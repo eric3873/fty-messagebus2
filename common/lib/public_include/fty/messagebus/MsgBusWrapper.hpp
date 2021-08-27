@@ -26,6 +26,8 @@
 #include <fty/messagebus/MsgBusException.hpp>
 #include <fty/messagebus/MsgBusFactory.hpp>
 
+#include <fty_log.h>
+
 #include <functional>
 #include <memory>
 #include <optional>
@@ -46,14 +48,16 @@ namespace fty::messagebus
     MsgBusWrapper() = default;
     MsgBusWrapper(const ClientName& clientName, const Endpoint& endpoint, const Identify& identify)
       : m_clientName(clientName)
-      , m_endpoint(endpoint)
+      , m_endPoint(endpoint)
       , m_identify(identify)
       , m_msgBus{fty::messagebus::MessageBusFactory<MessageBusType>::createMsgBus(clientName, endpoint)}
     {
       auto state = m_msgBus->connect();
       if (state != fty::messagebus::COM_STATE_OK)
       {
-        throw MessageBusException("Messagebus server connection error");
+        std::string errorMsg("Messagebus server connection error on: ");
+        errorMsg += endPoint();
+        throw MessageBusException(errorMsg);
       }
     };
 
@@ -66,7 +70,7 @@ namespace fty::messagebus
 
     Endpoint endPoint() const
     {
-      return m_endpoint;
+      return m_endPoint;
     };
 
     Identify identify() const
@@ -87,7 +91,7 @@ namespace fty::messagebus
 
   private:
     ClientName m_clientName{};
-    Endpoint m_endpoint{};
+    Endpoint m_endPoint{};
     Identify m_identify{};
 
 

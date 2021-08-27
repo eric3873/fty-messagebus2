@@ -5,7 +5,7 @@ project(fty_common_messagebus2_amqp
 )
 
 ##############################################################################################################
-# find_package(PahoMqttCpp REQUIRED)
+find_package(ProtonCpp REQUIRED)
 ##############################################################################################################
 
 etn_target(shared ${PROJECT_NAME} PUBLIC
@@ -21,6 +21,7 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
     fty_common_messagebus_utils
     fty-messagebus-common
     fty_common_logging
+    Proton::cpp
   FLAGS
     "-fmax-errors=2"
 )

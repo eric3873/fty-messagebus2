@@ -29,16 +29,16 @@
 namespace
 {
 #if defined(EXTERNAL_SERVER_FOR_TEST)
-  static constexpr auto AMQP_SERVER_URI{"??????"};
+  static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
 #else
-  static constexpr auto AMQP_SERVER_URI{"??????"};
+  static constexpr auto AMQP_SERVER_URI{"127.0.0.1:5672"};
 #endif
 
   using namespace fty::messagebus;
   using namespace fty::messagebus::test;
   using Message = fty::messagebus::amqp::AmqpMessage;
 
-  // static auto s_msgBus = MsgBusAmqp("TestCase", AMQP_SERVER_URI);
+  static auto s_msgBus = MsgBusAmqp("TestCase", AMQP_SERVER_URI);
 
   //----------------------------------------------------------------------
   // Test case
@@ -46,9 +46,8 @@ namespace
 
   TEST_CASE("Amqp identify implementation", "[identify]")
   {
-    // std::size_t found = s_msgBus.identify().find("Amqp");
-    // REQUIRE(found != std::string::npos);
-    REQUIRE(true);
+    std::size_t found = s_msgBus.identify().find("Amqp");
+    REQUIRE(found != std::string::npos);
   }
 
 } // namespace

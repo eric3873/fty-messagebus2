@@ -8,6 +8,7 @@ project(fty-common-messagebus2
 
 ##############################################################################################################
 find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR}/fty-cmake REQUIRED)
+set (THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 ##############################################################################################################
 

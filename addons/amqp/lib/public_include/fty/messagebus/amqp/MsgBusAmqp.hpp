@@ -21,19 +21,20 @@
 
 #pragma once
 
+#include "fty/messagebus/amqp/MsgBusAmqpClient.hpp"
 #include <fty/messagebus/IMessageBus.hpp>
 #include <fty/messagebus/MsgBusStatus.hpp>
 #include <fty/messagebus/amqp/MsgBusAmqpMessage.hpp>
 
 #include <thread>
+#include <vector>
 
 namespace fty::messagebus::amqp
 {
   // Default mqtt end point
-  static auto constexpr DEFAULT_AMQP_END_POINT{"????"};
+  static auto constexpr DEFAULT_AMQP_END_POINT{"127.0.0.1:5672"};
 
-  // TODO specialize the ClientPointer
-  using ClientPointer = std::shared_ptr<std::string>;
+  using ClientPointer = std::shared_ptr<AmqpClient>;
   using MessageListener = fty::messagebus::MessageListener<AmqpMessage>;
 
   class MessageBusAmqp final : public IMessageBus<AmqpMessage>
@@ -43,7 +44,7 @@ namespace fty::messagebus::amqp
 
     MessageBusAmqp(const std::string& clientName, const std::string& endpoint)
       : m_clientName(clientName)
-      , m_endpoint(endpoint){};
+      , m_endPoint(endpoint){};
 
     ~MessageBusAmqp() override;
 
@@ -65,9 +66,12 @@ namespace fty::messagebus::amqp
 
   private:
     std::string m_clientName{};
-    std::string m_endpoint{};
+    std::string m_endPoint{};
 
     ClientPointer m_client;
+
+    // Call back
+    //CallBack m_cb;
 
     bool isServiceAvailable();
   };

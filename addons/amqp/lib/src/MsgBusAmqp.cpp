@@ -26,9 +26,14 @@
 @end
 */
 
-#include "fty/messagebus/amqp/MsgBusAmqp.hpp"
-#include "fty/messagebus/MsgBusException.hpp"
-#include "fty/messagebus/utils/MsgBusHelper.hpp"
+#include <fty/messagebus/amqp/MsgBusAmqp.hpp>
+#include <fty/messagebus/MsgBusException.hpp>
+#include <fty/messagebus/utils/MsgBusHelper.hpp>
+
+
+#include <proton/connection_options.hpp>
+#include <proton/container.hpp>
+
 
 #include <fty_log.h>
 
@@ -51,7 +56,23 @@ namespace fty::messagebus::amqp
 
   ComState MessageBusAmqp::connect()
   {
-    return ComState::COM_STATE_UNKNOWN;
+    auto status = ComState::COM_STATE_NO_CONTACT;
+
+    log_debug("Amqp connect");
+
+
+    m_client = std::make_shared<AmqpClient>(m_endPoint, "examples");
+    proton::container container(*m_client);
+    // TODO ste more, or appropriate connection options
+    container.client_connection_options(proton::connection_options().max_frame_size(12345).idle_timeout(proton::duration(15000)));
+    container.run();
+
+    if (m_client->connectionActive())
+    {
+      status = ComState::COM_STATE_OK;
+    }
+
+    return status;
   }
 
   bool MessageBusAmqp::isServiceAvailable()

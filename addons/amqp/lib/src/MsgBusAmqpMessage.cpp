@@ -26,7 +26,7 @@
 @end
 */
 
-#include "fty/messagebus/amqp/MsgBusAmqpMessage.hpp"
+#include <fty/messagebus/amqp/MsgBusAmqpMessage.hpp>
 
 namespace fty::messagebus::amqp
 {
