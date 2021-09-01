@@ -162,19 +162,27 @@ namespace fty::messagebus::amqp
     {
       proton::message pMsg(message.userData().c_str());
       log_debug("Publishing [%s] on topic: %s", message.userData().c_str(), topic.c_str());
-      //sender send(*m_container, m_endPoint, topic);
-      //sender send(container_, m_endPoint, topic);
-      AmqpClient client(*m_container, m_endPoint, topic, pMsg);
-      proton::container container(client);
-      container.run();
 
-      // client cl(m_endPoint, "examples");
-      // proton::container container(cl);
-      // std::thread container_thread([&]() { container.run(); });
+      // AmqpClient client(*m_container, m_endPoint, topic, pMsg);
+      // proton::container container(client);
+      // container.run();
 
-      // std::thread sender([&]() {
-      //     cl.send(pMsg);
-      // });
+      client cl(m_endPoint, "examples");
+      proton::container container(cl);
+      std::thread container_thread([&]() { container.run(); });
+      // container.run();
+      //cl.send(pMsg);
+
+      //log_debug("avant send");
+      std::thread sender([&]() {
+          //log_debug("avant send");
+          OUT(std::cout << "avant send" << std::endl);
+          cl.send(pMsg);
+      });
+      sender.join();
+
+      cl.close();
+      container_thread.join();
 
       try
       {
