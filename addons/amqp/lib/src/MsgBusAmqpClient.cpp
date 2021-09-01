@@ -91,7 +91,7 @@ namespace fty::messagebus::amqp
   void AmqpClient::on_sender_open(proton::sender& s)
   {
     std::cout << "on_sender_open " << std::endl;
-    //sender = s;
+    sender = s;
     std::cout << "fin on_sender_open " << std::endl;
   }
 
@@ -99,9 +99,10 @@ namespace fty::messagebus::amqp
   {
     std::cout << "on_sendable" << std::endl;
     //proton::message m("Hello World!");
-    s.send(m_msg);
-    s.close();
-    m_connection.close();
+    // s.send(m_msg);
+    // s.close();
+    // m_connection.close();
+    send(m_msg);
     std::cout << "fin on_sendable" << std::endl;
   }
 
