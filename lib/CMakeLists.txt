@@ -26,25 +26,25 @@ if(BUILD_AMQP)
   )
 endif()
 
-if(BUILD_MALAMUTE)
-  target_sources(${PROJECT_NAME_UNDERSCORE} PRIVATE src/MsgBusMalamute.cpp)
-  target_link_libraries(${PROJECT_NAME_UNDERSCORE}
-    PUBLIC
-      fty_common_messagebus2_malamute
-  )
-endif()
+# if(BUILD_MALAMUTE)
+#   target_sources(${PROJECT_NAME_UNDERSCORE} PRIVATE src/MsgBusMalamute.cpp)
+#   target_link_libraries(${PROJECT_NAME_UNDERSCORE}
+#     PUBLIC
+#       fty_common_messagebus2_malamute
+#   )
+# endif()
 
-if(BUILD_MQTT)
-  target_sources(${PROJECT_NAME_UNDERSCORE} PRIVATE src/MsgBusMqtt.cpp)
-  target_link_libraries(${PROJECT_NAME_UNDERSCORE}
-    PUBLIC
-      fty_common_messagebus2_mqtt
-  )
-endif()
+# if(BUILD_MQTT)
+#   target_sources(${PROJECT_NAME_UNDERSCORE} PRIVATE src/MsgBusMqtt.cpp)
+#   target_link_libraries(${PROJECT_NAME_UNDERSCORE}
+#     PUBLIC
+#       fty_common_messagebus2_mqtt
+#   )
+# endif()
 
 set_target_properties(${PROJECT_NAME_UNDERSCORE} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 
 # Tests
 if(BUILD_TESTING)
-  # add_subdirectory(test)
+  add_subdirectory(test)
 endif()

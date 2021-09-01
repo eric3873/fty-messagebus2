@@ -18,9 +18,9 @@ if(BUILD_AMQP)
 endif()
 
 if(BUILD_MALAMUTE)
-  target_sources(${PROJECT_NAME_UNDERSCORE}-test PRIVATE src/MsgBusMalamute.cpp)
+  # target_sources(${PROJECT_NAME_UNDERSCORE}-test PRIVATE src/MsgBusMalamute.cpp)
 endif()
 
 if(BUILD_MQTT)
-  target_sources(${PROJECT_NAME_UNDERSCORE}-test PRIVATE src/MsgBusMqtt.cpp)
+  #target_sources(${PROJECT_NAME_UNDERSCORE}-test PRIVATE src/MsgBusMqtt.cpp)
 endif()

@@ -35,31 +35,46 @@
 #include <string>
 #include <thread>
 
+#include <iostream>
+
+
 namespace fty::messagebus::amqp
 {
 
   class AmqpClient : public proton::messaging_handler
   {
   public:
-    AmqpClient(const std::string& url, const std::string& addr)
+    AmqpClient(proton::container& cont, const std::string& url, const std::string& addr, const proton::message& msg)
+      //: m_container(std::move(cont))
       : m_url(url)
-      , m_addr(addr){};
+      , m_addr(addr)
+      , m_msg(msg){};
 
-    ~AmqpClient() = default;
+    ~AmqpClient();// = default;
     void on_container_start(proton::container& c) override;
     void on_connection_open(proton::connection& c) override;
+    void on_sender_open(proton::sender& s) override;
     void on_sendable(proton::sender& s) override;
     void on_message(proton::delivery& d, proton::message& m) override;
 
+    void send(const proton::message& m);
+
+
     bool connectionActive();
 
+    proton::connection connection() const;
 
   private:
+    proton::container m_container;
     std::string m_url;
     std::string m_addr;
+    proton::message m_msg;
     bool m_connectionActive;
+    proton::connection m_connection;
 
 
+    proton::sender sender;
+    proton::receiver receiver;
   };
 
 } // namespace fty::messagebus::amqp

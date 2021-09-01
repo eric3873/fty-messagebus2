@@ -25,6 +25,7 @@
 #include <fty/messagebus/IMessageBus.hpp>
 #include <fty/messagebus/MsgBusStatus.hpp>
 #include <fty/messagebus/amqp/MsgBusAmqpMessage.hpp>
+#include <fty/messagebus/amqp/Client.hpp>
 
 #include <thread>
 #include <vector>
@@ -35,6 +36,8 @@ namespace fty::messagebus::amqp
   static auto constexpr DEFAULT_AMQP_END_POINT{"127.0.0.1:5672"};
 
   using ClientPointer = std::shared_ptr<AmqpClient>;
+  using ContainerPointer = std::shared_ptr<proton::container>;
+  using Container = proton::container;
   using MessageListener = fty::messagebus::MessageListener<AmqpMessage>;
 
   class MessageBusAmqp final : public IMessageBus<AmqpMessage>
@@ -69,6 +72,11 @@ namespace fty::messagebus::amqp
     std::string m_endPoint{};
 
     ClientPointer m_client;
+    ContainerPointer m_container;
+    Container container_  = Container();
+    std::vector<std::thread> m_containerThreads;
+
+    //std::thread m_containerThreads;
 
     // Call back
     //CallBack m_cb;

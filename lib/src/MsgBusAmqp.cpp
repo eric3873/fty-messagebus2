@@ -49,12 +49,12 @@ namespace fty::messagebus
 
   DeliveryState MsgBusAmqp::subscribe(const std::string& topic, MessageListener<AmqpMessage> messageListener)
   {
-    return m_msgBus->subscribe(PREFIX_TOPIC + topic, messageListener);
+    return m_msgBus->subscribe(/*PREFIX_TOPIC + */topic, messageListener);
   }
 
   DeliveryState MsgBusAmqp::unsubscribe(const std::string& topic)
   {
-    return m_msgBus->unsubscribe(PREFIX_TOPIC + topic, nullptr);
+    return m_msgBus->unsubscribe(/*PREFIX_TOPIC + */topic, nullptr);
   }
 
   DeliveryState MsgBusAmqp::publish(const std::string& topic, const UserData& msg)
@@ -65,7 +65,7 @@ namespace fty::messagebus
     message.metaData().emplace(SUBJECT, PUBLISH_USER_PROPERTY);
     message.metaData().emplace(FROM, clientName());
 
-    return m_msgBus->publish(PREFIX_TOPIC + topic, message);
+    return m_msgBus->publish(/*PREFIX_TOPIC + */topic, message);
   }
 
   DeliveryState MsgBusAmqp::sendRequest(const std::string& requestQueue, const UserData& request, MessageListener<AmqpMessage> messageListener)
