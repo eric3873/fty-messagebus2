@@ -1,3 +1,4 @@
+
 /*  =========================================================================
     fty_common_messagebus_mqtt - class description
 
@@ -30,6 +31,7 @@
 #include <fty/messagebus/amqp/MsgBusAmqp.hpp>
 #include <fty/messagebus/utils/MsgBusHelper.hpp>
 // #include <fty/messagebus/amqp/AmqpSender.hpp>
+#include <fty/messagebus/amqp/AmqpContainer.hpp>
 #include <fty/messagebus/amqp/Client.hpp>
 
 #include <proton/connection_options.hpp>
@@ -44,24 +46,40 @@ using proton::source_options;
 
 namespace fty::messagebus::amqp
 {
+  static auto constexpr AMQP_QUEUE_PREFIX = "queue://";
+  static auto constexpr AMQP_TOPIC_PREFIX = "topic://";
+
   using Message = fty::messagebus::amqp::AmqpMessage;
 
   MessageBusAmqp::~MessageBusAmqp()
   {
-    // Cleaning all async clients
+    // Cleaning all amqp clients
     if (true /*isServiceAvailable()*/)
     {
       log_debug("Cleaning for: %s", m_clientName.c_str());
       try
       {
-        //m_client->connection().close();
-        //m_container->stop();
-        container_.stop();
-        log_debug("stop done");
-        //m_containerThread.join();
-        std::for_each(m_containerThreads.begin(), m_containerThreads.end(), [](std::thread& t) {
-          t.join();
-        });
+        //m_client->close();
+        //m_client->~Client();
+        log_debug("Cleaning 1");
+
+
+
+        m_container->stop();
+        log_debug("Cleaning 2");
+
+
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+        log_debug("Cleaning for: %s", m_clientName.c_str());
+
+        // std::for_each(m_containerThreads.begin(), m_containerThreads.end(), [](std::thread& t) {
+        //   t.join();
+        // });
+        for (const auto& [key, pHandle] : m_containerThreads) {
+            std::cout << "key: " << key << std::endl;
+            int result = pthread_cancel(pHandle);
+            std::cout << "cancel: " << strerror(result) << std::endl;
+        }
 
         log_debug("Cleaned for: %s", m_clientName.c_str());
       }
@@ -81,63 +99,38 @@ namespace fty::messagebus::amqp
     auto status = ComState::COM_STATE_NO_CONTACT;
     try
     {
-
-      log_debug("Amqp connect");
-
-      //m_client = std::make_shared<AmqpClient>(m_endPoint, "examples");
-
-      // AmqpClient client(m_endPoint, "examples");
       auto clientId = utils::getClientId(m_clientName);
-      log_debug("clientId: %s", clientId.c_str());
+      log_debug("Amqp connecting for clientId: %s", clientId.c_str());
 
-      m_container = std::make_shared<proton::container>();
-      //m_container = std::make_shared<proton::container>(*m_client, clientId);
-      //m_container = std::make_shared<proton::container>(client, clientId);
+      m_client = std::make_shared<Client>(DEFAULT_AMQP_END_POINT);
+      m_client->senderAddress("topic://examples");
 
-      //m_container = std::make_shared<proton::container>(*m_client, utils::getClientId(m_clientName));
-      //m_container = std::make_shared<proton::container>(utils::getClientId(m_clientName));
-      /*proton::container*/ //m_container(client, utils::getClientId(m_clientName));
-      //m_container = aContainer;
-      // auto amqpClient = AmqpClient(m_endPoint, "examples");
-      // m_container(amqpClient);
-      // TODO ste more, or appropriate connection options
-      //m_container->client_connection_options(proton::connection_options().max_frame_size(12345).idle_timeout(proton::duration(15000)));
+      m_container = std::make_shared<proton::container>(*m_client);
+      // m_containerThreads.push_back(std::thread([=]() {
+      //   m_container->run();
+      // }).native_handle());
 
-      //proton::connection connection = m_container->connect(m_endPoint);
-      //m_container->open_receiver("sample");
-      //m_container->run();
-      //proton::container(client).run(std::thread::hardware_concurrency());
+      std::thread thrd([=]() {
+          m_container->run();
+      });
+      // //m_containerThreads.push_back(thrd.native_handle());
+      m_containerThreads["container"] = thrd.native_handle();
+      thrd.detach();
 
-      //proton::container container(client);
-      //std::thread containerThread([&]() { m_container->run(); });
 
-      m_containerThreads.push_back(std::thread([=]() {
-        //m_container->run();
-        container_.run();
-      }));
+      //m_containerThreads.front().detach();
 
-      // client cl(m_endPoint, "examples");
-      // proton::container container(cl);
-      // std::thread container_thread([&]() { container.run(); });
-
-      //m_containerThreads.emplace_back(&containerThread);
-      //m_containerThread([&]() { m_container->run(); });
-      // m_containerThread.detach();//join();
-      //m_container->open_sender("examples");
-
-      log_debug("After run");
-      //if (connection.active())
-      // //if (client.connectionActive())
+      //if (m_client->connectionActive())
       // {
+      // TODO synchronize with client
+      std::this_thread::sleep_for(std::chrono::seconds(1));
       status = ComState::COM_STATE_OK;
       // }
     }
     catch (const std::exception& e)
     {
-      status = ComState::COM_STATE_OK; // ComState::COM_STATE_UNKNOWN;
+      status = ComState::COM_STATE_UNKNOWN;
       log_error("Error to connect with the Amqp server, reason: %s", e.what());
-
-      // std::cerr << e.what() << '\n';
     }
 
     log_debug("Status %d", status);
@@ -147,12 +140,12 @@ namespace fty::messagebus::amqp
   bool MessageBusAmqp::isServiceAvailable()
   {
     bool serviceAvailable = true;
-    if (!m_client->connection().active())
-    {
-      log_error("Amqp service is unvailable");
-      serviceAvailable = false;
-    }
-    return true; //serviceAvailable;
+    // if (!m_client.connection().active())
+    // {
+    //   log_error("Amqp service is unvailable");
+    //   serviceAvailable = false;
+    // }
+    return serviceAvailable; //serviceAvailable;
   }
 
   DeliveryState MessageBusAmqp::publish(const std::string& topic, const Message& message)
@@ -161,32 +154,16 @@ namespace fty::messagebus::amqp
     if (true /*isServiceAvailable()*/)
     {
       proton::message pMsg(message.userData().c_str());
-      log_debug("Publishing [%s] on topic: %s", message.userData().c_str(), topic.c_str());
+      std::string amqpTopic = AMQP_TOPIC_PREFIX + topic;
+      log_debug("Publishing [%s] on: %s", message.userData().c_str(), amqpTopic.c_str());
 
-      // AmqpClient client(*m_container, m_endPoint, topic, pMsg);
-      // proton::container container(client);
-      // container.run();
-
-      client cl(m_endPoint, "examples");
-      proton::container container(cl);
-      std::thread container_thread([&]() { container.run(); });
-      // container.run();
-      //cl.send(pMsg);
-
-      //log_debug("avant send");
-      std::thread sender([&]() {
-          //log_debug("avant send");
-          OUT(std::cout << "avant send" << std::endl);
-          cl.send(pMsg);
-      });
-      sender.join();
-
-      cl.close();
-      container_thread.join();
-
+      m_client->senderAddress(amqpTopic);
       try
       {
-        //client.send(pMsg);
+        std::thread senderTh([&]() {
+          m_client->send(pMsg);
+        });
+        senderTh.join();
       }
       catch (const std::exception& e)
       {
@@ -197,15 +174,43 @@ namespace fty::messagebus::amqp
       log_debug("Message published (%s)", to_string(delivState).c_str());
     }
     return delivState;
-  } // namespace fty::messagebus::amqp
+  }
 
   DeliveryState MessageBusAmqp::subscribe(const std::string& topic, MessageListener /*messageListener*/)
   {
     auto delivState = DeliveryState::DELI_STATE_UNAVAILABLE;
-    if (isServiceAvailable())
+    if (true /*isServiceAvailable()*/)
     {
-      log_debug("Subscribing on topic: %s", topic.c_str());
+      std::string amqpTopic = AMQP_TOPIC_PREFIX + topic;
+      log_debug("Subscribing on topic: %s", amqpTopic.c_str());
+      m_client->receiverAddress(amqpTopic);
+      std::this_thread::sleep_for(std::chrono::seconds(2));
 
+      std::thread receiveTh([&]() {
+          auto msg = m_client->receive();
+          OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
+      });
+      //m_containerThreads.push_back(receiveTh.native_handle());
+      m_containerThreads["sub"] = receiveTh.native_handle();
+
+      receiveTh.detach();
+
+      // m_containerThreads.push_back(std::thread([&]() {
+      //   auto msg = m_client->receive();
+      //   OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
+      // }));
+
+      // std::thread receiver([&]() {
+      //     OUT(std::cout << "avant received " << std::endl);
+      //     auto msg = m_client.receive();
+      //     OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
+      // });
+
+      // //receiver.join();
+      // receiver.detach();
+
+      //container_thread.join();
+      delivState = DeliveryState::DELI_STATE_ACCEPTED;
       log_debug("Subscribed (%s)", to_string(delivState).c_str());
     }
     return delivState;

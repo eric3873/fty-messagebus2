@@ -44,39 +44,40 @@ namespace
   //static auto s_msgBus = MsgBusAmqp("TestCase", AMQP_SERVER_URI);
 
   // Replyer listener
-  void responseListener(Message message)
-  {
-    assert(message.userData() == RESPONSE);
-  }
+  // void responseListener(Message message)
+  // {
+  //   //assert(message.userData() == RESPONSE);
+  // }
 
   //----------------------------------------------------------------------
   // Test case
   //----------------------------------------------------------------------
 
-  TEST_CASE("Amqp identify implementation", "[identify]")
-  {
-    std::cout << "Debut test" << std::endl;
-    auto msgBus = MsgBusAmqp("TestCase", AMQP_SERVER_URI);
-    std::cout << "Apres constructor" << std::endl;
-    // std::size_t found = msgBus.identify().find("Amqp");
-    // REQUIRE(found != std::string::npos);
-    // std::cout << "fin test" << std::endl;
+  // TEST_CASE("Amqp identify implementation", "[identify]")
+  // {
+  //   std::cout << "Debut test" << std::endl;
+  //   auto msgBus = MsgBusAmqp("TestCase", AMQP_SERVER_URI);
+  //   std::cout << "Apres constructor" << std::endl;
+  //   // std::size_t found = msgBus.identify().find("Amqp");
+  //   // REQUIRE(found != std::string::npos);
+  //   // std::cout << "fin test" << std::endl;
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    REQUIRE(true);
-  }
+  //   std::this_thread::sleep_for(std::chrono::seconds(1));
+  //   //REQUIRE(true);
+  // }
 
   TEST_CASE("Amqp publish subscribe", "[publish]")
   {
     auto msgBus = MsgBusAmqp("MqttPubSubTestCase", AMQP_SERVER_URI);
+    DeliveryState state;
 
-    // DeliveryState state = msgBus.subscribe(TEST_TOPIC, responseListener);
-    // REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
+    state = msgBus.subscribe(TEST_TOPIC, {});
+    REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
 
-    DeliveryState state = msgBus.publish(TEST_TOPIC, RESPONSE);
+    state = msgBus.publish(TEST_TOPIC, RESPONSE);
     REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
     // Wait to process publish
-    //std::this_thread::sleep_for(std::chrono::seconds(MAX_TIMEOUT));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
 } // namespace

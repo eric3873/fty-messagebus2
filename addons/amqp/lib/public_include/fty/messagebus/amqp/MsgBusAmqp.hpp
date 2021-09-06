@@ -29,15 +29,17 @@
 
 #include <thread>
 #include <vector>
+#include <map>
 
 namespace fty::messagebus::amqp
 {
   // Default mqtt end point
-  static auto constexpr DEFAULT_AMQP_END_POINT{"127.0.0.1:5672"};
+  static auto constexpr DEFAULT_AMQP_END_POINT{"amqp://127.0.0.1:5672"};
 
-  using ClientPointer = std::shared_ptr<AmqpClient>;
-  using ContainerPointer = std::shared_ptr<proton::container>;
   using Container = proton::container;
+  using ClientPointer = std::shared_ptr<Client>;
+  using ContainerPointer = std::shared_ptr<Container>;
+
   using MessageListener = fty::messagebus::MessageListener<AmqpMessage>;
 
   class MessageBusAmqp final : public IMessageBus<AmqpMessage>
@@ -71,10 +73,15 @@ namespace fty::messagebus::amqp
     std::string m_clientName{};
     std::string m_endPoint{};
 
-    ClientPointer m_client;
+
     ContainerPointer m_container;
-    Container container_  = Container();
-    std::vector<std::thread> m_containerThreads;
+    ClientPointer m_client;
+
+    //Container container_  = Container();
+    //std::vector<std::thread::native_handle_type> m_containerThreads;
+    std::map<std::string, pthread_t> m_containerThreads;
+    //client m_client = client();
+
 
     //std::thread m_containerThreads;
 
