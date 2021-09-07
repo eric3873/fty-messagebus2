@@ -58,11 +58,11 @@ namespace
   //   std::cout << "Debut test" << std::endl;
   //   auto msgBus = MsgBusAmqp("TestCase", AMQP_SERVER_URI);
   //   std::cout << "Apres constructor" << std::endl;
-  //   // std::size_t found = msgBus.identify().find("Amqp");
-  //   // REQUIRE(found != std::string::npos);
+  //   std::size_t found = msgBus.identify().find("Amqp");
+  //   REQUIRE(found != std::string::npos);
   //   // std::cout << "fin test" << std::endl;
 
-  //   std::this_thread::sleep_for(std::chrono::seconds(1));
+  //   //std::this_thread::sleep_for(std::chrono::seconds(1));
   //   //REQUIRE(true);
   // }
 
@@ -71,13 +71,14 @@ namespace
     auto msgBus = MsgBusAmqp("MqttPubSubTestCase", AMQP_SERVER_URI);
     DeliveryState state;
 
+    // TODO see only for subscribing
     state = msgBus.subscribe(TEST_TOPIC, {});
     REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
 
     state = msgBus.publish(TEST_TOPIC, RESPONSE);
     REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
     // Wait to process publish
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(3));
   }
 
 } // namespace

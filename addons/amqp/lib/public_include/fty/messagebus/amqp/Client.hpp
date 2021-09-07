@@ -69,7 +69,7 @@ namespace fty::messagebus::amqp
     proton::connection m_connection;
 
     // Only used in proton handler thread
-    proton::sender sender_;
+    proton::sender m_sender;
     proton::receiver m_receiver;
 
     // Shared by proton and user threads, protected by lock_
@@ -89,21 +89,23 @@ namespace fty::messagebus::amqp
     ~Client()
     {
       log_debug("Cleaning Amqp client");
-      if (sender_ && sender_.active())
+      if (m_sender)// && m_sender.active())
       {
-        sender_.connection().close();
+        log_debug("Cleaning sender");
+        m_sender.connection().close();
       }
-      log_debug("Cleaning Amqp 1");
-      if (m_receiver && m_receiver.active())
+
+      if (m_receiver )//&& m_receiver.active())
       {
-        //m_receiver.connection().close();
+        log_debug("Cleaning receiverer");
+        m_receiver.connection().close();
       }
-      log_debug("Cleaning Amqp 2");
-      if (m_connection && m_connection.active())
+      if (m_connection )//&& m_connection.active())
       {
+        log_debug("Cleaning connection");
         m_connection.close();
       }
-      log_debug("Cleaning Amqp 3");
+      log_debug("Amqp cleaned");
     }
 
     // Thread safe
@@ -111,8 +113,8 @@ namespace fty::messagebus::amqp
     {
       // Use [=] to copy the message, we cannot pass it by reference since it
       // will be used in another thread.
-      std::cout << "sending " << std::endl;
-      work_queue()->add([=]() { sender_.send(msg); });
+      log_debug("Sending");
+      work_queue()->add([=]() { m_sender.send(msg); });
     }
 
     // Thread safe
@@ -129,19 +131,25 @@ namespace fty::messagebus::amqp
     // Thread safe
     void close()
     {
-      work_queue()->add([=]() { sender_.connection().close(); });
+      work_queue()->add([=]() { m_sender.connection().close(); });
     }
 
     void senderAddress(const std::string& address)
     {
       m_senderAddress = address;
-      //m_connection.open_sender(m_senderAddress);
+      if (m_connection)
+      {
+        //m_connection.open_sender(m_senderAddress);
+      }
     }
 
     void receiverAddress(const std::string& address)
     {
       m_receiverAddress = address;
-      m_connection.open_receiver(m_receiverAddress);
+      if (m_connection)
+      {
+        m_connection.open_receiver(m_receiverAddress);
+      }
     }
 
     void url(const std::string& urlParam)
@@ -152,7 +160,7 @@ namespace fty::messagebus::amqp
   private:
     proton::work_queue* work_queue()
     {
-      // Wait till work_queue_ and sender_ are initialized.
+      // Wait till work_queue_ and m_sender are initialized.
       std::unique_lock<std::mutex> l(lock_);
       while (!work_queue_)
         sender_ready_.wait(l);
@@ -167,14 +175,15 @@ namespace fty::messagebus::amqp
     // See @ref multithreaded_client_flow_control.cpp for an example.
     void on_container_start(proton::container& cont) override
     {
-      std::cout << "on_container_start " << std::endl;
+      log_debug("on_container_start");
       m_connection = cont.connect(m_url);
     }
 
     void on_connection_open(proton::connection& conn) override
     {
-      std::cout << "on_connection_open " << std::endl;
-      m_connection.open_sender(m_senderAddress);
+      log_debug("on_connection_open");
+
+      conn.open_sender(m_senderAddress);
 
       // conn.open_sender(address_);
       // conn.open_receiver(address_);
@@ -204,30 +213,27 @@ namespace fty::messagebus::amqp
 
     void on_connection_close(proton::connection&) override
     {
-      std::cout << "on_connection_close " << std::endl;
+      log_debug("on_connection_close");
     }
 
     void on_container_stop(proton::container&) override
     {
-      std::cout << "on_container_stop " << std::endl;
+      log_debug("on_container_stop");
     }
 
-    void on_sender_open(proton::sender& s) override
+    void on_sender_open(proton::sender& sender) override
     {
-      // sender_ and work_queue_ must be set atomically
-      std::cout << "send: Opened sender for target address '"
-                << s.target().address() << "'\n";
-
+      // m_sender and work_queue_ must be set atomically
+      log_debug("Open sender for target address: %s", sender.target().address().c_str());
       std::lock_guard<std::mutex> l(lock_);
-      sender_ = s;
-      work_queue_ = &s.work_queue();
+      m_sender = sender;
+      work_queue_ = &sender.work_queue();
       sender_ready_.notify_all();
     }
 
     void on_receiver_open(proton::receiver& receiver) override
     {
-      std::cout << "receive: Opened receiver for target address '"
-                << receiver.source().address() << "'\n";
+      log_debug("Open receiver for target address: %s", receiver.source().address().c_str());
       m_receiver = receiver;
     }
 
@@ -240,14 +246,16 @@ namespace fty::messagebus::amqp
 
     void on_transport_error(proton::transport& t) override
     {
-      std::string err = t.error().what();
-      std::cout << "on_transport_error " << err << std::endl;
+      // std::string err = t.error().what();
+      // std::cout << "on_transport_error " << err << std::endl;
+      //log_error("on_transport_error: %s", t.error().what().c_str());
+      OUT(std::cerr << "on_transport_error: " << t.error().what() << std::endl);
     }
 
     void on_error(const proton::error_condition& e) override
     {
       OUT(std::cerr << "unexpected error: " << e << std::endl);
-      exit(1);
+      //exit(1);
     }
   };
 

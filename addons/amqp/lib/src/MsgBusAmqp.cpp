@@ -59,29 +59,20 @@ namespace fty::messagebus::amqp
       log_debug("Cleaning for: %s", m_clientName.c_str());
       try
       {
-        //m_client->close();
-        //m_client->~Client();
-        log_debug("Cleaning 1");
-
-
-
         m_container->stop();
-        log_debug("Cleaning 2");
-
-
-        std::this_thread::sleep_for(std::chrono::seconds(5));
-        log_debug("Cleaning for: %s", m_clientName.c_str());
-
+        log_debug("Container stoped");
         // std::for_each(m_containerThreads.begin(), m_containerThreads.end(), [](std::thread& t) {
         //   t.join();
         // });
-        for (const auto& [key, pHandle] : m_containerThreads) {
-            std::cout << "key: " << key << std::endl;
-            int result = pthread_cancel(pHandle);
-            std::cout << "cancel: " << strerror(result) << std::endl;
-        }
-
-        log_debug("Cleaned for: %s", m_clientName.c_str());
+        // for (const auto& [key, pHandle] : m_containerThreads) {
+        //     std::cout << "key: " << key << std::endl;
+        //     int result = pthread_cancel(pHandle);
+        //     std::cout << "cancel: " << strerror(result) << std::endl;
+        // }
+        pthread_cancel(m_containerThreads["sub"]);
+        //pthread_cancel(m_containerThreads["pub"]);
+        pthread_cancel(m_containerThreads["container"]);
+        log_debug("%s cleaned", m_clientName.c_str());
       }
       catch (const std::exception& e)
       {
@@ -118,6 +109,7 @@ namespace fty::messagebus::amqp
       thrd.detach();
 
 
+
       //m_containerThreads.front().detach();
 
       //if (m_client->connectionActive())
@@ -145,13 +137,13 @@ namespace fty::messagebus::amqp
     //   log_error("Amqp service is unvailable");
     //   serviceAvailable = false;
     // }
-    return serviceAvailable; //serviceAvailable;
+    return serviceAvailable;
   }
 
   DeliveryState MessageBusAmqp::publish(const std::string& topic, const Message& message)
   {
     auto delivState = DeliveryState::DELI_STATE_UNAVAILABLE;
-    if (true /*isServiceAvailable()*/)
+    if (isServiceAvailable())
     {
       proton::message pMsg(message.userData().c_str());
       std::string amqpTopic = AMQP_TOPIC_PREFIX + topic;
@@ -163,6 +155,8 @@ namespace fty::messagebus::amqp
         std::thread senderTh([&]() {
           m_client->send(pMsg);
         });
+        // m_containerThreads["pub"] = senderTh.native_handle();
+        // senderTh.detach();
         senderTh.join();
       }
       catch (const std::exception& e)
@@ -179,37 +173,20 @@ namespace fty::messagebus::amqp
   DeliveryState MessageBusAmqp::subscribe(const std::string& topic, MessageListener /*messageListener*/)
   {
     auto delivState = DeliveryState::DELI_STATE_UNAVAILABLE;
-    if (true /*isServiceAvailable()*/)
+    if (isServiceAvailable())
     {
       std::string amqpTopic = AMQP_TOPIC_PREFIX + topic;
       log_debug("Subscribing on topic: %s", amqpTopic.c_str());
       m_client->receiverAddress(amqpTopic);
-      std::this_thread::sleep_for(std::chrono::seconds(2));
 
       std::thread receiveTh([&]() {
           auto msg = m_client->receive();
           OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
       });
-      //m_containerThreads.push_back(receiveTh.native_handle());
-      m_containerThreads["sub"] = receiveTh.native_handle();
 
+      m_containerThreads["sub"] = receiveTh.native_handle();
       receiveTh.detach();
 
-      // m_containerThreads.push_back(std::thread([&]() {
-      //   auto msg = m_client->receive();
-      //   OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
-      // }));
-
-      // std::thread receiver([&]() {
-      //     OUT(std::cout << "avant received " << std::endl);
-      //     auto msg = m_client.receive();
-      //     OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
-      // });
-
-      // //receiver.join();
-      // receiver.detach();
-
-      //container_thread.join();
       delivState = DeliveryState::DELI_STATE_ACCEPTED;
       log_debug("Subscribed (%s)", to_string(delivState).c_str());
     }
