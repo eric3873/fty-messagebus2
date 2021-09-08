@@ -241,7 +241,7 @@ namespace fty::messagebus::amqp
     return delivState;
   }
 
-  Opt<Message> MessageBusAmqp::request(const std::string& requestQueue, const Message& message, int /*receiveTimeOut*/)
+  Opt<Message> MessageBusAmqp::request(const std::string& requestQueue, const Message& message, int receiveTimeOut)
   {
     auto replyMsg = Opt<Message>{};
 
@@ -249,10 +249,14 @@ namespace fty::messagebus::amqp
     std::string amqpQueue = AMQP_QUEUE_PREFIX + requestQueue;
 
     std::string replyTo = AMQP_QUEUE_PREFIX + fty::messagebus::amqp::getReplyQueue(message);
-    auto protonMsg = getAmqpMessageFromMsgBusAmqpMessage(message.metaData());
+    auto protonMsg = getAmqpMessageFromMsgBusAmqpMessage(message);
+    // TODO remove from here
+    protonMsg.to(amqpQueue);
 
-    Requester requester(m_endPoint, protonMsg);
-    // proton::container(requester).run();
+    std::cout << protonMsg << std::endl;
+
+    Requester requester(m_endPoint, protonMsg, receiveTimeOut);
+    proton::container(requester).run();
     log_debug("Sending request payload: '%s' to: %s and wait message on reply queue %s", message.userData().c_str(), amqpQueue.c_str(), replyTo.c_str());
 
     return replyMsg;

@@ -23,7 +23,8 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
     fty_common_logging
     Proton::cpp
   FLAGS
-    "-fmax-errors=2"
+    # "-Wno-unused-parameter -Wno-unused-variable -Wno-unused-const-variable -fmax-errors=1"
+    "-w"
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})

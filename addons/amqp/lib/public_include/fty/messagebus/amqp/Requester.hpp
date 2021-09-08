@@ -40,52 +40,77 @@ namespace fty::messagebus::amqp
   {
   private:
     std::string m_url;
+    proton::duration m_timeout;
     proton::message request;
-    proton::sender sender;
-    proton::receiver receiver;
+
+    proton::connection m_connection;
+
+    proton::sender m_sender;
+    proton::receiver m_receiver;
+    proton::work_queue *p_work_queue;
+    bool ready, canceled;
 
   public:
-    Requester(const std::string& url, const proton::message& message)
+    Requester(const std::string& url, const proton::message& message, int timeout)
       : m_url(url)
       , request(message)
+      , m_timeout(int(timeout * proton::duration::SECOND.milliseconds()))
     {
     }
 
     void on_container_start(proton::container& con) override
     {
       log_debug("on_container_start");
-      proton::connection connection = con.connect(m_url);
-      sender = connection.open_sender(request.to());
+      m_connection = con.connect(m_url);//, proton::connection_options().idle_timeout(m_timeout));
+
+      m_sender = m_connection.open_sender(request.to());
       // Create a receiver requesting a dynamically created queue
       // for the message source.
       receiver_options opts = receiver_options().source(source_options().dynamic(true));
-      receiver = sender.connection().open_receiver("", opts);
+      m_receiver = m_sender.connection().open_receiver("", opts);
     }
 
     void send_request()
     {
       log_debug("send_request");
-      request.reply_to(receiver.source().address());
-      sender.send(request);
-      sender.connection().close();
+      // TODO see where to set this.
+      request.reply_to(m_receiver.source().address());
+      m_sender.send(request);
     }
 
     void on_sender_open(proton::sender& s) override
     {
       log_debug("Open sender for target address: %s", s.target().address().c_str());
+    }
+
+    void on_receiver_open(proton::receiver& receiver) override
+    {
+      log_debug("Open receiver for target address: %s", receiver.source().address().c_str());
+      p_work_queue = &receiver.work_queue();
+      p_work_queue->schedule(m_timeout, make_work(&Requester::cancel, this, receiver));
       send_request();
     }
 
-    void on_receiver_open(proton::receiver& r) override
+    void cancel(proton::receiver receiver)
     {
-      log_debug("Open receiver for target address: %s", r.source().address().c_str());
-      send_request();
+        log_debug("Cancel");
+        canceled = true;
+
+        m_receiver.connection().close();
+        m_sender.connection().close();
+        m_connection.close();
+        //m_connection.container().stop();
+        log_debug("Canceled");
+
     }
 
     void on_message(proton::delivery& d, proton::message& response) override
     {
       std::cout << " response: " << response.body() << std::endl;
       d.connection().close();
+      //delete *p_work_queue;
+      cancel(d.receiver());
+      //d.connection().close();
     }
   };
 

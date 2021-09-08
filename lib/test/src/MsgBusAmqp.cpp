@@ -101,7 +101,7 @@ namespace
     // REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
 
     // Send synchronous request
-    Opt<Message> replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY, MAX_TIMEOUT);
+    Opt<Message> replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY, MAX_TIMEOUT * 10);
     REQUIRE(true);
     // REQUIRE(replyMsg.has_value());
     // REQUIRE(replyMsg.value().userData() == RESPONSE);
