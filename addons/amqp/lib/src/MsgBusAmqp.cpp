@@ -27,12 +27,20 @@
 @end
 */
 
+#include "fty/messagebus/amqp/MsgBusAmqp.hpp"
+
+//#include "fty/messagebus/amqp/MsgBusAmqpMessage.hpp"
+#include "fty/messagebus/amqp/MsgBusAmqpUtils.hpp"
+
 #include <fty/messagebus/MsgBusException.hpp>
-#include <fty/messagebus/amqp/MsgBusAmqp.hpp>
+
 #include <fty/messagebus/utils/MsgBusHelper.hpp>
+
 // #include <fty/messagebus/amqp/AmqpSender.hpp>
-#include <fty/messagebus/amqp/AmqpContainer.hpp>
-#include <fty/messagebus/amqp/Client.hpp>
+// #include <fty/messagebus/amqp/AmqpContainer.hpp>
+// #include <fty/messagebus/amqp/Client.hpp>
+// #include <fty/messagebus/amqp/Replyer.hpp>
+#include <fty/messagebus/amqp/Requester.hpp>
 
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
@@ -41,15 +49,14 @@
 #include <fty_log.h>
 #include <iostream>
 
-using proton::receiver_options;
-using proton::source_options;
-
 namespace fty::messagebus::amqp
 {
   static auto constexpr AMQP_QUEUE_PREFIX = "queue://";
   static auto constexpr AMQP_TOPIC_PREFIX = "topic://";
 
   using Message = fty::messagebus::amqp::AmqpMessage;
+  using proton::receiver_options;
+  using proton::source_options;
 
   MessageBusAmqp::~MessageBusAmqp()
   {
@@ -102,13 +109,11 @@ namespace fty::messagebus::amqp
       // }).native_handle());
 
       std::thread thrd([=]() {
-          m_container->run();
+        m_container->run();
       });
       // //m_containerThreads.push_back(thrd.native_handle());
       m_containerThreads["container"] = thrd.native_handle();
       thrd.detach();
-
-
 
       //m_containerThreads.front().detach();
 
@@ -145,7 +150,7 @@ namespace fty::messagebus::amqp
     auto delivState = DeliveryState::DELI_STATE_UNAVAILABLE;
     if (isServiceAvailable())
     {
-      proton::message pMsg(message.userData().c_str());
+      proton::message pMsg(message.userData());
       std::string amqpTopic = AMQP_TOPIC_PREFIX + topic;
       log_debug("Publishing [%s] on: %s", message.userData().c_str(), amqpTopic.c_str());
 
@@ -180,8 +185,8 @@ namespace fty::messagebus::amqp
       m_client->receiverAddress(amqpTopic);
 
       std::thread receiveTh([&]() {
-          auto msg = m_client->receive();
-          OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
+        auto msg = m_client->receive();
+        OUT(std::cout << "received \"" << msg.body() << '"' << std::endl);
       });
 
       m_containerThreads["sub"] = receiveTh.native_handle();
@@ -200,16 +205,21 @@ namespace fty::messagebus::amqp
     return delivState;
   }
 
-  DeliveryState MessageBusAmqp::receive(const std::string& /*queue*/, MessageListener /*messageListener*/)
+  DeliveryState MessageBusAmqp::receive(const std::string& queue, MessageListener /*messageListener*/)
   {
-    auto delivState = DeliveryState::DELI_STATE_UNAVAILABLE;
+    auto delivState = DeliveryState::DELI_STATE_ACCEPTED; //DeliveryState::DELI_STATE_UNAVAILABLE;
+    std::string amqpQueue = AMQP_QUEUE_PREFIX + queue;
+
+    // Replyer replyer(m_endPoint, amqpQueue);
+    // proton::container(replyer).run();
+    log_debug("Waiting to receive msg from: %s", amqpQueue.c_str(), to_string(delivState).c_str());
 
     return delivState;
   }
 
-  DeliveryState MessageBusAmqp::sendRequest(const std::string& /*requestQueue*/, const Message& /*message*/)
+  DeliveryState MessageBusAmqp::sendRequest(const std::string& requestQueue, const Message& message)
   {
-    auto delivState = DeliveryState::DELI_STATE_UNAVAILABLE;
+    auto delivState = DeliveryState::DELI_STATE_ACCEPTED; //DeliveryState::DELI_STATE_UNAVAILABLE;
 
     return delivState;
   }
@@ -231,9 +241,19 @@ namespace fty::messagebus::amqp
     return delivState;
   }
 
-  Opt<Message> MessageBusAmqp::request(const std::string& /*requestQueue*/, const Message& /*message*/, int /*receiveTimeOut*/)
+  Opt<Message> MessageBusAmqp::request(const std::string& requestQueue, const Message& message, int /*receiveTimeOut*/)
   {
     auto replyMsg = Opt<Message>{};
+
+    auto delivState = DeliveryState::DELI_STATE_ACCEPTED; //DeliveryState::DELI_STATE_UNAVAILABLE;
+    std::string amqpQueue = AMQP_QUEUE_PREFIX + requestQueue;
+
+    std::string replyTo = AMQP_QUEUE_PREFIX + fty::messagebus::amqp::getReplyQueue(message);
+    auto protonMsg = getAmqpMessageFromMsgBusAmqpMessage(message.metaData());
+
+    Requester requester(m_endPoint, protonMsg);
+    // proton::container(requester).run();
+    log_debug("Sending request payload: '%s' to: %s and wait message on reply queue %s", message.userData().c_str(), amqpQueue.c_str(), replyTo.c_str());
 
     return replyMsg;
   }

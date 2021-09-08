@@ -237,7 +237,7 @@ namespace fty::messagebus::amqp
       m_receiver = receiver;
     }
 
-    void on_message(proton::delivery& dlv, proton::message& msg) override
+    void on_message(proton::delivery& /*dlv*/, proton::message& msg) override
     {
       std::lock_guard<std::mutex> l(lock_);
       messages_.push(msg);

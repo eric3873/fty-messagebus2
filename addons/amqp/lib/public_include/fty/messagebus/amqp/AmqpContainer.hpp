@@ -21,8 +21,6 @@
 
 #pragma once
 
-#include <fty/messagebus/IMessageBus.hpp>
-
 #include <map>
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
@@ -37,44 +35,61 @@
 
 #include <iostream>
 
-
 namespace fty::messagebus::amqp
 {
 
-  class AmqpClient : public proton::messaging_handler
+  class AmqpContainer : public proton::messaging_handler
   {
+    // Invariant
+    const std::string m_url;
+
   public:
-    AmqpClient(proton::container& /*cont*/, const std::string& url, const std::string& addr, const proton::message& msg)
-      //: m_container(std::move(cont))
-      : m_url(url)
-      , m_addr(addr)
-      , m_msg(msg){};
+    AmqpContainer(const std::string& url)
+      : m_url(url){};
 
-    ~AmqpClient();// = default;
-    void on_container_start(proton::container& c) override;
-    void on_connection_open(proton::connection& c) override;
-    void on_sender_open(proton::sender& s) override;
-    void on_sendable(proton::sender& s) override;
-    void on_message(proton::delivery& d, proton::message& m) override;
+    ~AmqpContainer() = default;
 
-    void send(const proton::message& m);
+    void on_container_start(proton::container& cont) override
+    {
+      std::cout << "AmqpContainer on_container_start " << std::endl;
+      cont.connect(m_url);
+    }
 
+    void on_connection_open(proton::connection& conn) override
+    {
+      std::cout << "on_connection_open " << std::endl;
+      std::cout << "on_connection_open is active:" << conn.active() << std::endl;
+      //conn.open_sender("examples");
+    }
 
-    bool connectionActive();
+    void on_sender_open(proton::sender& s) override
+    {
+      // sender_ and work_queue_ must be set atomically
+      std::cout << "on_sender_open " << std::endl;
+    }
 
-    proton::connection connection() const;
+    void on_sendable(proton::sender& s)
+    {
+      std::cout << "on_sendable" << std::endl;
 
-  private:
-    proton::container m_container;
-    std::string m_url;
-    std::string m_addr;
-    proton::message m_msg;
-    bool m_connectionActive;
-    proton::connection m_connection;
+      std::cout << "fin on_sendable" << std::endl;
+    }
 
+    void on_error(const proton::error_condition& e) override
+    {
+      std::cerr << "unexpected error: " << e << std::endl;
+    }
 
-    proton::sender sender;
-    proton::receiver receiver;
+    void on_tracker_accept(proton::tracker& t) override
+    {
+      std::cout << "on_tracker_accept" << std::endl;
+
+    }
+
+    void on_transport_close(proton::transport&) override
+    {
+      std::cout << "on_transport_close" << std::endl;
+    }
   };
 
 } // namespace fty::messagebus::amqp

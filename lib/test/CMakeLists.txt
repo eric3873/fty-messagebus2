@@ -6,6 +6,8 @@ etn_test_target(${PROJECT_NAME_UNDERSCORE}
     src/UniTests.cpp
   USES
     ${PROJECT_NAME_UNDERSCORE}
+  FLAGS
+    "-w"
 )
 
 if (EXTERNAL_SERVER_FOR_TEST)

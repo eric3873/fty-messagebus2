@@ -23,6 +23,7 @@
 
 #include "fty/messagebus/test/MsgBusTestCommon.hpp"
 #include <fty/messagebus/MsgBusAmqp.hpp>
+#include <fty/messagebus/amqp/MsgBusAmqpUtils.hpp>
 
 #include <catch2/catch.hpp>
 #include <iostream>
@@ -36,12 +37,20 @@ namespace
 #endif
 
   static constexpr auto TEST_TOPIC = "examples";
+  static constexpr auto TEST_QUEUE = "examples";
 
   using namespace fty::messagebus;
   using namespace fty::messagebus::test;
+  using namespace fty::messagebus::amqp;
   using Message = fty::messagebus::amqp::AmqpMessage;
 
+
   //static auto s_msgBus = MsgBusAmqp("TestCase", AMQP_SERVER_URI);
+
+  void replyerListener(const Message& /*message*/)
+  {
+    //s_msgBus.sendRequestReply(message, message.userData() + OK);
+  }
 
   // Replyer listener
   // void responseListener(Message message)
@@ -66,9 +75,45 @@ namespace
   //   //REQUIRE(true);
   // }
 
+  TEST_CASE("Amqp proton message", "[protonMessage]")
+  {
+    auto msgBus = MsgBusAmqp("AmqpMessageTestCase", AMQP_SERVER_URI);
+    auto message = msgBus.buildMessage(TEST_QUEUE, QUERY);
+    proton::message protonMessage = getAmqpMessageFromMsgBusAmqpMessage(message);
+    std::cout << protonMessage << std::endl;
+
+    //Test all properties
+    REQUIRE(protonMessage.body() == QUERY);
+    REQUIRE(protonMessage.user() == "AmqpMessageTestCase");
+
+    std::string replyTo(TEST_QUEUE);
+    replyTo.append(".");
+    replyTo.append(proton::to_string(protonMessage.correlation_id()));
+    std::cout << replyTo << std::endl;
+    REQUIRE(protonMessage.reply_to() == replyTo);
+  }
+
+  TEST_CASE("Amqp sync request", "[sendRequest]")
+  {
+    auto msgBus = MsgBusAmqp("AmqpPubSubTestCase", AMQP_SERVER_URI);
+
+    // DeliveryState state = msgBus.registerRequestListener(TEST_QUEUE, replyerListener);
+    // REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
+
+    // Send synchronous request
+    Opt<Message> replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY, MAX_TIMEOUT);
+    REQUIRE(true);
+    // REQUIRE(replyMsg.has_value());
+    // REQUIRE(replyMsg.value().userData() == RESPONSE);
+
+    // replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY_2, MAX_TIMEOUT);
+    // REQUIRE(replyMsg.has_value());
+    // REQUIRE(replyMsg.value().userData() == RESPONSE_2);
+  }
+
   TEST_CASE("Amqp publish subscribe", "[publish]")
   {
-    auto msgBus = MsgBusAmqp("MqttPubSubTestCase", AMQP_SERVER_URI);
+    auto msgBus = MsgBusAmqp("AmqpPubSubTestCase", AMQP_SERVER_URI);
     DeliveryState state;
 
     // TODO see only for subscribing

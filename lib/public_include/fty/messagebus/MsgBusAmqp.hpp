@@ -47,7 +47,10 @@ namespace fty::messagebus
     DeliveryState registerRequestListener(const std::string& requestQueue, MessageListener<amqp::AmqpMessage> messageListener) override;
     DeliveryState sendRequestReply(const amqp::AmqpMessage& inputRequest, const amqp::UserData& response) override;
 
-  private:
     amqp::AmqpMessage buildMessage(const std::string& queue, const amqp::UserData& msg) override;
+
+
+  private:
+    //amqp::AmqpMessage buildMessage(const std::string& queue, const amqp::UserData& msg) override;
   };
 } // namespace fty::messagebus

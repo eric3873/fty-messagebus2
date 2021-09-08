@@ -77,12 +77,12 @@ namespace fty::messagebus
 
   Opt<AmqpMessage> MsgBusAmqp::sendRequest(const std::string& requestQueue, const UserData& request, int timeOut)
   {
-    return m_msgBus->request(PREFIX_REQUEST_QUEUE + requestQueue, buildMessage(requestQueue, request), timeOut);
+    return m_msgBus->request(/*PREFIX_REQUEST_QUEUE + */requestQueue, buildMessage(requestQueue, request), timeOut);
   }
 
   DeliveryState MsgBusAmqp::registerRequestListener(const std::string& requestQueue, MessageListener<AmqpMessage> messageListener)
   {
-    return m_msgBus->receive(PREFIX_REQUEST_QUEUE + requestQueue, messageListener);
+    return m_msgBus->receive(/*PREFIX_REQUEST_QUEUE + */requestQueue, messageListener);
   }
 
   DeliveryState MsgBusAmqp::sendRequestReply(const AmqpMessage& inputRequest, const UserData& response)
@@ -101,7 +101,7 @@ namespace fty::messagebus
   AmqpMessage MsgBusAmqp::buildMessage(const std::string& queue, const UserData& msg)
   {
     auto correlationId = utils::generateUuid();
-    auto replyTo = PREFIX_REPLY_QUEUE + queue + '.' + correlationId;
+    auto replyTo = /*PREFIX_REPLY_QUEUE +*/ queue + '.' + correlationId;
 
     AmqpMessage message;
     message.userData() = msg;
