@@ -44,7 +44,22 @@ namespace
   using namespace fty::messagebus::amqp;
   using Message = fty::messagebus::amqp::AmqpMessage;
 
+  namespace
+  {
+    // TODO temporary
+    std::string to_upper(const std::string& s)
+    {
+      std::string uc(s);
+      size_t l = uc.size();
 
+      for (size_t i = 0; i < l; i++)
+      {
+        uc[i] = static_cast<char>(std::toupper(uc[i]));
+      }
+
+      return uc;
+    }
+  } // namespace
   //static auto s_msgBus = MsgBusAmqp("TestCase", AMQP_SERVER_URI);
 
   void replyerListener(const Message& /*message*/)
@@ -97,18 +112,14 @@ namespace
   {
     auto msgBus = MsgBusAmqp("AmqpPubSubTestCase", AMQP_SERVER_URI);
 
-    // DeliveryState state = msgBus.registerRequestListener(TEST_QUEUE, replyerListener);
-    // REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
-
     // Send synchronous request
     Opt<Message> replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY, MAX_TIMEOUT * 10);
-    REQUIRE(true);
-    // REQUIRE(replyMsg.has_value());
-    // REQUIRE(replyMsg.value().userData() == RESPONSE);
+    REQUIRE(replyMsg.has_value());
+    REQUIRE(replyMsg.value().userData() == to_upper(QUERY) /*RESPONSE*/);
 
-    // replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY_2, MAX_TIMEOUT);
-    // REQUIRE(replyMsg.has_value());
-    // REQUIRE(replyMsg.value().userData() == RESPONSE_2);
+    replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY_2, MAX_TIMEOUT);
+    REQUIRE(replyMsg.has_value());
+    REQUIRE(replyMsg.value().userData() == to_upper(QUERY_2) /*RESPONSE_2*/);
   }
 
   TEST_CASE("Amqp publish subscribe", "[publish]")

@@ -39,6 +39,7 @@ namespace fty::messagebus::amqp
   using Container = proton::container;
   using ClientPointer = std::shared_ptr<Client>;
   using ContainerPointer = std::shared_ptr<Container>;
+  using messagePointer = std::shared_ptr<proton::message>;
 
   using MessageListener = fty::messagebus::MessageListener<AmqpMessage>;
 

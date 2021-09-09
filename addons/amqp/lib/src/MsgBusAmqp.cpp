@@ -249,15 +249,22 @@ namespace fty::messagebus::amqp
     std::string amqpQueue = AMQP_QUEUE_PREFIX + requestQueue;
 
     std::string replyTo = AMQP_QUEUE_PREFIX + fty::messagebus::amqp::getReplyQueue(message);
+    log_debug("Sending request payload: '%s' to: %s and wait message on reply queue %s", message.userData().c_str(), amqpQueue.c_str(), replyTo.c_str());
+
     auto protonMsg = getAmqpMessageFromMsgBusAmqpMessage(message);
     // TODO remove from here
     protonMsg.to(amqpQueue);
 
-    std::cout << protonMsg << std::endl;
-
-    Requester requester(m_endPoint, protonMsg, receiveTimeOut);
+    messagePointer response = std::make_shared<proton::message>();
+    Requester requester(m_endPoint, protonMsg);
     proton::container(requester).run();
-    log_debug("Sending request payload: '%s' to: %s and wait message on reply queue %s", message.userData().c_str(), amqpQueue.c_str(), replyTo.c_str());
+
+    bool messageArrived = requester.tryConsumeMessageFor(response, receiveTimeOut);
+    if(messageArrived)
+    {
+      log_debug("Message arrived (%s)", proton::to_string(*response).c_str());
+      replyMsg = Message{getMetaDataFromAmqpProperties(response), proton::to_string(response->body())};
+    }
 
     return replyMsg;
   }
