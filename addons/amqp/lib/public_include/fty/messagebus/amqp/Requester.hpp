@@ -42,14 +42,13 @@ namespace fty::messagebus::amqp
     std::string m_url;
     proton::duration m_timeout;
     proton::message m_request;
-    proton::message m_response;
+    std::queue<proton::message> m_messagesQueue;
 
     proton::connection m_connection;
 
     proton::sender m_sender;
     proton::receiver m_receiver;
-    proton::work_queue *p_work_queue;
-    bool m_messageArrived, canceled = false;
+    proton::work_queue* p_work_queue;
 
   public:
     Requester(const std::string& url, const proton::message& message)
@@ -62,7 +61,7 @@ namespace fty::messagebus::amqp
     void on_container_start(proton::container& con) override
     {
       log_debug("on_container_start");
-      m_connection = con.connect(m_url);//, proton::connection_options().idle_timeout(m_timeout));
+      m_connection = con.connect(m_url); //, proton::connection_options().idle_timeout(m_timeout));
 
       m_sender = m_connection.open_sender(m_request.to());
       // Create a receiver requesting a dynamically created queue
@@ -83,17 +82,13 @@ namespace fty::messagebus::amqp
     {
       // receiver_options opts = receiver_options().source(source_options().dynamic(true));
       // m_receiver = m_sender.connection().open_receiver("", opts);
-      if (m_messageArrived)
+      bool messageArrived = !m_messagesQueue.empty();
+      if (messageArrived)
       {
-        *response = std::move(m_response);
+        *response = std::move(m_messagesQueue.front());
+        m_messagesQueue.pop();
       }
-
-      return m_messageArrived;
-    }
-
-    proton::message receive()
-    {
-      return m_response;
+      return messageArrived;
     }
 
     void on_sender_open(proton::sender& s) override
@@ -111,27 +106,20 @@ namespace fty::messagebus::amqp
 
     void cancel(proton::receiver receiver)
     {
-        log_debug("Cancel");
-        canceled = true;
+      log_debug("Cancel");
 
-        m_receiver.connection().close();
-        m_sender.connection().close();
-        m_connection.close();
-        //m_connection.container().stop();
-        log_debug("Canceled");
-
+      m_receiver.connection().close();
+      m_sender.connection().close();
+      m_connection.close();
+      //m_connection.container().stop();
+      log_debug("Canceled");
     }
 
-    void on_message(proton::delivery& d, proton::message& response) override
+    void on_message(proton::delivery& d, proton::message& msg) override
     {
-      std::cout << " response arrived: " << response << std::endl;
-      m_response = response;
-      m_messageArrived = true;
-      //d.connection().close();
-      //delete *p_work_queue;
+      std::cout << " response arrived: " << msg << std::endl;
+      m_messagesQueue.push(msg);
       cancel(d.receiver());
-      //m_connection.wake();
-      //d.connection().close();
     }
   };
 
