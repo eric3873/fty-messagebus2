@@ -42,12 +42,11 @@ namespace fty::messagebus::amqp
   private:
     std::string m_url;
     proton::message m_request;
+    // Synchronisation
     std::promise<proton::message> m_promise;
     std::future<proton::message> m_future;
     std::mutex m_lock;
-
-    proton::connection m_connection;
-
+    // sender and receiver
     proton::sender m_sender;
     proton::receiver m_receiver;
 
@@ -62,9 +61,9 @@ namespace fty::messagebus::amqp
     void on_container_start(proton::container& con) override
     {
       log_debug("on_container_start");
-      m_connection = con.connect(m_url);
+      proton::connection conn = con.connect(m_url);
 
-      m_sender = m_connection.open_sender(m_request.to());
+      m_sender = conn.open_sender(m_request.to());
       // Create a receiver requesting a dynamically created queue
       // for the message source.
       receiver_options opts = receiver_options().source(source_options().dynamic(true));
@@ -107,22 +106,14 @@ namespace fty::messagebus::amqp
     void cancel(proton::receiver receiver)
     {
       std::lock_guard<std::mutex> l(m_lock);
-      log_debug("Cancel");
+      log_debug("Canceling");
       if (m_receiver)
       {
-        log_debug("Cancel1");
         m_receiver.connection().close();
       }
       if (m_sender)
-      {
-        log_debug("Cancel2");
+      {;
         m_sender.connection().close();
-      }
-      if (m_connection)
-      {
-        log_debug("Cancel3");
-
-        m_connection.close();
       }
       log_debug("Canceled");
     }

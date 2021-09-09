@@ -113,7 +113,7 @@ namespace
     auto msgBus = MsgBusAmqp("AmqpPubSubTestCase", AMQP_SERVER_URI);
 
     // Send synchronous request
-    Opt<Message> replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY, MAX_TIMEOUT * 3);
+    Opt<Message> replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY, MAX_TIMEOUT);
     REQUIRE(replyMsg.has_value());
     REQUIRE(replyMsg.value().userData() == to_upper(QUERY) /*RESPONSE*/);
 
