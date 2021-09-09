@@ -57,7 +57,7 @@ namespace fty::messagebus::amqp
       metaData.emplace(CORRELATION_ID, proton::to_string(msg->correlation_id()));
     }
 
-    if (!msg->reply_to().empty())
+    if (!msg->address().empty())
     {
       metaData.emplace(REPLY_TO, msg->reply_to());
     }

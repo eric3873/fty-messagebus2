@@ -256,15 +256,30 @@ namespace fty::messagebus::amqp
     protonMsg.to(amqpQueue);
 
     messagePointer response = std::make_shared<proton::message>();
+
     Requester requester(m_endPoint, protonMsg);
-    proton::container(requester).run();
+    std::thread thrd([&]() {
+      proton::container(requester).run();
+    });
+    thrd.detach();
+
+    //std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::cout << "avant tryConsumeMessageFor" << std::endl;
 
     bool messageArrived = requester.tryConsumeMessageFor(response, receiveTimeOut);
-    if(messageArrived)
+    std::cout << "apres tryConsumeMessageFor" << std::endl;
+
+    if (messageArrived)
     {
       log_debug("Message arrived (%s)", proton::to_string(*response).c_str());
-      replyMsg = Message{getMetaDataFromAmqpProperties(response), proton::to_string(response->body())};
+      if (!response->body().empty())
+      {
+        replyMsg = Message{getMetaDataFromAmqpProperties(response), proton::to_string(response->body())};
+        log_debug("Message transformed");
+      }
     }
+
+    //thrd.join();
 
     return replyMsg;
   }

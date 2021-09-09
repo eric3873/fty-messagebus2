@@ -28,6 +28,7 @@
 #include <proton/source_options.hpp>
 #include <proton/tracker.hpp>
 
+#include <future>
 #include <iostream>
 #include <vector>
 
@@ -40,28 +41,28 @@ namespace fty::messagebus::amqp
   {
   private:
     std::string m_url;
-    proton::duration m_timeout;
     proton::message m_request;
-    std::queue<proton::message> m_messagesQueue;
+    std::promise<proton::message> m_promise;
+    std::future<proton::message> m_future;
+    std::mutex m_lock;
 
     proton::connection m_connection;
 
     proton::sender m_sender;
     proton::receiver m_receiver;
-    proton::work_queue* p_work_queue;
 
   public:
     Requester(const std::string& url, const proton::message& message)
       : m_url(url)
       , m_request(message)
-      , m_timeout(int(10 * proton::duration::SECOND.milliseconds()))
     {
+      m_future = m_promise.get_future();
     }
 
     void on_container_start(proton::container& con) override
     {
       log_debug("on_container_start");
-      m_connection = con.connect(m_url); //, proton::connection_options().idle_timeout(m_timeout));
+      m_connection = con.connect(m_url);
 
       m_sender = m_connection.open_sender(m_request.to());
       // Create a receiver requesting a dynamically created queue
@@ -78,16 +79,17 @@ namespace fty::messagebus::amqp
       m_sender.send(m_request);
     }
 
-    bool tryConsumeMessageFor(std::shared_ptr<proton::message> response, int timeout)
+    bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout)
     {
-      // receiver_options opts = receiver_options().source(source_options().dynamic(true));
-      // m_receiver = m_sender.connection().open_receiver("", opts);
-      bool messageArrived = !m_messagesQueue.empty();
-      if (messageArrived)
+      log_debug("Checking answer for %d, please wait", timeout);
+
+      bool messageArrived = false;
+      if (m_future.wait_for(std::chrono::seconds(timeout)) != std::future_status::timeout)
       {
-        *response = std::move(m_messagesQueue.front());
-        m_messagesQueue.pop();
+        *resp = std::move(m_future.get());
+        messageArrived = true;
       }
+      cancel(m_receiver);
       return messageArrived;
     }
 
@@ -99,27 +101,36 @@ namespace fty::messagebus::amqp
     void on_receiver_open(proton::receiver& receiver) override
     {
       log_debug("Open receiver for target address: %s", receiver.source().address().c_str());
-      // p_work_queue = &receiver.work_queue();
-      // p_work_queue->schedule(m_timeout, make_work(&Requester::cancel, this, receiver));
       send_request();
     }
 
     void cancel(proton::receiver receiver)
     {
+      std::lock_guard<std::mutex> l(m_lock);
       log_debug("Cancel");
+      if (m_receiver)
+      {
+        log_debug("Cancel1");
+        m_receiver.connection().close();
+      }
+      if (m_sender)
+      {
+        log_debug("Cancel2");
+        m_sender.connection().close();
+      }
+      if (m_connection)
+      {
+        log_debug("Cancel3");
 
-      m_receiver.connection().close();
-      m_sender.connection().close();
-      m_connection.close();
-      //m_connection.container().stop();
+        m_connection.close();
+      }
       log_debug("Canceled");
     }
 
     void on_message(proton::delivery& d, proton::message& msg) override
     {
-      std::cout << " response arrived: " << msg << std::endl;
-      m_messagesQueue.push(msg);
-      cancel(d.receiver());
+      std::lock_guard<std::mutex> l(m_lock);
+      m_promise.set_value(msg);
     }
   };
 
