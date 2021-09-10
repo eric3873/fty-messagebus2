@@ -117,9 +117,9 @@ namespace
     REQUIRE(replyMsg.has_value());
     REQUIRE(replyMsg.value().userData() == to_upper(QUERY) /*RESPONSE*/);
 
-    // replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY_2, MAX_TIMEOUT);
-    // REQUIRE(replyMsg.has_value());
-    // REQUIRE(replyMsg.value().userData() == to_upper(QUERY_2) /*RESPONSE_2*/);
+    replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY_2, MAX_TIMEOUT);
+    REQUIRE(replyMsg.has_value());
+    REQUIRE(replyMsg.value().userData() == to_upper(QUERY_2) /*RESPONSE_2*/);
   }
 
   TEST_CASE("Amqp publish subscribe", "[publish]")

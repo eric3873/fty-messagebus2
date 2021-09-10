@@ -80,7 +80,7 @@ namespace fty::messagebus::amqp
 
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout)
     {
-      log_debug("Checking answer for %d, please wait", timeout);
+      log_debug("Checking answer for %d second(s), please wait...", timeout);
 
       bool messageArrived = false;
       if (m_future.wait_for(std::chrono::seconds(timeout)) != std::future_status::timeout)
@@ -88,7 +88,7 @@ namespace fty::messagebus::amqp
         *resp = std::move(m_future.get());
         messageArrived = true;
       }
-      cancel(m_receiver);
+      cancel();
       return messageArrived;
     }
 
@@ -103,7 +103,7 @@ namespace fty::messagebus::amqp
       send_request();
     }
 
-    void cancel(proton::receiver receiver)
+    void cancel()
     {
       std::lock_guard<std::mutex> l(m_lock);
       log_debug("Canceling");
@@ -112,7 +112,7 @@ namespace fty::messagebus::amqp
         m_receiver.connection().close();
       }
       if (m_sender)
-      {;
+      {
         m_sender.connection().close();
       }
       log_debug("Canceled");
