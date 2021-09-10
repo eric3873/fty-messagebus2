@@ -36,15 +36,18 @@ namespace fty::messagebus::amqp
   using Message = fty::messagebus::amqp::AmqpMessage;
   using property_map = std::map<std::string, proton::scalar>;
 
-  inline const MetaData getMetaDataFromAmqpProperties(const messagePointer& msg)
+// TODO remove from here
+  static auto constexpr AMQP_QUEUE_PREFIX_ = "queue://";
+
+  inline const MetaData getMetaDataFromAmqpProperties(const proton::message& msg)
   {
     MetaData metaData{};
 
     // User properties
-    if (!msg->properties().empty())
+    if (!msg.properties().empty())
     {
       property_map props;
-      proton::get(msg->properties(), props);
+      proton::get(msg.properties(), props);
       for (property_map::iterator it = props.begin(); it != props.end(); ++it)
       {
         metaData.emplace(proton::to_string(it->first), proton::to_string(it->second));
@@ -52,14 +55,14 @@ namespace fty::messagebus::amqp
     }
 
     // Req/Rep pattern properties
-    if (!msg->correlation_id().empty())
+    if (!msg.correlation_id().empty())
     {
-      metaData.emplace(CORRELATION_ID, proton::to_string(msg->correlation_id()));
+      metaData.emplace(CORRELATION_ID, proton::to_string(msg.correlation_id()));
     }
 
-    if (!msg->address().empty())
+    if (!msg.address().empty())
     {
-      metaData.emplace(REPLY_TO, msg->reply_to());
+      metaData.emplace(REPLY_TO, msg.reply_to());
     }
     return metaData;
   }
@@ -69,17 +72,19 @@ namespace fty::messagebus::amqp
     proton::message msg;
     for (const auto& [key, value] : message.metaData())
     {
+      std::cout<< "key: "<< key<< " value: " << value<<std::endl;
       if (key == REPLY_TO)
       {
         std::string correlationId = message.metaData().find(CORRELATION_ID)->second;
         msg.correlation_id(correlationId);
         msg.reply_to(value);
+        msg.to(value);
       }
       else if (key == SUBJECT)
       {
         msg.subject(value);
       }
-      else if (key == TO)
+      else if (key == TO )
       {
         msg.to(value);
       }
