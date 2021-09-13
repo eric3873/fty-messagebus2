@@ -53,7 +53,7 @@ namespace fty::messagebus::amqp
     proton::receiver m_receiver;
     MessageListener m_messageListener;
     //std::unique_ptr<proton::work_queue> p_work_queue;
-    proton::work_queue* p_work_queue;
+    //proton::work_queue* p_work_queue;
 
   public:
     Receiver(const std::string& url, const std::string& address, MessageListener messageListener)
@@ -70,7 +70,7 @@ namespace fty::messagebus::amqp
 
     void on_container_start(proton::container& con) override
     {
-      log_debug("on_container_start");
+      log_debug("Receiver on_container_start");
       proton::connection conn = con.connect(m_url);
 
       m_receiver = conn.open_receiver(m_address);
@@ -78,15 +78,15 @@ namespace fty::messagebus::amqp
 
     void on_receiver_open(proton::receiver& receiver) override
     {
-      log_debug("Open receiver for target address: %s", receiver.source().address().c_str());
-      //p_work_queue = std::make_unique<proton::work_queue>();
-      p_work_queue = &receiver.work_queue();
+      log_debug("Receiver on_receiver_open for target address: %s", receiver.source().address().c_str());
+      //p_work_queue.reset(&receiver.work_queue());
+      //p_work_queue = &receiver.work_queue();
     }
 
     void cancel()
     {
       std::lock_guard<std::mutex> l(m_lock);
-      log_debug("Canceling");
+      log_debug("Cancel for %s", m_address.c_str());
       if (m_receiver)
       {
         m_receiver.connection().close();
@@ -94,18 +94,16 @@ namespace fty::messagebus::amqp
       log_debug("Canceled");
     }
 
-    void print(const proton::message& msg)
-    {
-      std::cout << "print received: " << msg << std::endl;
-    }
-
     void on_message(proton::delivery&, proton::message& msg) override
     {
+
       std::lock_guard<std::mutex> l(m_lock);
+      log_debug("Message arrived on: %s", m_address);
       //m_work_queue.add(make_work(&Queue::unsubscribe, s->queue_, s));
       //p_work_queue->add([=]() { this->print(msg);});
       AmqpMessage amqpMsg(getMetaDataFromAmqpProperties(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
-      p_work_queue->add(proton::make_work(m_messageListener, amqpMsg));
+      //p_work_queue->add(proton::make_work(m_messageListener, amqpMsg));
+      m_receiver.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
     }
   };
 

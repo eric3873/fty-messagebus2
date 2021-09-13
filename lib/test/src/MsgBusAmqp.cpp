@@ -74,8 +74,8 @@ namespace
   // Reponse listener
   void responseListener(Message message)
   {
-    //assert(message.userData() == RESPONSE);
-    assert(true);
+    std::cout << "responseListener: "<< message.userData() <<std ::endl;
+    REQUIRE(message.userData() == RESPONSE);
   }
 
   //----------------------------------------------------------------------
@@ -113,6 +113,24 @@ namespace
     REQUIRE(protonMessage.reply_to() == replyTo);
   }
 
+
+  TEST_CASE("Amqp async request", "[sendRequest]")
+  {
+    auto msgBus = MsgBusAmqp("AmqpAsyncRequestTestCase", AMQP_SERVER_URI);
+    DeliveryState state;
+
+    state = msgBus.registerRequestListener(TEST_QUEUE, replyerListener);
+    REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
+    state = msgBus.sendRequest(TEST_QUEUE, QUERY, responseListener);
+    REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
+
+    // Wait to process the response
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
+
   TEST_CASE("Amqp sync request", "[sendRequest]")
   {
     auto msgBus = MsgBusAmqp("AmqpSyncRequestTestCase", AMQP_SERVER_URI);
@@ -128,21 +146,6 @@ namespace
     // replyMsg = msgBus.sendRequest(TEST_QUEUE, QUERY_2, MAX_TIMEOUT);
     // REQUIRE(replyMsg.has_value());
     // REQUIRE(replyMsg.value().userData() == to_upper(QUERY_2) /*RESPONSE_2*/);
-  }
-
-  TEST_CASE("Amqp async request", "[sendRequest]")
-  {
-    auto msgBus = MsgBusAmqp("AmqpAsyncRequestTestCase", AMQP_SERVER_URI);
-    DeliveryState state;
-
-    // state = msgBus.registerRequestListener(TEST_QUEUE, replyerListener);
-    // REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
-
-    state = msgBus.sendRequest(TEST_QUEUE, QUERY, responseListener);
-    REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
-
-    // Wait to process the response
-    std::this_thread::sleep_for(std::chrono::seconds(MAX_TIMEOUT));
   }
 
   TEST_CASE("Amqp publish subscribe", "[publish]")

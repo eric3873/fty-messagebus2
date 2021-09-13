@@ -36,9 +36,6 @@ namespace fty::messagebus::amqp
   using Message = fty::messagebus::amqp::AmqpMessage;
   using property_map = std::map<std::string, proton::scalar>;
 
-// TODO remove from here
-  static auto constexpr AMQP_QUEUE_PREFIX_ = "queue://";
-
   inline const MetaData getMetaDataFromAmqpProperties(const proton::message& msg)
   {
     MetaData metaData{};
@@ -72,7 +69,6 @@ namespace fty::messagebus::amqp
     proton::message msg;
     for (const auto& [key, value] : message.metaData())
     {
-      std::cout<< "key: "<< key<< " value: " << value<<std::endl;
       if (key == REPLY_TO)
       {
         std::string correlationId = message.metaData().find(CORRELATION_ID)->second;

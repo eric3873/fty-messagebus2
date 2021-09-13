@@ -40,8 +40,8 @@
 // #include <fty/messagebus/amqp/AmqpContainer.hpp>
 // #include <fty/messagebus/amqp/Client.hpp>
 // #include <fty/messagebus/amqp/Replyer.hpp>
-#include <fty/messagebus/amqp/Requester.hpp>
 #include <fty/messagebus/amqp/Receiver.hpp>
+#include <fty/messagebus/amqp/Requester.hpp>
 #include <fty/messagebus/amqp/Sender.hpp>
 
 #include <proton/connection_options.hpp>
@@ -78,9 +78,15 @@ namespace fty::messagebus::amqp
         //     int result = pthread_cancel(pHandle);
         //     std::cout << "cancel: " << strerror(result) << std::endl;
         // }
-        pthread_cancel(m_containerThreads["sub"]);
+        //pthread_cancel(m_containerThreads["sub"]);
         //pthread_cancel(m_containerThreads["pub"]);
-        pthread_cancel(m_containerThreads["container"]);
+        //pthread_cancel(m_containerThreads["container"]);
+
+        // for (const auto& [key, receiver] : m_subScriptions)
+        // {
+        //   log_debug("Cleaning: %s...", key.c_str());
+        //   receiver->cancel();
+        // }
         log_debug("%s cleaned", m_clientName.c_str());
       }
       catch (const std::exception& e)
@@ -102,20 +108,20 @@ namespace fty::messagebus::amqp
       auto clientId = utils::getClientId(m_clientName);
       log_debug("Amqp connecting for clientId: %s", clientId.c_str());
 
-      m_client = std::make_shared<Client>(DEFAULT_AMQP_END_POINT);
-      m_client->senderAddress("topic://examples");
+      // m_client = std::make_shared<Client>(DEFAULT_AMQP_END_POINT);
+      // m_client->senderAddress("topic://examples");
 
       m_container = std::make_shared<proton::container>(*m_client);
       // m_containerThreads.push_back(std::thread([=]() {
       //   m_container->run();
       // }).native_handle());
 
-      std::thread thrd([=]() {
-        m_container->run();
-      });
+      // std::thread thrd([=]() {
+      //   m_container->run();
+      // });
       // //m_containerThreads.push_back(thrd.native_handle());
-      m_containerThreads["container"] = thrd.native_handle();
-      thrd.detach();
+      // m_containerThreads["container"] = thrd.native_handle();
+      // thrd.detach();
 
       //m_containerThreads.front().detach();
 
@@ -219,9 +225,9 @@ namespace fty::messagebus::amqp
       std::thread thrd([&]() {
         proton::container(*receiver).run();
       });
+      m_subScriptions.emplace(std::make_pair(amqpQueue, receiver));
       thrd.detach();
       //thrd.join();
-      m_subScriptions.emplace(std::make_pair(amqpQueue, receiver));
       //m_subScriptions[amqpQueue] = receiver;
       delivState = DeliveryState::DELI_STATE_ACCEPTED;
       log_debug("Waiting to receive msg from: %s", amqpQueue.c_str(), to_string(delivState).c_str());
@@ -269,7 +275,6 @@ namespace fty::messagebus::amqp
     if (isServiceAvailable())
     {
       proton::message msgToSend = getAmqpMessageFromMsgBusAmqpMessage(message);
-      std::cout << "msgToSend: " <<msgToSend<< std::endl;
       log_debug("Sending reply payload: '%s' to: %s", message.userData().c_str(), msgToSend.to().c_str());
 
       Sender sender = Sender(m_endPoint, msgToSend.to());

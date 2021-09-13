@@ -53,7 +53,7 @@ namespace fty::messagebus::amqp
     proton::work_queue* p_workQueue;
 
   public:
-    Sender(const std::string& url,const std::string& address)
+    Sender(const std::string& url, const std::string& address)
       : m_url(url)
       , m_address(address)
     {
@@ -66,13 +66,13 @@ namespace fty::messagebus::amqp
 
     void on_container_start(proton::container& con) override
     {
-      log_debug("on_container_start");
+      log_debug("Sender on_container_start");
       m_connection = con.connect(m_url);
     }
 
     void on_connection_open(proton::connection& conn) override
     {
-      log_debug("on_connection_open");
+      log_debug("Sender on_connection_open for target address: %s", m_address.c_str());
       conn.open_sender(m_address);
     }
 
@@ -82,27 +82,27 @@ namespace fty::messagebus::amqp
       log_debug("on_sender_open");
       std::unique_lock<std::mutex> l(m_lock);
       m_sender = s;
-      p_workQueue = &s.work_queue();
+      //p_workQueue = &s.work_queue();
       m_cvSenderReady.notify_all();
     }
 
-
     void sendMsg(const proton::message& msg)
     {
-      log_debug("Wait init before sending message...");
+      log_debug("Init sender waiting...");
       std::unique_lock<std::mutex> l(m_lock);
       //m_cv.wait(l);
       // log_debug("connection is ready");
       // m_connection.open_sender(msg.to());
       m_cvSenderReady.wait(l);
       log_debug("sender ready on %s", msg.to().c_str());
-      if (p_workQueue)
-      {
-        p_workQueue->add([=]() {
-          m_sender.send(msg);
-          cancel();
-        });
-      }
+      // if (p_workQueue)
+      // {
+      m_sender.work_queue().add([=]() {
+        m_sender.send(msg);
+        log_debug("sent");
+        cancel();
+      });
+      //}
 
       // l.unlock();
       // work_queue()->add([=]() {
@@ -115,7 +115,7 @@ namespace fty::messagebus::amqp
     void cancel()
     {
       std::lock_guard<std::mutex> l(m_lock);
-      log_debug("Canceling");
+      log_debug("Cancel for %s", m_address.c_str());
       if (m_sender)
       {
         m_sender.connection().close();

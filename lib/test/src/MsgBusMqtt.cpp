@@ -45,7 +45,7 @@ namespace
 
   static auto s_msgBus = MsgBusMqtt("TestCase", MQTT_SERVER_URI);
 
-  // Replyer listener
+
   void replyerListener(const Message& message)
   {
     s_msgBus.sendRequestReply(message, message.userData() + OK);
@@ -54,7 +54,7 @@ namespace
   // Response listener
   void responseListener(Message message)
   {
-    assert(message.userData() == RESPONSE);
+    REQUIRE(message.userData() == RESPONSE);
   }
 
   //----------------------------------------------------------------------
