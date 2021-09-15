@@ -1,4 +1,4 @@
-usr/lib/*/libfty_common_messagebus2_amqp.so*
-usr/lib/*/libfty_common_messagebus2_malamute.so*
-usr/lib/*/libfty_common_messagebus2_mqtt.so*
-usr/lib/*/libfty_common_messagebus2.so*
+#usr/lib/*/libfty-common-messagebus2-amqp.so*
+#usr/lib/*/libfty-common-messagebus2-malamute.so*
+usr/lib/*/libfty-common-messagebus2-mqtt.so*
+usr/lib/*/libfty-common-messagebus2.so*

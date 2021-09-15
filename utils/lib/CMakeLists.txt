@@ -5,7 +5,7 @@ project(fty_common_messagebus_utils
 
 find_package(Threads REQUIRED)
 
-etn_target(static ${PROJECT_NAME}
+etn_target(static ${PROJECT_NAME} PRIVATE
   PUBLIC_INCLUDE_DIR
     public_include
   PUBLIC_HEADERS
