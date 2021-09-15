@@ -34,9 +34,9 @@ namespace fty::messagebus
   static const std::string PREFIX_TOPIC = "etn.t";
 
   // Queues
-  static const std::string PREFIX_QUEUE = "etn.t.";
-  static const std::string PREFIX_REQUEST_QUEUE = PREFIX_QUEUE + "request";
-  static const std::string PREFIX_REPLY_QUEUE = PREFIX_QUEUE + "reply";
+  static const std::string PREFIX_QUEUE = "etn.q.";
+  static const std::string PREFIX_REQUEST_QUEUE = PREFIX_QUEUE + "request.";
+  static const std::string PREFIX_REPLY_QUEUE = PREFIX_QUEUE + "reply.";
 }
 
 namespace fty::messagebus
@@ -72,17 +72,18 @@ namespace fty::messagebus
   {
     auto message = buildMessage(requestQueue, request);
     m_msgBus->receive(message.metaData().find(REPLY_TO)->second, messageListener);
-    return m_msgBus->sendRequest(/*PREFIX_REQUEST_QUEUE + */requestQueue, message);
+    //std::this_thread::sleep_for(std::chrono::seconds(2));
+    return m_msgBus->sendRequest(PREFIX_REQUEST_QUEUE + requestQueue, message);
   }
 
   Opt<AmqpMessage> MsgBusAmqp::sendRequest(const std::string& requestQueue, const UserData& request, int timeOut)
   {
-    return m_msgBus->request(/*PREFIX_REQUEST_QUEUE + */requestQueue, buildMessage(requestQueue, request), timeOut);
+    return m_msgBus->request(PREFIX_REQUEST_QUEUE + requestQueue, buildMessage(requestQueue, request), timeOut);
   }
 
   DeliveryState MsgBusAmqp::registerRequestListener(const std::string& requestQueue, MessageListener<AmqpMessage> messageListener)
   {
-    return m_msgBus->receive(/*PREFIX_REQUEST_QUEUE + */requestQueue, messageListener);
+    return m_msgBus->receive(PREFIX_REQUEST_QUEUE + requestQueue, messageListener);
   }
 
   DeliveryState MsgBusAmqp::sendRequestReply(const AmqpMessage& inputRequest, const UserData& response)
@@ -101,7 +102,7 @@ namespace fty::messagebus
   AmqpMessage MsgBusAmqp::buildMessage(const std::string& queue, const UserData& msg)
   {
     auto correlationId = utils::generateUuid();
-    auto replyTo = /*PREFIX_REPLY_QUEUE +*/ queue + '.' + correlationId;
+    auto replyTo = PREFIX_REPLY_QUEUE + queue;// + '.' + correlationId;
 
     AmqpMessage message;
     message.userData() = msg;

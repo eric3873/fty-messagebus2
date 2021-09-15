@@ -27,6 +27,7 @@
 #include <fty/messagebus/amqp/MsgBusAmqpMessage.hpp>
 #include <fty/messagebus/amqp/Client.hpp>
 #include <fty/messagebus/amqp/Receiver.hpp>
+#include <fty/messagebus/amqp/Sender.hpp>
 
 #include <thread>
 #include <vector>
@@ -42,6 +43,7 @@ namespace fty::messagebus::amqp
   using ContainerPointer = std::shared_ptr<Container>;
   using MessagePointer = std::shared_ptr<proton::message>;
   using ReceiverPointer = std::shared_ptr<Receiver>;
+  using SenderPointer = std::shared_ptr<Sender>;
 
   using MessageListener = fty::messagebus::MessageListener<AmqpMessage>;
 

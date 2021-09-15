@@ -69,8 +69,8 @@ namespace fty::messagebus::amqp
       // Create a receiver requesting a dynamically created queue
       // for the message source.
       receiver_options opts = receiver_options().source(source_options().dynamic(true));
-      m_receiver = m_sender.connection().open_receiver("", opts);
-      //m_receiver = m_sender.connection().open_receiver(m_request.reply_to());
+      //m_receiver = m_sender.connection().open_receiver("", opts);
+      m_receiver = m_sender.connection().open_receiver(m_request.reply_to());
     }
 
     void send_request()

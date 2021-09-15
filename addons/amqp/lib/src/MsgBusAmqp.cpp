@@ -82,11 +82,11 @@ namespace fty::messagebus::amqp
         //pthread_cancel(m_containerThreads["pub"]);
         //pthread_cancel(m_containerThreads["container"]);
 
-        // for (const auto& [key, receiver] : m_subScriptions)
-        // {
-        //   log_debug("Cleaning: %s...", key.c_str());
-        //   receiver->cancel();
-        // }
+        for (const auto& [key, receiv] : m_subScriptions)
+        {
+          log_debug("Cleaning: %s...", key.c_str());
+          //receiv.cancel();
+        }
         log_debug("%s cleaned", m_clientName.c_str());
       }
       catch (const std::exception& e)
@@ -221,16 +221,23 @@ namespace fty::messagebus::amqp
 
       std::string amqpQueue = AMQP_QUEUE_PREFIX + queue;
 
+      log_debug("Waiting to receive msg from: %s", amqpQueue.c_str());
+
       ReceiverPointer receiver = std::make_shared<Receiver>(m_endPoint, amqpQueue, messageListener);
-      std::thread thrd([&]() {
+      //Receiver receiver(m_endPoint, amqpQueue, messageListener);
+      log_debug("Apres shared pointer");
+      std::thread thrd([=]() {
+        log_debug("Avant run");
+        //if(receiver)
         proton::container(*receiver).run();
       });
       m_subScriptions.emplace(std::make_pair(amqpQueue, receiver));
+      //m_subScriptions[amqpQueue] = receiver;
       thrd.detach();
       //thrd.join();
       //m_subScriptions[amqpQueue] = receiver;
       delivState = DeliveryState::DELI_STATE_ACCEPTED;
-      log_debug("Waiting to receive msg from: %s", amqpQueue.c_str(), to_string(delivState).c_str());
+      //log_debug("Waiting to receive msg from: %s", amqpQueue.c_str(), to_string(delivState).c_str());
     }
     return delivState;
   }
@@ -244,8 +251,9 @@ namespace fty::messagebus::amqp
       proton::message msgToSend = getAmqpMessageFromMsgBusAmqpMessage(message);
       // TODO remove from here
       msgToSend.to(amqpQueue);
+      msgToSend.reply_to(AMQP_QUEUE_PREFIX + msgToSend.reply_to());
 
-      log_debug("Sending request payload: '%s' to: %s and wait message on reply queue %s", message.userData().c_str(), msgToSend.to().c_str(), msgToSend.reply_to().c_str());
+      //log_debug("Sending request payload: '%s' to: %s and wait message on reply queue %s", message.userData().c_str(), msgToSend.to().c_str(), msgToSend.reply_to().c_str());
 
       Sender sender = Sender(m_endPoint, amqpQueue);
       std::thread thrd([&]() {
@@ -275,7 +283,7 @@ namespace fty::messagebus::amqp
     if (isServiceAvailable())
     {
       proton::message msgToSend = getAmqpMessageFromMsgBusAmqpMessage(message);
-      log_debug("Sending reply payload: '%s' to: %s", message.userData().c_str(), msgToSend.to().c_str());
+      //log_debug("Sending reply payload: '%s' to: %s", message.userData().c_str(), msgToSend.to().c_str());
 
       Sender sender = Sender(m_endPoint, msgToSend.to());
       std::thread thrd([&]() {
@@ -299,7 +307,7 @@ namespace fty::messagebus::amqp
       std::string amqpQueue = AMQP_QUEUE_PREFIX + requestQueue;
 
       std::string replyTo = AMQP_QUEUE_PREFIX + fty::messagebus::amqp::getReplyQueue(message);
-      log_debug("Sending request payload: '%s' to: %s and wait message on reply queue %s", message.userData().c_str(), amqpQueue.c_str(), replyTo.c_str());
+      //log_debug("Sending request payload: '%s' to: %s and wait message on reply queue %s", message.userData().c_str(), amqpQueue.c_str(), replyTo.c_str());
 
       auto protonMsg = getAmqpMessageFromMsgBusAmqpMessage(message);
       // TODO remove from here

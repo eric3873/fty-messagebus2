@@ -71,9 +71,16 @@ namespace fty::messagebus::amqp
     void on_container_start(proton::container& con) override
     {
       log_debug("Receiver on_container_start");
-      proton::connection conn = con.connect(m_url);
+      try
+      {
+        proton::connection conn = con.connect(m_url);
+        m_receiver = conn.open_receiver(m_address);
+      }
+      catch(std::exception& e)
+      {
+      log_error("Exception %s", e.what());
+      }
 
-      m_receiver = conn.open_receiver(m_address);
     }
 
     void on_receiver_open(proton::receiver& receiver) override
@@ -94,16 +101,16 @@ namespace fty::messagebus::amqp
       log_debug("Canceled");
     }
 
-    void on_message(proton::delivery&, proton::message& msg) override
+    void on_message(proton::delivery& delivery, proton::message& msg) override
     {
-
       std::lock_guard<std::mutex> l(m_lock);
-      log_debug("Message arrived on: %s", m_address);
+      log_debug("Message arrived on: %s", m_address.c_str());
       //m_work_queue.add(make_work(&Queue::unsubscribe, s->queue_, s));
       //p_work_queue->add([=]() { this->print(msg);});
       AmqpMessage amqpMsg(getMetaDataFromAmqpProperties(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
       //p_work_queue->add(proton::make_work(m_messageListener, amqpMsg));
       m_receiver.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
+      delivery.accept();
     }
   };
 

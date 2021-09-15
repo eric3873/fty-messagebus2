@@ -61,13 +61,20 @@ namespace fty::messagebus::amqp
 
     ~Sender()
     {
-      cancel();
+      //cancel();
     }
 
     void on_container_start(proton::container& con) override
     {
       log_debug("Sender on_container_start");
-      m_connection = con.connect(m_url);
+      try
+      {
+        m_connection = con.connect(m_url);
+      }
+      catch(std::exception& e)
+      {
+      log_error("Exception %s", e.what());
+      }
     }
 
     void on_connection_open(proton::connection& conn) override
@@ -98,11 +105,18 @@ namespace fty::messagebus::amqp
       // if (p_workQueue)
       // {
       m_sender.work_queue().add([=]() {
-        m_sender.send(msg);
-        log_debug("sent");
-        cancel();
+        auto tracker = m_sender.send(msg);
+        log_debug("Msg sent %s", proton::to_string(tracker.state()).c_str());
+        m_sender.connection().close();
+        log_debug("Sender closed");
       });
       //}
+      // auto tracker = m_sender.send(msg);
+      // log_debug("Msg sent %s", proton::to_string(tracker.state()).c_str());
+      // m_sender.connection().close();
+      // log_debug("Sender closed");
+      // l.unlock();
+      // cancel();
 
       // l.unlock();
       // work_queue()->add([=]() {
