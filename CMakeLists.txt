@@ -30,6 +30,7 @@ option(                            BUILD_DOC                   "Build documentat
 option(                            EXTERNAL_SERVER_FOR_TEST    "Using external server for test"   OFF)
 
 # Library
+add_subdirectory(utils)
 add_subdirectory(common)
 
 # Addons

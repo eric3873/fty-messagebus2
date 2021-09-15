@@ -3,6 +3,8 @@ project(fty_common_messagebus_utils
         DESCRIPTION "fty messagebus utilitary static library"
 )
 
+find_package(Threads REQUIRED)
+
 etn_target(static ${PROJECT_NAME}
   PUBLIC_INCLUDE_DIR
     public_include
