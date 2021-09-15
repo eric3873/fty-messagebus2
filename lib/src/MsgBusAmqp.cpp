@@ -71,7 +71,7 @@ namespace fty::messagebus
   DeliveryState MsgBusAmqp::sendRequest(const std::string& requestQueue, const UserData& request, MessageListener<AmqpMessage> messageListener)
   {
     auto message = buildMessage(requestQueue, request);
-    m_msgBus->receive(message.metaData().find(REPLY_TO)->second, messageListener);
+    m_msgBus->receive(message.metaData().find(REPLY_TO)->second, messageListener, message.metaData().find(CORRELATION_ID)->second);
     //std::this_thread::sleep_for(std::chrono::seconds(2));
     return m_msgBus->sendRequest(PREFIX_REQUEST_QUEUE + requestQueue, message);
   }

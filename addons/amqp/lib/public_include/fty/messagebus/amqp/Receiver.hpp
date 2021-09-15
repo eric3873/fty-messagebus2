@@ -21,9 +21,9 @@
 
 #pragma once
 
+#include "fty/messagebus/amqp/MsgBusAmqpUtils.hpp"
 #include <fty/messagebus/IMessageBus.hpp>
 #include <fty/messagebus/amqp/MsgBusAmqpMessage.hpp>
-#include "fty/messagebus/amqp/MsgBusAmqpUtils.hpp"
 
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
@@ -40,6 +40,7 @@
 
 namespace fty::messagebus::amqp
 {
+  static auto constexpr AMQP_CORREL_ID = "JMSCorrelationID";
   using MessageListener = fty::messagebus::MessageListener<AmqpMessage>;
 
   class Receiver : public proton::messaging_handler
@@ -47,19 +48,37 @@ namespace fty::messagebus::amqp
   private:
     std::string m_url;
     std::string m_address;
+    MessageListener m_messageListener;
+    std::string m_filter;
 
     std::mutex m_lock;
-    // sender and receiver
+    // receiver
     proton::receiver m_receiver;
-    MessageListener m_messageListener;
     //std::unique_ptr<proton::work_queue> p_work_queue;
     //proton::work_queue* p_work_queue;
 
+    void set_filter(proton::source_options& opts, const std::string& selector_str)
+    {
+      proton::source::filter_map map;
+      proton::symbol filter_key("selector");
+      proton::value filter_value;
+      // The value is a specific AMQP "described type": binary string with symbolic descriptor
+      proton::codec::encoder enc(filter_value);
+      enc << proton::codec::start::described()
+          << proton::symbol("apache.org:selector-filter:string")
+          << selector_str
+          << proton::codec::finish();
+      // In our case, the map has this one element
+      map.put(filter_key, filter_value);
+      opts.filters(map);
+    }
+
   public:
-    Receiver(const std::string& url, const std::string& address, MessageListener messageListener)
+    Receiver(const std::string& url, const std::string& address, MessageListener messageListener, const std::string& filter = "")
       : m_url(url)
       , m_address(address)
       , m_messageListener(std::move(messageListener))
+      , m_filter(filter)
     {
     }
 
@@ -74,13 +93,23 @@ namespace fty::messagebus::amqp
       try
       {
         proton::connection conn = con.connect(m_url);
-        m_receiver = conn.open_receiver(m_address);
+        proton::source_options opts;
+        if (!m_filter.empty())
+        {
+          std::ostringstream correlIdFilter;
+          correlIdFilter << AMQP_CORREL_ID;
+          correlIdFilter << "='";
+          correlIdFilter << m_filter;
+          correlIdFilter << "'";
+          log_debug("CorrelId filter: %s", correlIdFilter.str().c_str());
+          set_filter(opts, correlIdFilter.str());
+        }
+        m_receiver = conn.open_receiver(m_address, proton::receiver_options().source(opts));
       }
-      catch(std::exception& e)
+      catch (std::exception& e)
       {
-      log_error("Exception %s", e.what());
+        log_error("Exception %s", e.what());
       }
-
     }
 
     void on_receiver_open(proton::receiver& receiver) override

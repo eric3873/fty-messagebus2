@@ -104,13 +104,13 @@ namespace
     state = s_msgBus.registerRequestListener(TEST_QUEUE, replyerListener);
     REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
 
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    //std::this_thread::sleep_for(std::chrono::seconds(3));
 
     state = s_msgBus.sendRequest(TEST_QUEUE, QUERY, responseListener);
     REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
 
     // Wait to process the response
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
   }
 
   TEST_CASE("Amqp sync request", "[sendRequest]")

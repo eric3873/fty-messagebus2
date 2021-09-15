@@ -70,6 +70,7 @@ namespace fty::messagebus::amqp
     DeliveryState sendRequest(const std::string& requestQueue, const AmqpMessage& message, MessageListener messageListener) override;
     DeliveryState sendReply(const std::string& replyQueue, const AmqpMessage& message) override;
     DeliveryState receive(const std::string& queue, MessageListener messageListener) override;
+    DeliveryState receive(const std::string& queue, MessageListener messageListener, const std::string& filter);
 
     // Sync queue
     Opt<AmqpMessage> request(const std::string& requestQueue, const AmqpMessage& message, int receiveTimeOut) override;

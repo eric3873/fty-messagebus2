@@ -213,7 +213,7 @@ namespace fty::messagebus::amqp
     return delivState;
   }
 
-  DeliveryState MessageBusAmqp::receive(const std::string& queue, MessageListener messageListener)
+  DeliveryState MessageBusAmqp::receive(const std::string& queue, MessageListener messageListener, const std::string& filter)
   {
     auto delivState = DeliveryState::DELI_STATE_UNAVAILABLE;
     if (isServiceAvailable())
@@ -223,7 +223,7 @@ namespace fty::messagebus::amqp
 
       log_debug("Waiting to receive msg from: %s", amqpQueue.c_str());
 
-      ReceiverPointer receiver = std::make_shared<Receiver>(m_endPoint, amqpQueue, messageListener);
+      ReceiverPointer receiver = std::make_shared<Receiver>(m_endPoint, amqpQueue, messageListener, filter);
       //Receiver receiver(m_endPoint, amqpQueue, messageListener);
       log_debug("Apres shared pointer");
       std::thread thrd([=]() {
@@ -240,6 +240,12 @@ namespace fty::messagebus::amqp
       //log_debug("Waiting to receive msg from: %s", amqpQueue.c_str(), to_string(delivState).c_str());
     }
     return delivState;
+
+  }
+
+  DeliveryState MessageBusAmqp::receive(const std::string& queue, MessageListener messageListener)
+  {
+    return receive(queue, messageListener, {});
   }
 
   DeliveryState MessageBusAmqp::sendRequest(const std::string& requestQueue, const Message& message)
