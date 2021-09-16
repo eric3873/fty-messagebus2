@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_common_messagebus_mqtt - class description
+    MsgBusMqtt.cpp - class description
 
     Copyright (C) 2014 - 2021 Eaton
 
@@ -178,21 +178,21 @@ namespace fty::messagebus::mqtt
       return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
     }
 
-    
+
     logDebug("Subscribing on topic: {}", topic.c_str());
     m_cb.setSubscriptions(topic, messageListener);
     m_asynClient->set_message_callback([this](::mqtt::const_message_ptr msg) {
       // Wrapper from mqtt msg to Message
       m_cb.onMessageArrived(msg);
     });
-    
+
     if(! m_asynClient->subscribe(topic, QOS)->wait_for(TIMEOUT)) {
       logDebug("Subscribed ({})", DELIVERY_STATE_REJECTED);
       return fty::unexpected(DELIVERY_STATE_REJECTED);
     }
 
     logDebug("Subscribed (Accepted)");
-    
+
     return {};
   }
 
@@ -240,7 +240,7 @@ namespace fty::messagebus::mqtt
     if(! m_asynClient->subscribe(queue, QOS)->wait_for(TIMEOUT)) {
       logDebug("Waiting to receive msg from: {} {}", queue.c_str(), DELIVERY_STATE_REJECTED);
       return fty::unexpected(DELIVERY_STATE_REJECTED);
-    } 
+    }
 
     logDebug("Waiting to receive msg from: {} Accepted");
     return {};
@@ -347,7 +347,7 @@ namespace fty::messagebus::mqtt
         logDebug("No message arrive in time!");
         return fty::unexpected(DELIVERY_STATE_TIMEOUT);
       }
-      
+
       logDebug("Message arrived ({})", msg->get_payload_str().c_str());
       return Message(getMetaDataFromMqttProperties(msg->get_properties()), msg->get_payload_str());
     }
@@ -355,7 +355,7 @@ namespace fty::messagebus::mqtt
     {
       return fty::unexpected(e.what());
     }
-    
+
   }
 
   void MsgBusMqtt::sendServiceStatus(const std::string& message)

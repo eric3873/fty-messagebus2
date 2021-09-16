@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_common_messagebus_mqtt - class description
+    MsgBusMqttUtils.h - class description
 
     Copyright (C) 2014 - 2021 Eaton
 

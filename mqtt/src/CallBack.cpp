@@ -1,5 +1,5 @@
 /*  =========================================================================
-    fty_common_messagebus_mqtt - class description
+    CallBack.cpp - class description
 
     Copyright (C) 2014 - 2021 Eaton
 
@@ -142,7 +142,7 @@ namespace fty::messagebus::mqtt
         // Delegate to the pool worker
         logTrace("Notify received from topic: '{}'", topic);
         m_poolWorkers->offload([this, clientPointer, topic](MessageListener listener, const Message& mqttMsg) {
-          
+
 
           if(listener) {
             logTrace("Trigger callback...");
@@ -152,8 +152,8 @@ namespace fty::messagebus::mqtt
             logTrace("No callback to trigger");
           }
 
-          
-          
+
+
           // Unsubscribe only reply
           auto iterator = mqttMsg.metaData().find(SUBJECT);
           if (clientPointer && (iterator != mqttMsg.metaData().end() /*&& iterator->second == ANSWER_USER_PROPERTY*/))
