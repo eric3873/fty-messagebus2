@@ -12,12 +12,12 @@ add_subdirectory(dto)
 
 # AMQP samples
 if(BUILD_AMQP)
-  #add_subdirectory(amqp)
+  add_subdirectory(amqp)
 endif()
 
 # Malamute samples
 if(BUILD_MALAMUTE)
-  #add_subdirectory(malamute)
+  add_subdirectory(malamute)
 endif()
 
 # Mqtt samples
