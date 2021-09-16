@@ -27,5 +27,40 @@
 
 namespace fty::messagebus::amqp
 {
+  // Default amqp end point
+  static auto constexpr DEFAULT_AMQP_END_POINT{"amqp://127.0.0.1:5672"};
+
+  static auto constexpr BUS_INDENTITY_AMQP{"AMQP"};
+
+  class MsgBusAmqp;
+
+  class MessageBusAmqp final : public fty::messagebus::MessageBus
+  {
+  public:
+    MessageBusAmqp(const ClientName& clientName = utils::getClientId("MessageBusAmqp"),
+                   const Endpoint& endpoint = DEFAULT_MQTT_ENDPOINT /*,
+                    const std::string& connectionStateTopic = "",
+                    bool reportConnectionState = true*/
+    );
+
+    ~MessageBusAmqp();
+
+    MessageBusAmqp(MessageBusAmqp&& other) = default;
+    MessageBusAmqp& operator=(MessageBusAmqp&& other) = delete;
+    MessageBusAmqp(const MessageBusAmqp& other) = default;
+    MessageBusAmqp& operator=(const MessageBusAmqp& other) = delete;
+
+    [[nodiscard]] fty::Expected<void> connect() noexcept override;
+    [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept override;
+    [[nodiscard]] fty::Expected<void> subscribe(const std::string& queue, std::function<void(const Message&)>&& func) noexcept override;
+    [[nodiscard]] fty::Expected<void> unsubscribe(const std::string& queue) noexcept override;
+    [[nodiscard]] fty::Expected<Message> request(const Message& msg, int timeOut) noexcept override;
+
+    [[nodiscard]] const ClientName& clientName() const noexcept override;
+    [[nodiscard]] const Identity& identity() const noexcept override;
+
+  private:
+    std::shared_ptr<MsgBusAmqp> m_busAmqp;
+  };
 
 } // namespace fty::messagebus::amqp
