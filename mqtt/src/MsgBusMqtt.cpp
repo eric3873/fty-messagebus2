@@ -79,7 +79,7 @@ namespace fty::messagebus::mqtt
 
   fty::Expected<void> MsgBusMqtt::connect()
   {
-    logDebug("Try to connect...");
+    logDebug("Connecting to %s ...", m_endpoint.c_str());
     ::mqtt::create_options opts(MQTTVERSION_5);
 
     m_asynClient = std::make_shared<::mqtt::async_client>(m_endpoint, utils::getClientId("async-" + m_clientName), opts);
@@ -139,14 +139,13 @@ namespace fty::messagebus::mqtt
 
   fty::Expected<void> MsgBusMqtt::publish(const std::string& topic, const Message& message)
   {
-    logDebug("Publishing on topic: {}", topic.c_str());
-
     if (!isServiceAvailable(m_asynClient))
     {
       logDebug("Service not available");
       return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
     }
 
+    logDebug("Publishing on topic: {}", topic.c_str());
     // Adding all meta data inside mqtt properties
     auto props = getMqttPropertiesFromMetaData(message.metaData());
     // Build the message
@@ -204,9 +203,10 @@ namespace fty::messagebus::mqtt
       return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
     }
 
-
     logTrace("{} - unsubscribed for topic '{}'", m_clientName.c_str(), topic.c_str());
-    if(! m_asynClient->unsubscribe(topic)->wait_for(TIMEOUT)) {
+    if(! m_asynClient->unsubscribe(topic)->wait_for(TIMEOUT))
+    {
+      logDebug("Unsubscribed ({})", DELIVERY_STATE_REJECTED);
       return fty::unexpected(DELIVERY_STATE_REJECTED);
     }
 
