@@ -30,7 +30,7 @@
 
 namespace fty::messagebus::amqp
 {
-  using Message = Message;
+  using fty::messagebus::Message;
   using property_map = std::map<std::string, proton::scalar>;
 
   inline const MetaData getMetaDataFromAmqpProperties(const proton::message& msg)

@@ -21,10 +21,8 @@
 
 #include "fty/messagebus/mqtt/MessageBusMqtt.h"
 
-#include "MsgBusMqtt.h"
 #include "CallBack.h"
-
-//#include <fty_log.h>
+#include "MsgBusMqtt.h"
 
 #include <mqtt/async_client.h>
 #include <mqtt/client.h>
@@ -32,14 +30,14 @@
 #include <mqtt/properties.h>
 
 #include <fty/expected.h>
-#include <memory>
-
 #include <fty_log.h>
+
+#include <memory>
 
 namespace fty::messagebus::mqtt
 {
-  MessageBusMqtt::MessageBusMqtt( const ClientName& clientName,
-                  const Endpoint& endpoint)
+  MessageBusMqtt::MessageBusMqtt(const ClientName& clientName,
+                                 const Endpoint& endpoint)
     : MessageBus()
   {
     m_busMqtt = std::make_shared<MsgBusMqtt>(clientName, endpoint);

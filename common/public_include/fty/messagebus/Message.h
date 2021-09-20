@@ -37,7 +37,7 @@ namespace fty::messagebus
   static constexpr auto FROM = "FROM"; //ClientId of the message
   static constexpr auto TO = "TO"; //Queue of destination
   static constexpr auto REPLY_TO = "REPLY_TO"; //Queue for the reply
-  static constexpr auto SUBJECT = "SUBJECT"; 
+  static constexpr auto SUBJECT = "SUBJECT";
   static constexpr auto STATUS = "STATUS";
   static constexpr auto TIMEOUT = "TIMEOUT";
 

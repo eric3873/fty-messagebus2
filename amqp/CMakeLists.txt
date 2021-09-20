@@ -23,7 +23,7 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
     fty_common_logging
     Proton::cpp
   FLAGS
-    "-fmax-errors=2"
+    "-fmax-errors=1"
     #"-w"
 )
 

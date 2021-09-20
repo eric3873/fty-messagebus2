@@ -21,68 +21,63 @@
 
 #pragma once
 
-#include "CallBack.h"
-
 #include <fty/expected.h>
 
-namespace fty::messagebus::mqtt
+#include "Receiver.h"
+#include "Requester.h"
+#include "Sender.h"
+
+#include <proton/connection_options.hpp>
+#include <proton/container.hpp>
+#include <proton/listen_handler.hpp>
+
+namespace fty::messagebus::amqp
 {
-  // Default mqtt end point
-  static auto constexpr DEFAULT_MQTT_END_POINT{"tcp://localhost:1883"};
-  static auto constexpr SECURE_MQTT_END_POINT{"tcp://localhost:8883"};
 
-  // Mqtt default delimiter
-  static auto constexpr MQTT_DELIMITER{'/'};
+  using Container = proton::container;
+  //using ClientPointer = std::shared_ptr<Client>;
+  using ContainerPointer = std::shared_ptr<Container>;
+  using MessagePointer = std::shared_ptr<proton::message>;
+  using ReceiverPointer = std::shared_ptr<Receiver>;
+  using SenderPointer = std::shared_ptr<Sender>;
 
-  // Mqtt will topic
-  static auto constexpr DISCOVERY_TOPIC{"/etn/t/service/"};
-  static auto constexpr DISCOVERY_TOPIC_SUBJECT{"/status"};
-
-  // Mqtt will message
-  static auto constexpr CONNECTED_MSG{"CONNECTED"};
-  static auto constexpr DISCONNECTED_MSG{"DISCONNECTED"};
-  static auto constexpr DISAPPEARED_MSG{"DISAPPEARED"};
-
-  class MsgBusMqtt
+  class MsgBusAmqp
   {
   public:
-    MsgBusMqtt() = delete;
+    MsgBusAmqp() = delete;
 
-    MsgBusMqtt(const std::string& clientName, const std::string& endpoint)
+    MsgBusAmqp(const std::string& clientName, const std::string& endpoint)
       : m_clientName(clientName)
       , m_endpoint(endpoint){};
 
-    ~MsgBusMqtt();
+    ~MsgBusAmqp();
 
     [[nodiscard]] fty::Expected<void> connect();
 
     // Pub/Sub pattern
-    fty::Expected<void> publish(const std::string& topic, const Message& message) ;
-    fty::Expected<void> subscribe(const std::string& topic, MessageListener messageListener) ;
-    fty::Expected<void> unsubscribe(const std::string& topic) ;
+    fty::Expected<void> publish(const std::string& topic, const Message& message);
+    fty::Expected<void> subscribe(const std::string& topic, MessageListener messageListener);
+    fty::Expected<void> unsubscribe(const std::string& topic);
 
     // Req/Rep pattern
-    fty::Expected<void> sendRequest(const std::string& requestQueue, const Message& message) ;
-    fty::Expected<void> sendRequest(const std::string& requestQueue, const Message& message, MessageListener messageListener) ;
-    fty::Expected<void> sendReply(const std::string& replyQueue, const Message& message) ;
-    fty::Expected<void> receive(const std::string& queue, MessageListener messageListener) ;
+    fty::Expected<void> sendRequest(const std::string& requestQueue, const Message& message);
+    fty::Expected<void> sendRequest(const std::string& requestQueue, const Message& message, MessageListener messageListener);
+    fty::Expected<void> sendReply(const std::string& replyQueue, const Message& message);
+    fty::Expected<void> receive(const std::string& queue, MessageListener messageListener, const std::string& filter);
+    fty::Expected<void> receive(const std::string& queue, MessageListener messageListener);
 
     // Sync queue
-    fty::Expected<Message> request(const std::string& requestQueue, const Message& message, int receiveTimeOut) ;
+    fty::Expected<Message> request(const std::string& requestQueue, const Message& message, int receiveTimeOut);
 
-    const std::string & clientName() const { return m_clientName; }
+    const std::string& clientName() const
+    {
+      return m_clientName;
+    }
 
   private:
     std::string m_clientName{};
     std::string m_endpoint{};
 
-    // Asynchronous and synchronous mqtt client
-    AsynClientPointer m_asynClient;
-    SynClientPointer m_synClient;
-
-    // Call back
-    CallBack m_cb;
-
-    void sendServiceStatus(const std::string& message);
+    std::map<std::string, ReceiverPointer> m_subScriptions;
   };
-} // namespace fty::messagebus::mqtt
+} // namespace fty::messagebus::amqp

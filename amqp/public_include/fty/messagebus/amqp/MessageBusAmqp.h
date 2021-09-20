@@ -38,10 +38,7 @@ namespace fty::messagebus::amqp
   {
   public:
     MessageBusAmqp(const ClientName& clientName = utils::getClientId("MessageBusAmqp"),
-                   const Endpoint& endpoint = DEFAULT_MQTT_ENDPOINT /*,
-                    const std::string& connectionStateTopic = "",
-                    bool reportConnectionState = true*/
-    );
+                   const Endpoint& endpoint = DEFAULT_AMQP_END_POINT);
 
     ~MessageBusAmqp();
 

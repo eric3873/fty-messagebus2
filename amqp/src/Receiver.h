@@ -21,9 +21,8 @@
 
 #pragma once
 
-#include "fty/messagebus/amqp/MsgBusAmqpUtils.hpp"
-#include <fty/messagebus/IMessageBus.hpp>
-#include <fty/messagebus/amqp/MsgBusAmqpMessage.hpp>
+#include "MsgBusAmqpUtils.h"
+#include <fty/messagebus/MessageBus.h>
 
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
@@ -33,15 +32,19 @@
 #include <proton/receiver_options.hpp>
 #include <proton/source_options.hpp>
 #include <proton/tracker.hpp>
+#include <proton/work_queue.hpp>
 
 #include <future>
 #include <iostream>
 #include <vector>
 
+#include <fty_log.h>
+
 namespace fty::messagebus::amqp
 {
   static auto constexpr AMQP_CORREL_ID = "JMSCorrelationID";
-  using MessageListener = fty::messagebus::MessageListener<AmqpMessage>;
+  using fty::messagebus::Message;
+  using MessageListener = fty::messagebus::MessageListener;
 
   class Receiver : public proton::messaging_handler
   {
@@ -89,7 +92,7 @@ namespace fty::messagebus::amqp
 
     void on_container_start(proton::container& con) override
     {
-      log_debug("Receiver on_container_start");
+      logDebug("Receiver on_container_start");
       try
       {
         proton::connection conn = con.connect(m_url);
@@ -101,20 +104,20 @@ namespace fty::messagebus::amqp
           correlIdFilter << "='";
           correlIdFilter << m_filter;
           correlIdFilter << "'";
-          log_debug("CorrelId filter: %s", correlIdFilter.str().c_str());
+          logDebug("CorrelId filter: {}", correlIdFilter.str().c_str());
           set_filter(opts, correlIdFilter.str());
         }
         m_receiver = conn.open_receiver(m_address, proton::receiver_options().source(opts));
       }
       catch (std::exception& e)
       {
-        log_error("Exception %s", e.what());
+        log_error("Exception {}", e.what());
       }
     }
 
     void on_receiver_open(proton::receiver& receiver) override
     {
-      log_debug("Receiver on_receiver_open for target address: %s", receiver.source().address().c_str());
+      logDebug("Receiver on_receiver_open for target address: {}", receiver.source().address().c_str());
       //p_work_queue.reset(&receiver.work_queue());
       //p_work_queue = &receiver.work_queue();
     }
@@ -122,25 +125,24 @@ namespace fty::messagebus::amqp
     void cancel()
     {
       std::lock_guard<std::mutex> l(m_lock);
-      log_debug("Cancel for %s", m_address.c_str());
+      logDebug("Cancel for {}", m_address.c_str());
       if (m_receiver)
       {
         m_receiver.connection().close();
       }
-      log_debug("Canceled");
+      logDebug("Canceled");
     }
 
     void on_message(proton::delivery& delivery, proton::message& msg) override
     {
       std::lock_guard<std::mutex> l(m_lock);
-      log_debug("Message arrived on: %s", m_address.c_str());
+      logDebug("Message arrived on: {}", m_address.c_str());
       delivery.accept();
       //m_work_queue.add(make_work(&Queue::unsubscribe, s->queue_, s));
       //p_work_queue->add([=]() { this->print(msg);});
-      AmqpMessage amqpMsg(getMetaDataFromAmqpProperties(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
+      Message amqpMsg(getMetaDataFromAmqpProperties(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
       //p_work_queue->add(proton::make_work(m_messageListener, amqpMsg));
       m_receiver.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
-
     }
   };
 

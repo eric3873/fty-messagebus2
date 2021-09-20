@@ -21,11 +21,23 @@
 
 #pragma once
 
+// #include <proton/connection.hpp>
+// #include <proton/container.hpp>
+// #include <proton/delivery.hpp>
+// #include <proton/message.hpp>
+// #include <proton/messaging_handler.hpp>
+// #include <proton/receiver_options.hpp>
+// #include <proton/source_options.hpp>
+// #include <proton/tracker.hpp>
+
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
-#include <proton/delivery.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
+#include <proton/sender.hpp>
+#include <proton/sender_options.hpp>
+#include <proton/target.hpp>
+#include <proton/target_options.hpp>
 #include <proton/receiver_options.hpp>
 #include <proton/source_options.hpp>
 #include <proton/tracker.hpp>
@@ -33,6 +45,8 @@
 #include <future>
 #include <iostream>
 #include <vector>
+
+#include <fty_log.h>
 
 namespace fty::messagebus::amqp
 {
@@ -80,7 +94,7 @@ namespace fty::messagebus::amqp
 
     void on_container_start(proton::container& con) override
     {
-      log_debug("on_container_start");
+      logDebug("on_container_start");
       proton::connection conn = con.connect(m_url);
 
       m_sender = conn.open_sender(m_request.to());
@@ -96,7 +110,7 @@ namespace fty::messagebus::amqp
         correlIdFilter << "='";
         correlIdFilter << proton::to_string(m_request.correlation_id());
         correlIdFilter << "'";
-        log_debug("CorrelId filter: %s", correlIdFilter.str().c_str());
+        logDebug("CorrelId filter: {}", correlIdFilter.str().c_str());
         set_filter(opts, correlIdFilter.str());
       }
       m_receiver = m_sender.connection().open_receiver("queue://" + m_request.reply_to(), proton::receiver_options().source(opts));
@@ -104,7 +118,7 @@ namespace fty::messagebus::amqp
 
     void send_request()
     {
-      log_debug("send_request");
+      logDebug("send_request");
       // TODO see where to set this.
       //m_request.reply_to(m_receiver.source().address());
       m_sender.send(m_request);
@@ -112,7 +126,7 @@ namespace fty::messagebus::amqp
 
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout)
     {
-      log_debug("Checking answer for %d second(s), please wait...", timeout);
+      logDebug("Checking answer for {} second(s), please wait...", timeout);
 
       bool messageArrived = false;
       if (m_future.wait_for(std::chrono::seconds(timeout)) != std::future_status::timeout)
@@ -124,21 +138,21 @@ namespace fty::messagebus::amqp
       return messageArrived;
     }
 
-    void on_sender_open(proton::sender& s) override
+    void on_sender_open(proton::sender& snd) override
     {
-      log_debug("Open sender for target address: %s", s.target().address().c_str());
+      logDebug("Open sender for target address: {}", snd.target().address());
     }
 
     void on_receiver_open(proton::receiver& receiver) override
     {
-      log_debug("Open receiver for target address: %s", receiver.source().address().c_str());
+      logDebug("Open receiver for target address: {}", receiver.source().address());
       send_request();
     }
 
     void cancel()
     {
       std::lock_guard<std::mutex> l(m_lock);
-      log_debug("Canceling");
+      logDebug("Canceling");
       if (m_receiver)
       {
         m_receiver.connection().close();
@@ -147,7 +161,7 @@ namespace fty::messagebus::amqp
       {
         m_sender.connection().close();
       }
-      log_debug("Canceled");
+      logDebug("Canceled");
     }
 
     void on_message(proton::delivery& delivery, proton::message& msg) override
