@@ -1,4 +1,4 @@
-project(mqtt-publish-sample
+project(${PROJECT_NAME}-publish
         VERSION 1.0.0
         DESCRIPTION "fty messagebus sample for mqtt publish"
         LANGUAGES CXX

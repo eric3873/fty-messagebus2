@@ -1,3 +1,9 @@
+project(${PROJECT_NAME}-mqtt
+        VERSION ${PROJECT_VERSION}
+        DESCRIPTION "fty messagebus sample for mqtt"
+        LANGUAGES CXX
+)
+
 add_subdirectory(publish)
 add_subdirectory(daemon)
 

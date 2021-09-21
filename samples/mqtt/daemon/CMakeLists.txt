@@ -1,4 +1,4 @@
-project(mqtt-daemon-basic-sample
+project(${PROJECT_NAME}-daemon-basic
         VERSION 1.0.0
         DESCRIPTION "fty messagebus sample for mqtt publish"
         LANGUAGES CXX

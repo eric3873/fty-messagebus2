@@ -19,9 +19,10 @@ macro(relative_option parent_option new_option_name text)
   endif()
 endmacro()
 
-option(                            BUILD_ALL                   "Build all addons"                  ON)
+option(                            BUILD_ALL                   "Build all addons"                   ON)
 relative_option(${BUILD_ALL}       BUILD_AMQP                  "Build AMQP addon"                     )
-relative_option(${BUILD_ALL}       BUILD_MALAMUTE              "Build Malamute addon"                 )
+# relative_option(${BUILD_ALL}       BUILD_MALAMUTE              "Build Malamute addon"              ON)
+option(                            BUILD_MALAMUTE              "Build Malamute addon"              OFF)
 relative_option(${BUILD_ALL}       BUILD_MQTT                  "Build MQTT addon"                     )
 
 option(                            BUILD_SAMPLES               "Build samples"                     OFF)
@@ -44,7 +45,7 @@ if(BUILD_MQTT)
 endif()
 
 if(BUILD_MALAMUTE)
-  #add_subdirectory(malamute)
+  add_subdirectory(malamute)
 endif()
 
 # Samples
