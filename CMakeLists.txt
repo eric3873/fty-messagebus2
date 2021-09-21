@@ -19,7 +19,7 @@ macro(relative_option parent_option new_option_name text)
   endif()
 endmacro()
 
-option(                            BUILD_ALL                   "Build all addons"                  OFF)
+option(                            BUILD_ALL                   "Build all addons"                  ON)
 relative_option(${BUILD_ALL}       BUILD_AMQP                  "Build AMQP addon"                     )
 relative_option(${BUILD_ALL}       BUILD_MALAMUTE              "Build Malamute addon"                 )
 relative_option(${BUILD_ALL}       BUILD_MQTT                  "Build MQTT addon"                     )
