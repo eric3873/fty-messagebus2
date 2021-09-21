@@ -26,9 +26,8 @@
 @end
 */
 
-#include <fty/messagebus/MsgBusAmqp.hpp>
-#include <fty/messagebus/test/FtyCommonMathDto.hpp>
-#include <fty/messagebus/test/FtyCommonTestDef.hpp>
+#include <fty/sample/dto/FtyCommonMathDto.hpp>
+#include <fty/messagebus/amqp/MessageBusAmqp.h>
 
 #include <csignal>
 #include <fty_log.h>
@@ -37,10 +36,10 @@
 
 namespace
 {
-  using namespace fty::messagebus::test;
-  using Message = fty::messagebus::amqp::AmqpMessage;
+  using namespace fty::messagebus;
+  using namespace fty::sample::dto;
 
-  auto reqRep = fty::messagebus::MsgBusAmqp();
+  auto bus = amqp::MessageBusAmqp();
   static bool _continue = true;
 
   static void signalHandler(int signal)
@@ -75,21 +74,55 @@ namespace
       mathResultResult.error = "Unsuported operation";
     }
 
-    reqRep.sendRequestReply(message, mathResultResult.serialize());
+    fty::Expected<Message> response = message.buildReply(mathResultResult.serialize());
+    if (!response)
+    {
+      logError("Error while creating reply: {}", response.error());
+      return;
+    }
+
+    fty::Expected<void> sendRet = bus.send(response.value());
+    if (!sendRet)
+    {
+      logError("Error while sending: {}", sendRet.error());
+      return;
+    }
+
     //_continue = false;
   }
 
 } // namespace
 
-int main(int /*argc*/, char** argv)
+int main(int argc, char** argv)
 {
+  if (argc != 2)
+  {
+    std::cout << "USAGE: " << argv[0] << " <repQueue>" << std::endl;
+    return EXIT_FAILURE;
+  }
+
   logInfo("{} - starting...", argv[0]);
+
+  auto replyQueue = std::string{argv[1]};
 
   // Install a signal handler
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
 
-  reqRep.registerRequestListener(SAMPLE_QUEUE, replyerMessageListener);
+  fty::Expected<void> connectionRet = bus.connect();
+  if (!connectionRet)
+  {
+    logError("Error while connecting {}", connectionRet.error());
+    return EXIT_FAILURE;
+  }
+
+  fty::Expected<void> subscribRet = bus.subscribe(replyQueue, replyerMessageListener);
+  if (!subscribRet)
+  {
+    logError("Error while subscribing {}", subscribRet.error());
+    return EXIT_FAILURE;
+  }
+
 
   while (_continue)
   {

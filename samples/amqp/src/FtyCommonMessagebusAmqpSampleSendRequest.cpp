@@ -26,9 +26,8 @@
 @end
 */
 
-#include <fty/messagebus/MsgBusAmqp.hpp>
-#include <fty/messagebus/test/FtyCommonMathDto.hpp>
-#include <fty/messagebus/test/FtyCommonTestDef.hpp>
+#include <fty/sample/dto/FtyCommonMathDto.hpp>
+#include <fty/messagebus/amqp/MessageBusAmqp.h>
 
 #include <csignal>
 #include <fty_log.h>
@@ -38,8 +37,7 @@
 namespace
 {
   using namespace fty::messagebus;
-  using namespace fty::messagebus::test;
-  using Message = fty::messagebus::amqp::AmqpMessage;
+  using namespace fty::sample::dto;
 
   static bool _continue = true;
   static auto constexpr SYNC_REQUEST_TIMEOUT = 5;
@@ -65,39 +63,67 @@ int main(int argc, char** argv)
 {
   if (argc != 6)
   {
-    std::cout << "USAGE: " << argv[0] << " <reqQueue> <async|sync> <add|mult> <num1> <num2>" << std::endl;
+    std::cout << "USAGE: " << argv[0] << " <reqQueue, i.e. /etn/samples/maths/> <async|sync> <add|mult> <num1> <num2>" << std::endl;
     return EXIT_FAILURE;
   }
 
   logInfo("{} - starting...", argv[0]);
 
   auto requestQueue = std::string{argv[1]};
+  auto replyQueue = requestQueue + "/reply/";
 
   // Install a signal handler
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
 
-  auto reqRep = MsgBusAmqp();
+  auto bus = amqp::MessageBusAmqp(argv[0]);
 
-  auto query = MathOperation(argv[3], std::stoi(argv[4]), std::stoi(argv[5]));
+  //Connect to the bus
+  fty::Expected<void> connectionRet = bus.connect();
+  if (!connectionRet)
+  {
+    logError("Error while connecting {}", connectionRet.error());
+    return EXIT_FAILURE;
+  }
+
+  auto operationQuery = MathOperation(argv[3], std::stoi(argv[4]), std::stoi(argv[5]));
+  Message request = Message::buildRequest(argv[0], requestQueue, "MathsOperations", replyQueue + utils::generateId(), operationQuery.serialize());
 
   if (strcmp(argv[2], "async") == 0)
   {
-    reqRep.sendRequest(requestQueue, query.serialize(), responseMessageListener);
+
+    fty::Expected<void> subscribRet = bus.subscribe(replyQueue, responseMessageListener);
+    if (!subscribRet)
+    {
+      logError("Error while subscribing {}", subscribRet.error());
+      return EXIT_FAILURE;
+    }
+
+    fty::Expected<void> sendRet = bus.send(request);
+    if (!sendRet)
+    {
+      logError("Error while sending: {}", sendRet.error());
+      return EXIT_FAILURE;
+    }
   }
   else
   {
     _continue = false;
 
-    std::optional<Message> replyMsg = reqRep.sendRequest(requestQueue, query.serialize(), SYNC_REQUEST_TIMEOUT);
-    if (replyMsg.has_value())
+    fty::Expected<Message> reply = bus.request(request, SYNC_REQUEST_TIMEOUT);
+    if (!reply)
     {
-      responseMessageListener(replyMsg.value());
+      std::cerr << "Error while requesting " << reply.error() << std::endl;
+      return EXIT_FAILURE;
     }
-    else
+
+    if (reply.value().metaData().at(STATUS) != STATUS_OK)
     {
-      logError("Time out reached: (%ds)", SYNC_REQUEST_TIMEOUT);
+      std::cerr << "An error occured, message status is not OK!" << std::endl;
+      return EXIT_FAILURE;
     }
+
+    responseMessageListener(reply.value());
   }
 
   while (_continue)

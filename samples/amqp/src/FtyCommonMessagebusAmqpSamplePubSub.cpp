@@ -26,9 +26,8 @@
 @end
 */
 
-#include <fty/messagebus/MsgBusAmqp.hpp>
-#include <fty/messagebus/test/FtyCommonFooBarDto.hpp>
-#include <fty/messagebus/test/FtyCommonTestDef.hpp>
+#include <fty/messagebus/amqp/MessageBusAmqp.h>
+#include <fty/sample/dto/FtyCommonFooBarDto.hpp>
 
 #include <csignal>
 #include <fty_log.h>
@@ -37,8 +36,10 @@
 
 namespace
 {
-  using namespace fty::messagebus::test;
-  using Message = fty::messagebus::amqp::AmqpMessage;
+  using namespace fty::messagebus;
+  using namespace fty::sample::dto;
+
+  static auto constexpr SAMPLES_TOPIC = "/etn/samples/publish";
 
   static bool _continue = true;
 
@@ -74,11 +75,35 @@ int main(int /*argc*/, char** argv)
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
 
-  auto pubSub = fty::messagebus::MsgBusAmqp();
-  pubSub.subscribe(SAMPLE_TOPIC, messageListener);
+  auto bus = amqp::MessageBusAmqp();
+
+  fty::Expected<void> connectionRet = bus.connect();
+  if (!connectionRet)
+  {
+    logError("Error while connecting {}", connectionRet.error());
+    return EXIT_FAILURE;
+  }
+
+  fty::Expected<void> subscribRet = bus.subscribe(SAMPLES_TOPIC, messageListener);
+  if (!subscribRet)
+  {
+    logError("Error while subscribing {}", subscribRet.error());
+    return EXIT_FAILURE;
+  }
 
   std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  pubSub.publish(SAMPLE_TOPIC, FooBar("event", "hello").serialize());
+
+  //Build the message to send
+  Message msg = Message::buildMessage(argv[0], SAMPLES_TOPIC, "MESSAGE", FooBar("event", "hello").serialize());
+
+  //Send the message
+  fty::Expected<void> sendRet = bus.send(msg);
+  if (!sendRet)
+  {
+    logError("Error while sending {}", sendRet.error());
+    return EXIT_FAILURE;
+  }
+  //bus.publish(SAMPLE_TOPIC, FooBar("event", "hello").serialize());
 
   while (_continue)
   {
