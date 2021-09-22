@@ -33,7 +33,7 @@ namespace fty::messagebus::amqp
   using fty::messagebus::Message;
   using property_map = std::map<std::string, proton::scalar>;
 
-  inline const MetaData getMetaDataFromAmqpProperties(const proton::message& msg)
+  inline const MetaData getMetaData(const proton::message& msg)
   {
     MetaData metaData{};
 
@@ -83,7 +83,7 @@ namespace fty::messagebus::amqp
     return metaData;
   }
 
-  inline const proton::message getAmqpMessageFromMsgBusAmqpMessage(const Message& message)
+  inline const proton::message getAmqpMessage(const Message& message)
   {
     proton::message msg;
     for (const auto& [key, value] : message.metaData())

@@ -141,7 +141,7 @@ namespace fty::messagebus::amqp
       delivery.accept();
       //m_work_queue.add(make_work(&Queue::unsubscribe, s->queue_, s));
       //p_work_queue->add([=]() { this->print(msg);});
-      Message amqpMsg(getMetaDataFromAmqpProperties(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
+      Message amqpMsg(getMetaData(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
       //p_work_queue->add(proton::make_work(m_messageListener, amqpMsg));
       m_receiver.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
     }
