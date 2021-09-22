@@ -55,9 +55,9 @@ namespace fty::messagebus::amqp
     [[nodiscard]] fty::Expected<void> connect();
 
     // Pub/Sub pattern
-    fty::Expected<void> publish(const std::string& topic, const Message& message);
-    fty::Expected<void> subscribe(const std::string& topic, MessageListener messageListener);
-    fty::Expected<void> unsubscribe(const std::string& topic);
+    fty::Expected<void> publish(const std::string& address, const Message& message);
+    fty::Expected<void> subscribe(const std::string& address, MessageListener messageListener);
+    fty::Expected<void> unsubscribe(const std::string& address);
 
     // Req/Rep pattern
     fty::Expected<void> sendRequest(const std::string& requestQueue, const Message& message);

@@ -137,6 +137,7 @@ namespace fty::messagebus::amqp
     {
       std::lock_guard<std::mutex> l(m_lock);
       logDebug("Message arrived on: {}", m_address.c_str());
+      logDebug("Message arrived {}", proton::to_string(msg));
       delivery.accept();
       //m_work_queue.add(make_work(&Queue::unsubscribe, s->queue_, s));
       //p_work_queue->add([=]() { this->print(msg);});

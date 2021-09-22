@@ -52,10 +52,7 @@ namespace
   {
     logInfo("Replyer messageListener");
 
-    for (const auto& pair : message.metaData())
-    {
-      logInfo("  ** '{}' : '{}'", pair.first.c_str(), pair.second.c_str());
-    }
+    logDebug("Message arrived: '{}'", message.toString());
 
     auto mathQuery = MathOperation(message.userData());
     auto mathResultResult = MathResult();

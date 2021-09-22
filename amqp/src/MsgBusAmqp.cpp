@@ -49,19 +49,19 @@ namespace fty::messagebus::amqp
     // Cleaning amqp ressources
     if (isServiceAvailable())
     {
-      log_debug("Cleaning Amqp ressources for: %s", m_clientName.c_str());
+      logDebug("Cleaning Amqp ressources for: {}", m_clientName);
       try
       {
         for (const auto& [key, receiv] : m_subScriptions)
         {
-          log_debug("Cleaning: %s...", key.c_str());
+          logDebug("Cleaning: {}...", key);
           //receiv.cancel();
         }
-        log_debug("%s cleaned", m_clientName.c_str());
+        logDebug("{} cleaned", m_clientName);
       }
       catch (const std::exception& e)
       {
-        log_error("Exception: %s", e.what());
+        logError("Exception: {}", e.what());
       }
     }
   }
@@ -69,7 +69,7 @@ namespace fty::messagebus::amqp
   fty::Expected<void> MsgBusAmqp::connect()
   {
 
-    logDebug("Connecting to %s ...", m_endpoint.c_str());
+    logDebug("Connecting to {} ...", m_endpoint);
     try
     {
     }
@@ -82,7 +82,7 @@ namespace fty::messagebus::amqp
     return {};
   }
 
-  fty::Expected<void> MsgBusAmqp::publish(const std::string& topic, const Message& /*message*/)
+  fty::Expected<void> MsgBusAmqp::publish(const std::string& address, const Message& /*message*/)
   {
     if (!isServiceAvailable())
     {
@@ -90,7 +90,7 @@ namespace fty::messagebus::amqp
       return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
     }
 
-    logDebug("Publishing on topic: {}", topic.c_str());
+    logDebug("Publishing on: {}", address);
 
     // TODO insert real impl
     if (true)
@@ -105,7 +105,7 @@ namespace fty::messagebus::amqp
     return {};
   }
 
-  fty::Expected<void> MsgBusAmqp::subscribe(const std::string& topic, MessageListener /*messageListener*/)
+  fty::Expected<void> MsgBusAmqp::subscribe(const std::string& address, MessageListener messageListener)
   {
     if (!isServiceAvailable())
     {
@@ -113,21 +113,24 @@ namespace fty::messagebus::amqp
       return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
     }
 
-    logDebug("Subscribing on topic: {}", topic.c_str());
+    logDebug("Try to subscribing on: {}", address);
 
-    // TODO insert real impl
-    if (true)
-    {
-      logDebug("Subscribed ({})", DELIVERY_STATE_REJECTED);
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
-    }
+    ReceiverPointer receiver = std::make_shared<Receiver>(m_endpoint, address, messageListener);
+    std::thread thrd([=]() {
+      proton::container(*receiver).run();
+    });
+    m_subScriptions.emplace(std::make_pair(address, receiver));
+    thrd.detach();
+
+    // logDebug("Subscribed ({})", DELIVERY_STATE_REJECTED);
+    // return fty::unexpected(DELIVERY_STATE_REJECTED);
 
     logDebug("Subscribed (Accepted)");
 
     return {};
   }
 
-  fty::Expected<void> MsgBusAmqp::unsubscribe(const std::string& topic)
+  fty::Expected<void> MsgBusAmqp::unsubscribe(const std::string& address)
   {
     if (!isServiceAvailable())
     {
@@ -135,7 +138,7 @@ namespace fty::messagebus::amqp
       return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
     }
 
-    logTrace("{} - unsubscribed for topic '{}'", m_clientName.c_str(), topic.c_str());
+    logTrace("{} - unsubscribed on: '{}'", m_clientName, address);
 
     // TODO insert real impl
     if (true)
@@ -155,8 +158,8 @@ namespace fty::messagebus::amqp
       return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
     }
 
-    std::string amqpQueue = AMQP_QUEUE_PREFIX + queue;
-    logDebug("Waiting to receive msg from: {}", amqpQueue.c_str());
+    std::string amqpQueue = /*AMQP_QUEUE_PREFIX + */queue;
+    logDebug("Waiting to receive msg from: {}", amqpQueue);
 
     // TODO see filter
     ReceiverPointer receiver = std::make_shared<Receiver>(m_endpoint, amqpQueue, messageListener, filter);
@@ -166,7 +169,7 @@ namespace fty::messagebus::amqp
     m_subScriptions.emplace(std::make_pair(amqpQueue, receiver));
     thrd.detach();
 
-    logDebug("Waiting to receive msg from: {} Accepted", amqpQueue.c_str());
+    logDebug("Waiting to receive msg from: {} Accepted", amqpQueue);
     return {};
   }
 
@@ -183,9 +186,9 @@ namespace fty::messagebus::amqp
       return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
     }
 
-    logDebug("Request sent to {}", requestQueue.c_str());
+    logDebug("Request sent to {}", requestQueue);
 
-    std::string amqpQueue = AMQP_QUEUE_PREFIX + requestQueue;
+    std::string amqpQueue = /*AMQP_QUEUE_PREFIX +*/ requestQueue;
     proton::message msgToSend = getAmqpMessageFromMsgBusAmqpMessage(message);
     // TODO remove from here
     msgToSend.to(amqpQueue);
@@ -193,10 +196,10 @@ namespace fty::messagebus::amqp
     std::string replyTo = "<none>";
     if (message.needReply())
     {
-      msgToSend.reply_to(AMQP_QUEUE_PREFIX + msgToSend.reply_to());
+      msgToSend.reply_to(/*AMQP_QUEUE_PREFIX + */msgToSend.reply_to());
     }
 
-    //logDebug("Sending request payload: '{}' to: {} and wait message on reply queue {}", message.userData().c_str(), requestQueue.c_str(), replyTo.c_str());
+    //logDebug("Sending request payload: '{}' to: {} and wait message on reply queue {}", message.userData(), requestQueue, replyTo);
 
     Sender sender = Sender(m_endpoint, amqpQueue);
     std::thread thrd([&]() {
@@ -236,7 +239,7 @@ namespace fty::messagebus::amqp
     // Adding all meta data inside mqtt properties
     proton::message msgToSend = getAmqpMessageFromMsgBusAmqpMessage(message);
 
-    //log_debug("Sending reply payload: '%s' to: %s", message.userData().c_str(), msgToSend.to().c_str());
+    //logDebug("Sending reply payload: '{}' to: {}", message.userData(), msgToSend.to());
 
     Sender sender = Sender(m_endpoint, msgToSend.to());
     std::thread thrd([&]() {
@@ -266,8 +269,8 @@ namespace fty::messagebus::amqp
         return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
       }
 
-      std::string amqpQueue = AMQP_QUEUE_PREFIX + requestQueue;
-      std::string replyTo = AMQP_QUEUE_PREFIX + fty::messagebus::amqp::getReplyQueue(message);
+      std::string amqpQueue = /*AMQP_QUEUE_PREFIX + */requestQueue;
+      std::string replyTo = /*AMQP_QUEUE_PREFIX + */fty::messagebus::amqp::getReplyQueue(message);
 
       auto protonMsg = getAmqpMessageFromMsgBusAmqpMessage(message);
       // TODO remove from here
@@ -287,7 +290,7 @@ namespace fty::messagebus::amqp
         return fty::unexpected(DELIVERY_STATE_TIMEOUT);
       }
 
-      log_debug("Message arrived (%s)", proton::to_string(*response).c_str());
+      logDebug("Message arrived ({})", proton::to_string(*response));
       return Message{getMetaDataFromAmqpProperties(*response), response->body().empty() ? std::string{} : proton::to_string(response->body())};
     }
     catch (std::exception& e)

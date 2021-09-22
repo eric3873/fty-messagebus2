@@ -48,6 +48,22 @@ namespace fty::messagebus::amqp
       }
     }
 
+    if (!msg.user().empty())
+    {
+      metaData.emplace(FROM, msg.user());
+    }
+
+    if (!msg.id().empty())
+    {
+      metaData.emplace(FROM, proton::to_string(msg.id()));
+    }
+
+    if (!msg.subject().empty())
+    {
+      metaData.emplace(SUBJECT, msg.subject());
+    }
+
+
     // Req/Rep pattern properties
     if (!msg.correlation_id().empty())
     {
@@ -58,6 +74,12 @@ namespace fty::messagebus::amqp
     {
       metaData.emplace(REPLY_TO, msg.reply_to());
     }
+
+    if (!msg.to().empty())
+    {
+      metaData.emplace(TO, msg.to());
+    }
+
     return metaData;
   }
 
@@ -84,8 +106,9 @@ namespace fty::messagebus::amqp
       else if (key == FROM)
       {
         msg.user(value);
+        msg.id(value);
       }
-      else
+      else if (key != CORRELATION_ID)
       {
         msg.properties().put(key, value);
       }

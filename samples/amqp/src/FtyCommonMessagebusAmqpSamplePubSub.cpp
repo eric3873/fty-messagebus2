@@ -55,12 +55,12 @@ namespace
     auto metadata = message.metaData();
     for (const auto& pair : message.metaData())
     {
-      logInfo("  ** '{}' : '{}'", pair.first.c_str(), pair.second.c_str());
+      logInfo("  ** '{}' : '{}'", pair.first, pair.second);
     }
 
     auto fooBar = FooBar(message.userData());
-    logInfo("  * foo    : '{}'", fooBar.foo.c_str());
-    logInfo("  * bar    : '{}'", fooBar.bar.c_str());
+    logInfo("  * foo    : '{}'", fooBar.foo);
+    logInfo("  * bar    : '{}'", fooBar.bar);
 
     _continue = false;
   }

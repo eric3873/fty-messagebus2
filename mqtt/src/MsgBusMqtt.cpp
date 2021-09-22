@@ -79,7 +79,7 @@ namespace fty::messagebus::mqtt
 
   fty::Expected<void> MsgBusMqtt::connect()
   {
-    logDebug("Connecting to %s ...", m_endpoint.c_str());
+    logDebug("Connecting to {} ...", m_endpoint);
     ::mqtt::create_options opts(MQTTVERSION_5);
 
     m_asynClient = std::make_shared<::mqtt::async_client>(m_endpoint, utils::getClientId("async-" + m_clientName), opts);

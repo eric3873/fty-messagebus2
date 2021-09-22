@@ -49,8 +49,8 @@ namespace fty::messagebus::amqp
 
     [[nodiscard]] fty::Expected<void> connect() noexcept override;
     [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept override;
-    [[nodiscard]] fty::Expected<void> subscribe(const std::string& queue, std::function<void(const Message&)>&& func) noexcept override;
-    [[nodiscard]] fty::Expected<void> unsubscribe(const std::string& queue) noexcept override;
+    [[nodiscard]] fty::Expected<void> subscribe(const std::string& address, std::function<void(const Message&)>&& func) noexcept override;
+    [[nodiscard]] fty::Expected<void> unsubscribe(const std::string& address) noexcept override;
     [[nodiscard]] fty::Expected<Message> request(const Message& msg, int timeOut) noexcept override;
 
     [[nodiscard]] const ClientName& clientName() const noexcept override;

@@ -50,9 +50,9 @@ namespace
 
   void responseMessageListener(const Message& message)
   {
-    logInfo("Response arrived");
+    logInfo("Response arrived: {}", message.toString());
     auto mathresult = MathResult(message.userData());
-    logInfo("  * status: '{}', result: %d, error: '{}'", mathresult.status.c_str(), mathresult.result, mathresult.error.c_str());
+    logInfo("  * status: '{}', result: {}, error: '{}'", mathresult.status, mathresult.result, mathresult.error);
 
     _continue = false;
   }
@@ -70,7 +70,7 @@ int main(int argc, char** argv)
   logInfo("{} - starting...", argv[0]);
 
   auto requestQueue = std::string{argv[1]};
-  auto replyQueue = requestQueue + "/reply/";
+  auto replyQueue = requestQueue + "/reply";
 
   // Install a signal handler
   std::signal(SIGINT, signalHandler);
@@ -87,7 +87,8 @@ int main(int argc, char** argv)
   }
 
   auto operationQuery = MathOperation(argv[3], std::stoi(argv[4]), std::stoi(argv[5]));
-  Message request = Message::buildRequest(argv[0], requestQueue, "MathsOperations", replyQueue + utils::generateId(), operationQuery.serialize());
+
+  Message request = Message::buildRequest("MathsOperationsRequester", requestQueue, "MathsOperations", replyQueue, operationQuery.serialize());
 
   if (strcmp(argv[2], "async") == 0)
   {

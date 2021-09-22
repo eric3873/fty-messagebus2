@@ -110,6 +110,7 @@ namespace fty::messagebus::amqp
 
 
       m_sender.work_queue().add([=]() {
+        logDebug("Msg to sent {}", proton::to_string(msg));
         auto tracker = m_sender.send(msg);
         logDebug("Msg sent {}", proton::to_string(tracker.state()));
         m_sender.connection().close();
