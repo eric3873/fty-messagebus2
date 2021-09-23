@@ -121,7 +121,7 @@ namespace fty::messagebus::mqtt
       });
 
       logInfo("{} => connect status: sync client: {}, async client: {}", m_clientName.c_str(), m_asynClient->is_connected() ? "true" : "false",  m_synClient->is_connected() ? "true" : "false");
-      sendServiceStatus(COM_STATE_CONNECT_FAILED);
+      sendServiceStatus(CONNECTED_MSG);
     }
     catch (const ::mqtt::exception& e)
     {
