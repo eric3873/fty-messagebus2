@@ -39,7 +39,7 @@ namespace
   using namespace fty::messagebus;
   using namespace fty::sample::dto;
 
-  static auto constexpr SAMPLE_TOPIC = "topic://etn/samples/pubsub";
+  static auto constexpr SAMPLE_TOPIC = "topic://etn.t.samples.pubsub";
   // ensure that we received the message
   static std::promise<bool> g_received;
 

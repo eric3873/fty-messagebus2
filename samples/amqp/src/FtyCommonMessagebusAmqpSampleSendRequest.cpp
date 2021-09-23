@@ -63,14 +63,14 @@ int main(int argc, char** argv)
 {
   if (argc != 6)
   {
-    std::cout << "USAGE: " << argv[0] << " <reqQueue, i.e. /etn/samples/maths/> <async|sync> <add|mult> <num1> <num2>" << std::endl;
+    std::cout << "USAGE: " << argv[0] << " <reqQueue, i.e. queue://etn.q.samples.maths/> <async|sync> <add|mult> <num1> <num2>" << std::endl;
     return EXIT_FAILURE;
   }
 
   logInfo("{} - starting...", argv[0]);
 
   auto requestQueue = std::string{argv[1]};
-  auto replyQueue = requestQueue + "/reply";
+  auto replyQueue = requestQueue + ".reply";
 
   // Install a signal handler
   std::signal(SIGINT, signalHandler);
