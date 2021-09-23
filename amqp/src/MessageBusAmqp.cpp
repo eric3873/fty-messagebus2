@@ -59,8 +59,10 @@ namespace fty::messagebus::amqp
     logDebug("Send message");
     //Sanity check
     if (!msg.isValidMessage())
+    {
       return fty::unexpected(DELIVERY_STATE_REJECTED);
-
+    }
+    
     //Send
     return m_busAmqp->sendRequest(msg.metaData().at(TO), msg);
   }

@@ -32,21 +32,21 @@
 #include <csignal>
 #include <fty_log.h>
 #include <iostream>
-#include <thread>
+#include <future>
 
 namespace
 {
   using namespace fty::messagebus;
   using namespace fty::sample::dto;
 
-  static auto constexpr SAMPLES_TOPIC = "/etn/samples/publish";
-
-  static bool _continue = true;
+  static auto constexpr SAMPLE_TOPIC = "topic://etn/samples/pubsub";
+  // ensure that we received the message
+  static std::promise<bool> g_received;
 
   static void signalHandler(int signal)
   {
     std::cout << "Signal " << signal << " received\n";
-    _continue = false;
+    g_received.set_value(false);
   }
 
   void messageListener(Message message)
@@ -62,7 +62,7 @@ namespace
     logInfo("  * foo    : '{}'", fooBar.foo);
     logInfo("  * bar    : '{}'", fooBar.bar);
 
-    _continue = false;
+    g_received.set_value(true);
   }
 
 } // namespace
@@ -84,32 +84,25 @@ int main(int /*argc*/, char** argv)
     return EXIT_FAILURE;
   }
 
-  fty::Expected<void> subscribRet = bus.subscribe(SAMPLES_TOPIC, messageListener);
+  fty::Expected<void> subscribRet = bus.subscribe(SAMPLE_TOPIC, messageListener);
   if (!subscribRet)
   {
     logError("Error while subscribing {}", subscribRet.error());
     return EXIT_FAILURE;
   }
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  // Build message
+  Message msg = Message::buildMessage(argv[0], SAMPLE_TOPIC, "PublishMessage", FooBar("event", "hello").serialize());
 
-  //Build the message to send
-  Message msg = Message::buildMessage(argv[0], SAMPLES_TOPIC, "MESSAGE", FooBar("event", "hello").serialize());
-
-  //Send the message
+  // Send message
   fty::Expected<void> sendRet = bus.send(msg);
   if (!sendRet)
   {
     logError("Error while sending {}", sendRet.error());
     return EXIT_FAILURE;
   }
-  //bus.publish(SAMPLE_TOPIC, FooBar("event", "hello").serialize());
 
-  while (_continue)
-  {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
-
+  g_received.get_future().get();
   logInfo("{} - end", argv[0]);
   return EXIT_SUCCESS;
 }
