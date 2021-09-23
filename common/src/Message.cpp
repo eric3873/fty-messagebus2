@@ -48,42 +48,61 @@ namespace fty::messagebus
     return m_data;
   }
 
+  std::string Message::getMetaDataValue(const std::string& key) const
+  {
+    std::string value{};
+    auto iterator = m_metadata.find(key);
+    if (iterator != m_metadata.end())
+    {
+      value = iterator->second;
+    }
+    return value;
+  }
+
+  std::string Message::correlationId() const
+  {
+    return getMetaDataValue(CORRELATION_ID);
+  }
+
+  std::string Message::from() const
+  {
+    return getMetaDataValue(FROM);
+  }
+
+  std::string Message::to() const
+  {
+    return getMetaDataValue(TO);
+  }
+
+  std::string Message::replyTo() const
+  {
+    return getMetaDataValue(REPLY_TO);
+  }
+
+  std::string Message::subject() const
+  {
+    return getMetaDataValue(SUBJECT);
+  }
+
+  std::string Message::status() const
+  {
+    return getMetaDataValue(STATUS);
+  }
+
   bool Message::isValidMessage() const
   {
-    //Check that request have all the proper field set
-    try
-    {
-      return ((!m_metadata.at(SUBJECT).empty()) && (!m_metadata.at(FROM).empty()) && (!m_metadata.at(TO).empty()));
-    }
-    catch (...)
-    {
-      return false;
-    }
+    return ((!subject().empty()) && (!from().empty()) && (!to().empty()));
   }
 
   bool Message::isRequest() const
   {
-    try
-    {
-      return ((!m_metadata.at(CORRELATION_ID).empty()) && isValidMessage());
-    }
-    catch (...)
-    {
-      return false;
-    }
+    return ((!correlationId().empty()) && isValidMessage());
   }
 
   bool Message::needReply() const
   {
     //Check that request have all the proper field set
-    try
-    {
-      return (!m_metadata.at(REPLY_TO).empty() && isRequest());
-    }
-    catch (...)
-    {
-      return false;
-    }
+    return (!replyTo().empty() && isRequest());
   }
 
   fty::Expected<Message> Message::buildReply(const UserData& userData, const std::string& status) const

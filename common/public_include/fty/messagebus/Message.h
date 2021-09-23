@@ -56,6 +56,13 @@ namespace fty::messagebus
     UserData& userData();
     const UserData& userData() const;
 
+    std::string correlationId() const;
+    std::string from() const;
+    std::string to() const;
+    std::string replyTo() const;
+    std::string subject() const;
+    std::string status() const;
+
     bool isValidMessage() const;
     bool isRequest() const;
     bool needReply() const;
@@ -69,6 +76,10 @@ namespace fty::messagebus
   protected:
     MetaData m_metadata;
     UserData m_data;
+
+  private:
+
+    std::string getMetaDataValue(const std::string& key) const;
   };
 
 } // namespace fty::messagebus
