@@ -46,6 +46,7 @@ namespace fty::messagebus
   {
   public:
     Message() = default;
+    Message(const Message& message);
     Message(const MetaData& metaData, const UserData& userData);
 
     virtual ~Message() noexcept = default;
@@ -57,11 +58,17 @@ namespace fty::messagebus
     const UserData& userData() const;
 
     std::string correlationId() const;
+    void correlationId(const std::string& correlationId);
     std::string from() const;
+    void from(const std::string& from);
     std::string to() const;
+    void to(const std::string& to);
     std::string replyTo() const;
+    void replyTo(const std::string& replyTo);
     std::string subject() const;
+    void subject(const std::string& subject);
     std::string status() const;
+    void status(const std::string& status);
 
     bool isValidMessage() const;
     bool isRequest() const;

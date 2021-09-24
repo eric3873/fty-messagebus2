@@ -30,112 +30,90 @@
 
 namespace fty::messagebus::amqp
 {
-  using fty::messagebus::Message;
   using property_map = std::map<std::string, proton::scalar>;
 
-  inline const MetaData getMetaData(const proton::message& msg)
+  inline const MetaData getMetaData(const proton::message& protonMsg)
   {
-    MetaData metaData{};
+    Message message;
 
     // User properties
-    if (!msg.properties().empty())
+    if (!protonMsg.properties().empty())
     {
       property_map props;
-      proton::get(msg.properties(), props);
+      proton::get(protonMsg.properties(), props);
       for (property_map::iterator it = props.begin(); it != props.end(); ++it)
       {
-        metaData.emplace(proton::to_string(it->first), proton::to_string(it->second));
+        message.metaData().emplace(proton::to_string(it->first), proton::to_string(it->second));
       }
     }
 
-    if (!msg.user().empty())
+    if (!protonMsg.user().empty())
     {
-      metaData.emplace(FROM, msg.user());
+      message.from(protonMsg.user());
     }
 
-    if (!msg.id().empty())
+    if (!protonMsg.id().empty())
     {
-      metaData.emplace(FROM, proton::to_string(msg.id()));
+      message.from(proton::to_string(protonMsg.id()));
     }
 
-    if (!msg.subject().empty())
+    if (!protonMsg.subject().empty())
     {
-      metaData.emplace(SUBJECT, msg.subject());
+      message.subject(protonMsg.subject());
     }
-
 
     // Req/Rep pattern properties
-    if (!msg.correlation_id().empty())
+    if (!protonMsg.correlation_id().empty())
     {
-      metaData.emplace(CORRELATION_ID, proton::to_string(msg.correlation_id()));
+      message.correlationId(proton::to_string(protonMsg.correlation_id()));
     }
 
-    if (!msg.address().empty())
+    if (!protonMsg.address().empty())
     {
-      metaData.emplace(REPLY_TO, msg.reply_to());
+      message.replyTo(protonMsg.reply_to());
     }
 
-    if (!msg.to().empty())
+    if (!protonMsg.to().empty())
     {
-      metaData.emplace(TO, msg.to());
+      message.to(protonMsg.to());
     }
 
-    return metaData;
+    return message.metaData();
   }
 
   inline const proton::message getAmqpMessage(const Message& message)
   {
-    proton::message msg;
+    proton::message protonMsg;
     for (const auto& [key, value] : message.metaData())
     {
       if (key == REPLY_TO)
       {
-        std::string correlationId = message.metaData().find(CORRELATION_ID)->second;
-        msg.correlation_id(correlationId);
-        msg.reply_to(value);
-        msg.to(value);
+        std::string correlationId = message.correlationId();
+        protonMsg.correlation_id(correlationId);
+        protonMsg.reply_to(value);
+        protonMsg.to(value);
       }
       else if (key == SUBJECT)
       {
-        msg.subject(value);
+        protonMsg.subject(value);
       }
       else if (key == TO)
       {
-        msg.to(value);
+        protonMsg.to(value);
       }
       else if (key == FROM)
       {
-        msg.user(value);
-        msg.id(value);
+        protonMsg.user(value);
+        protonMsg.id(value);
       }
       else if (key != CORRELATION_ID)
       {
-        msg.properties().put(key, value);
+        protonMsg.properties().put(key, value);
       }
     }
-    msg.content_type("string");
-    msg.body(message.userData());
-    return msg;
-  }
-
-  inline const std::string getCorrelationId(const Message& message)
-  {
-    auto iterator = message.metaData().find(CORRELATION_ID);
-    if (iterator == message.metaData().end() || iterator->second == "")
-    {
-      throw std::runtime_error("Request must have a correlation id.");
-    }
-    return iterator->second;
-  }
-
-  inline const std::string getReplyQueue(const Message& message)
-  {
-    auto iterator = message.metaData().find(REPLY_TO);
-    if (iterator == message.metaData().end() || iterator->second == "")
-    {
-      throw std::runtime_error("Request must have a reply to.");
-    }
-    return iterator->second;
+    protonMsg.content_type("string");
+    protonMsg.body(message.userData());
+    return protonMsg;
   }
 
 } // namespace fty::messagebus::amqp

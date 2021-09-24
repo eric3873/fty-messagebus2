@@ -62,9 +62,9 @@ namespace fty::messagebus::amqp
     {
       return fty::unexpected(DELIVERY_STATE_REJECTED);
     }
-    
+
     //Send
-    return m_busAmqp->sendRequest(msg.metaData().at(TO), msg);
+    return m_busAmqp->sendRequest(msg.to(), msg);
   }
 
   fty::Expected<void> MessageBusAmqp::subscribe(const std::string& address, std::function<void(const Message&)>&& func) noexcept
@@ -86,7 +86,7 @@ namespace fty::messagebus::amqp
       return fty::unexpected(DELIVERY_STATE_REJECTED);
 
     //Send
-    return m_busAmqp->request(msg.metaData().at(TO), msg, timeOut);
+    return m_busAmqp->request(msg.to(), msg, timeOut);
   }
 
   const std::string& MessageBusAmqp::clientName() const noexcept

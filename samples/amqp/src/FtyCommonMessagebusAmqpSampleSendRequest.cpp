@@ -118,7 +118,7 @@ int main(int argc, char** argv)
       return EXIT_FAILURE;
     }
 
-    if (reply.value().metaData().at(STATUS) != STATUS_OK)
+    if (reply.value().status() != STATUS_OK)
     {
       std::cerr << "An error occured, message status is not OK!" << std::endl;
       return EXIT_FAILURE;

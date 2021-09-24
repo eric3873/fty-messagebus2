@@ -67,7 +67,7 @@ int main(int /*argc*/, char** argv)
 
 void signalHandler(int signal)
 {
-  std::cout << "Signal " << signal << " received\n"; 
+  std::cout << "Signal " << signal << " received\n";
   g_exit.set_value();
 }
 
@@ -76,18 +76,18 @@ void processMessage(const Message& message)
   logInfo("Process message:\n {}", message.toString());
 
   //check the message has the good subject
-  if( message.metaData().at(SUBJECT) != "TO_UPPER") {
+  if( message.subject() != "TO_UPPER") {
     logError("Subject not supported");
     return;
   }
-  
-  //we process the message - Here nothing to do because 
+
+  //we process the message - Here nothing to do because
   std::string data = message.userData();
 
   std::transform(data.begin(), data.end(), data.begin(),
                   [](unsigned char c){ return std::toupper(c); }
                 );
-  
+
   fty::Expected<Message> response = message.buildReply(data);
   if(!response ) {
     logError("Error while creating reply: {}", response.error());

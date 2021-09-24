@@ -22,6 +22,12 @@
 
 namespace fty::messagebus
 {
+  Message::Message(const Message& message)
+    : m_metadata(message.metaData())
+    , m_data(message.userData())
+  {
+  }
+
   Message::Message(const MetaData& metaData, const UserData& userData)
     : m_metadata(metaData)
     , m_data(userData)
@@ -64,9 +70,19 @@ namespace fty::messagebus
     return getMetaDataValue(CORRELATION_ID);
   }
 
+  void Message::correlationId(const std::string& correlationId)
+  {
+    m_metadata[CORRELATION_ID] = correlationId;
+  }
+
   std::string Message::from() const
   {
     return getMetaDataValue(FROM);
+  }
+
+  void Message::from(const std::string& from)
+  {
+    m_metadata[FROM] = from;
   }
 
   std::string Message::to() const
@@ -74,9 +90,19 @@ namespace fty::messagebus
     return getMetaDataValue(TO);
   }
 
+  void Message::to(const std::string& to)
+  {
+    m_metadata[TO] = to;
+  }
+
   std::string Message::replyTo() const
   {
     return getMetaDataValue(REPLY_TO);
+  }
+
+  void Message::replyTo(const std::string& replyTo)
+  {
+    m_metadata[REPLY_TO] = replyTo;
   }
 
   std::string Message::subject() const
@@ -84,9 +110,19 @@ namespace fty::messagebus
     return getMetaDataValue(SUBJECT);
   }
 
+  void Message::subject(const std::string& subject)
+  {
+    m_metadata[SUBJECT] = subject;
+  }
+
   std::string Message::status() const
   {
     return getMetaDataValue(STATUS);
+  }
+
+  void Message::status(const std::string& status)
+  {
+    m_metadata[STATUS] = status;
   }
 
   bool Message::isValidMessage() const
@@ -113,11 +149,11 @@ namespace fty::messagebus
       return fty::unexpected("Nowhere to reply!");
 
     Message reply;
-    reply.m_metadata[FROM] = m_metadata.at(TO);
-    reply.m_metadata[TO] = m_metadata.at(REPLY_TO);
-    reply.m_metadata[SUBJECT] = m_metadata.at(SUBJECT);
-    reply.m_metadata[CORRELATION_ID] = m_metadata.at(CORRELATION_ID);
-    reply.m_metadata[STATUS] = status;
+    reply.from(to());
+    reply.to(replyTo());
+    reply.subject(subject());
+    reply.correlationId(correlationId());
+    reply.status(status);
 
     reply.m_data = userData;
 
@@ -127,10 +163,10 @@ namespace fty::messagebus
   Message Message::buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData)
   {
     Message msg;
-    msg.m_metadata[FROM] = from;
-    msg.m_metadata[TO] = to;
-    msg.m_metadata[SUBJECT] = subject;
-    msg.m_metadata[CORRELATION_ID] = utils::generateUuid();
+    msg.from(from);
+    msg.to(to);
+    msg.subject(subject);
+    msg.correlationId(utils::generateUuid());
 
     msg.m_data = userData;
 
@@ -140,7 +176,7 @@ namespace fty::messagebus
   Message Message::buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData)
   {
     Message msg = buildMessage(from, to, subject, userData);
-    msg.m_metadata[REPLY_TO] = replyTo;
+    msg.replyTo(replyTo);
 
     return msg;
   }
