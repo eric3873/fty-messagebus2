@@ -31,7 +31,7 @@ namespace fty::messagebus::mqtt
   static auto constexpr DEFAULT_MQTT_ENDPOINT{"tcp://localhost:1883"};
 
   static auto constexpr BUS_INDENTITY_MQTT{"MQTT"};
-  
+
   /*static auto constexpr SECURE_MQTT_END_POINT{"tcp://localhost:8883"};
 
   // Mqtt default delimiter
@@ -65,8 +65,8 @@ namespace fty::messagebus::mqtt
 
     [[nodiscard]] fty::Expected<void> connect() noexcept override;
     [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept override;
-    [[nodiscard]] fty::Expected<void> subscribe(const std::string& queue, std::function<void(const Message&)>&& func) noexcept override;
-    [[nodiscard]] fty::Expected<void> unsubscribe(const std::string& queue) noexcept override;
+    [[nodiscard]] fty::Expected<void> subscribe(const std::string& address, std::function<void(const Message&)>&& func) noexcept override;
+    [[nodiscard]] fty::Expected<void> unsubscribe(const std::string& address) noexcept override;
     [[nodiscard]] fty::Expected<Message> request(const Message& msg, int timeOut) noexcept override;
 
     [[nodiscard]] const ClientName & clientName() const noexcept override;

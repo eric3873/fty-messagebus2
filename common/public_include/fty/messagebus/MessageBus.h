@@ -53,28 +53,28 @@ namespace fty::messagebus
     virtual [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept = 0 ;
 
 
-    /// Register a listener to a queue using function
-    /// @param queue the queue to subscribe
+    /// Register a listener to a address using function
+    /// @param queue the address to subscribe
     /// @param func the function to subscribe
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> subscribe(const std::string& queue, MessageListener && func) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> subscribe(const std::string& address, MessageListener && func) noexcept = 0 ;
 
     /// Unsubscribe from a queue
-    /// @param queue the queue to unsubscribe
+    /// @param queue the address to unsubscribe
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> unsubscribe(const std::string& queue) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> unsubscribe(const std::string& address) noexcept = 0 ;
 
-    /// Register a listener to a queue using class
+    /// Register a listener to a address using class
     /// @example
-    ///     bus.subsribe("queue", &MyCls::onMessage, this);
-    /// @param queue the queue to subscribe
+    ///     bus.subsribe("address", &MyCls::onMessage, this);
+    /// @param address the address to subscribe
     /// @param fnc the member function to subscribe
     /// @param cls class instance
     /// @return Success or error
     template <typename Func, typename Cls>
-    [[nodiscard]] fty::Expected<void> subscribe(const std::string& queue, Func&& fnc, Cls* cls) noexcept
+    [[nodiscard]] fty::Expected<void> subscribe(const std::string& address, Func&& fnc, Cls* cls) noexcept
     {
-        return registerListener(queue, [f = std::move(fnc), c = cls](const Message& msg) -> void {
+        return registerListener(address, [f = std::move(fnc), c = cls](const Message& msg) -> void {
             std::invoke(f, *c, Message(msg));
         });
     }

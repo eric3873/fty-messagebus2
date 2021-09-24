@@ -226,7 +226,7 @@ namespace fty::messagebus::mqtt
     m_cb.setSubscriptions(queue, messageListener);
     m_asynClient->set_message_callback([this](::mqtt::const_message_ptr msg) {
       const ::mqtt::properties& props = msg->get_properties();
-      if (/*props.contains(::mqtt::property::RESPONSE_TOPIC) ||*/ props.contains(::mqtt::property::CORRELATION_DATA))
+      if (props.contains(::mqtt::property::CORRELATION_DATA))
       {
         // Wrapper from mqtt msg to Message
         m_cb.onMessageArrived(msg, m_asynClient);
