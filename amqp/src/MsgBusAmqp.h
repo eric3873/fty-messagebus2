@@ -54,12 +54,11 @@ namespace fty::messagebus::amqp
 
     [[nodiscard]] fty::Expected<void> connect();
 
-    fty::Expected<void> send(const std::string& address, const Message& message);
-    fty::Expected<void> receive(const std::string& address, MessageListener messageListener, const std::string& filter);
-    fty::Expected<void> receive(const std::string& address, MessageListener messageListener);
+    fty::Expected<void> send(const Message& message);
+    fty::Expected<void> receive(const std::string& address, MessageListener messageListener, const std::string& filter = {});
     fty::Expected<void> unreceive(const std::string& address);
 
-    // Sync queue
+    // Sync request with timeout
     fty::Expected<Message> request(const Message& message, int receiveTimeOut);
 
     const std::string& clientName() const
@@ -73,4 +72,5 @@ namespace fty::messagebus::amqp
 
     std::map<std::string, ReceiverPointer> m_subScriptions;
   };
+
 } // namespace fty::messagebus::amqp

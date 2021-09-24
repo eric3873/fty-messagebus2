@@ -36,11 +36,7 @@ namespace
 
 namespace fty::messagebus::amqp
 {
-  static auto constexpr AMQP_TOPIC_PREFIX = "topic://";
-  static auto constexpr AMQP_QUEUE_PREFIX = "queue://";
-
   using namespace fty::messagebus;
-
   using proton::receiver_options;
   using proton::source_options;
 
@@ -124,12 +120,7 @@ namespace fty::messagebus::amqp
     return {};
   }
 
-  fty::Expected<void> MsgBusAmqp::receive(const std::string& address, MessageListener messageListener)
-  {
-    return receive(address, messageListener, {});
-  }
-
-  fty::Expected<void> MsgBusAmqp::send(const std::string& address, const Message& message)
+  fty::Expected<void> MsgBusAmqp::send(const Message& message)
   {
     if (!isServiceAvailable())
     {
@@ -137,11 +128,10 @@ namespace fty::messagebus::amqp
       return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
     }
 
-    logDebug("Sending to {}", address);
+    logDebug("Sending message {}", message.toString());
     proton::message msgToSend = getAmqpMessage(message);
-    //logDebug("Sending request payload: '{}' to: {} and wait message on reply queue {}", message.userData(), requestQueue, replyTo);
 
-    Sender sender = Sender(m_endpoint, address);
+    Sender sender = Sender(m_endpoint, message.to());
     std::thread thrd([&]() {
       proton::container(sender).run();
     });

@@ -30,14 +30,6 @@
 
 namespace fty::messagebus::amqp
 {
-  // Topic
-  static const std::string PREFIX_TOPIC = "etn.t";
-
-  // Queues
-  static const std::string PREFIX_QUEUE = "etn.q.";
-  static const std::string PREFIX_REQUEST_QUEUE = PREFIX_QUEUE + "request.";
-  static const std::string PREFIX_REPLY_QUEUE = PREFIX_QUEUE + "reply.";
-
   MessageBusAmqp::MessageBusAmqp(const ClientName& clientName,
                                  const Endpoint& endpoint)
     : MessageBus()
@@ -60,7 +52,7 @@ namespace fty::messagebus::amqp
     }
 
     //Send
-    return m_busAmqp->send(msg.to(), msg);
+    return m_busAmqp->send(msg);
   }
 
   fty::Expected<void> MessageBusAmqp::subscribe(const std::string& address, std::function<void(const Message&)>&& func) noexcept
