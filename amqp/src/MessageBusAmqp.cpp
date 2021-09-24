@@ -45,10 +45,6 @@ namespace fty::messagebus::amqp
     m_busAmqp = std::make_shared<MsgBusAmqp>(clientName, endpoint);
   }
 
-  MessageBusAmqp::~MessageBusAmqp()
-  {
-  }
-
   fty::Expected<void> MessageBusAmqp::connect() noexcept
   {
     return m_busAmqp->connect();
@@ -64,17 +60,17 @@ namespace fty::messagebus::amqp
     }
 
     //Send
-    return m_busAmqp->sendRequest(msg.to(), msg);
+    return m_busAmqp->send(msg.to(), msg);
   }
 
   fty::Expected<void> MessageBusAmqp::subscribe(const std::string& address, std::function<void(const Message&)>&& func) noexcept
   {
-    return m_busAmqp->subscribe(address, func);
+    return m_busAmqp->receive(address, func);
   }
 
   fty::Expected<void> MessageBusAmqp::unsubscribe(const std::string& address) noexcept
   {
-    return m_busAmqp->unsubscribe(address);
+    return m_busAmqp->unreceive(address);
   }
 
   fty::Expected<Message> MessageBusAmqp::request(const Message& msg, int timeOut) noexcept
@@ -86,7 +82,7 @@ namespace fty::messagebus::amqp
       return fty::unexpected(DELIVERY_STATE_REJECTED);
 
     //Send
-    return m_busAmqp->request(msg.to(), msg, timeOut);
+    return m_busAmqp->request(msg, timeOut);
   }
 
   const std::string& MessageBusAmqp::clientName() const noexcept

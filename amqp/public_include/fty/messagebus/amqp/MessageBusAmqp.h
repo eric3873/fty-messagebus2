@@ -40,7 +40,7 @@ namespace fty::messagebus::amqp
     MessageBusAmqp(const ClientName& clientName = utils::getClientId("MessageBusAmqp"),
                    const Endpoint& endpoint = DEFAULT_AMQP_END_POINT);
 
-    ~MessageBusAmqp();
+    ~MessageBusAmqp() = default;
 
     MessageBusAmqp(MessageBusAmqp&& other) = default;
     MessageBusAmqp& operator=(MessageBusAmqp&& other) = delete;

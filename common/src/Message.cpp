@@ -23,8 +23,7 @@
 namespace fty::messagebus
 {
   Message::Message(const Message& message)
-    : m_metadata(message.metaData())
-    , m_data(message.userData())
+    : Message(message.metaData(), message.userData())
   {
   }
 
@@ -146,7 +145,7 @@ namespace fty::messagebus
     if (!isValidMessage())
       return fty::unexpected("Not a valid message!");
     if (!needReply())
-      return fty::unexpected("Nowhere to reply!");
+      return fty::unexpected("No where to reply!");
 
     Message reply;
     reply.from(to());

@@ -54,20 +54,13 @@ namespace fty::messagebus::amqp
 
     [[nodiscard]] fty::Expected<void> connect();
 
-    // Pub/Sub pattern
-    fty::Expected<void> publish(const std::string& address, const Message& message);
-    fty::Expected<void> subscribe(const std::string& address, MessageListener messageListener);
-    fty::Expected<void> unsubscribe(const std::string& address);
-
-    // Req/Rep pattern
-    fty::Expected<void> sendRequest(const std::string& requestQueue, const Message& message);
-    fty::Expected<void> sendRequest(const std::string& requestQueue, const Message& message, MessageListener messageListener);
-    fty::Expected<void> sendReply(const std::string& replyQueue, const Message& message);
-    fty::Expected<void> receive(const std::string& queue, MessageListener messageListener, const std::string& filter);
-    fty::Expected<void> receive(const std::string& queue, MessageListener messageListener);
+    fty::Expected<void> send(const std::string& address, const Message& message);
+    fty::Expected<void> receive(const std::string& address, MessageListener messageListener, const std::string& filter);
+    fty::Expected<void> receive(const std::string& address, MessageListener messageListener);
+    fty::Expected<void> unreceive(const std::string& address);
 
     // Sync queue
-    fty::Expected<Message> request(const std::string& requestQueue, const Message& message, int receiveTimeOut);
+    fty::Expected<Message> request(const Message& message, int receiveTimeOut);
 
     const std::string& clientName() const
     {
