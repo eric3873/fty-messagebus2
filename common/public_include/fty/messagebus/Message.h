@@ -78,6 +78,8 @@ namespace fty::messagebus
     static Message buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData = {});
     static Message buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData = {});
 
+    MetaData getUndefinedProperties() const;
+
     std::string toString() const;
 
   protected:

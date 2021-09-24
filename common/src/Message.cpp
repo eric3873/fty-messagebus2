@@ -181,6 +181,19 @@ namespace fty::messagebus
     return msg;
   }
 
+  MetaData Message::getUndefinedProperties() const
+  {
+    MetaData metaData;
+    for (const auto& [key, value] : m_metadata)
+    {
+      if (key != CORRELATION_ID || key != FROM || key != TO || key != REPLY_TO || key != SUBJECT)
+      {
+        metaData.emplace(key, value);
+      }
+    }
+    return metaData;
+  }
+
   std::string Message::toString() const
   {
     std::string data;

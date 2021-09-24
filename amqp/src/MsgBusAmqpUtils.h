@@ -84,33 +84,36 @@ namespace fty::messagebus::amqp
   inline const proton::message getAmqpMessage(const Message& message)
   {
     proton::message protonMsg;
-    for (const auto& [key, value] : message.metaData())
+
+    if(!message.replyTo().empty())
     {
-      if (key == REPLY_TO)
-      {
-        std::string correlationId = message.correlationId();
-        protonMsg.correlation_id(correlationId);
-        protonMsg.reply_to(value);
-        protonMsg.to(value);
-      }
-      else if (key == SUBJECT)
-      {
-        protonMsg.subject(value);
-      }
-      else if (key == TO)
-      {
-        protonMsg.to(value);
-      }
-      else if (key == FROM)
-      {
-        protonMsg.user(value);
-        protonMsg.id(value);
-      }
-      else if (key != CORRELATION_ID)
-      {
-        protonMsg.properties().put(key, value);
-      }
+      protonMsg.correlation_id(message.correlationId());
+      protonMsg.reply_to(message.replyTo());
+      protonMsg.to(message.replyTo());
     }
+
+    if(!message.subject().empty())
+    {
+      protonMsg.subject(message.subject());
+    }
+
+    if(!message.to().empty())
+    {
+      protonMsg.subject(message.to());
+    }
+
+    if(!message.from().empty())
+    {
+      protonMsg.user(message.from());
+      protonMsg.id(message.from());
+    }
+
+    // All remaining properties
+    for (const auto& [key, value] : message.getUndefinedProperties())
+    {
+      protonMsg.properties().put(key, value);
+    }
+
     protonMsg.content_type("string");
     protonMsg.body(message.userData());
     return protonMsg;
