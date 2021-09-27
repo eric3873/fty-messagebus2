@@ -113,14 +113,12 @@ namespace fty::messagebus::amqp
         logDebug("CorrelId filter: {}", correlIdFilter.str().c_str());
         set_filter(opts, correlIdFilter.str());
       }
-      m_receiver = m_sender.connection().open_receiver("queue://" + m_request.reply_to(), proton::receiver_options().source(opts));
-    }
+      m_receiver = conn.open_receiver(m_request.reply_to(), proton::receiver_options().source(opts));
+}
 
     void send_request()
     {
       logDebug("send_request");
-      // TODO see where to set this.
-      //m_request.reply_to(m_receiver.source().address());
       m_sender.send(m_request);
     }
 
@@ -166,6 +164,7 @@ namespace fty::messagebus::amqp
 
     void on_message(proton::delivery& delivery, proton::message& msg) override
     {
+      logDebug("on_message: {}", proton::to_string(msg));
       std::lock_guard<std::mutex> l(m_lock);
       delivery.accept();
       m_promise.set_value(msg);

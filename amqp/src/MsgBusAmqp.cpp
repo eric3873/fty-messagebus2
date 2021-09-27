@@ -158,9 +158,10 @@ namespace fty::messagebus::amqp
         return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
       }
 
-      auto protonMsg = getAmqpMessage(message);
+      logDebug("Sending message {}", message.toString());
+      proton::message msgToSend = getAmqpMessage(message);
 
-      Requester requester(m_endpoint, protonMsg);
+      Requester requester(m_endpoint, msgToSend);
       std::thread thrd([&]() {
         proton::container(requester).run();
       });

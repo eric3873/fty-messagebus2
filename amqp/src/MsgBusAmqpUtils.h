@@ -51,28 +51,23 @@ namespace fty::messagebus::amqp
     {
       message.from(protonMsg.user());
     }
-
     if (!protonMsg.id().empty())
     {
       message.from(proton::to_string(protonMsg.id()));
     }
-
     if (!protonMsg.subject().empty())
     {
       message.subject(protonMsg.subject());
     }
-
     // Req/Rep pattern properties
     if (!protonMsg.correlation_id().empty())
     {
       message.correlationId(proton::to_string(protonMsg.correlation_id()));
     }
-
     if (!protonMsg.address().empty())
     {
       message.replyTo(protonMsg.reply_to());
     }
-
     if (!protonMsg.to().empty())
     {
       message.to(protonMsg.to());
@@ -85,28 +80,18 @@ namespace fty::messagebus::amqp
   {
     proton::message protonMsg;
 
-    if(!message.replyTo().empty())
+    protonMsg.to(message.to());
+    if (!message.replyTo().empty())
+    {
+      protonMsg.reply_to(message.replyTo());
+    }
+    if (!message.correlationId().empty())
     {
       protonMsg.correlation_id(message.correlationId());
-      protonMsg.reply_to(message.replyTo());
-      protonMsg.to(message.replyTo());
     }
-
-    if(!message.subject().empty())
-    {
-      protonMsg.subject(message.subject());
-    }
-
-    if(!message.to().empty())
-    {
-      protonMsg.subject(message.to());
-    }
-
-    if(!message.from().empty())
-    {
-      protonMsg.user(message.from());
-      protonMsg.id(message.from());
-    }
+    protonMsg.subject(message.subject());
+    protonMsg.user(message.from());
+    protonMsg.id(message.from());
 
     // All remaining properties
     for (const auto& [key, value] : message.getUndefinedProperties())

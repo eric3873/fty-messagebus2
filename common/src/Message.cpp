@@ -185,7 +185,7 @@ namespace fty::messagebus
     MetaData metaData;
     for (const auto& [key, value] : m_metadata)
     {
-      if (key != CORRELATION_ID || key != FROM || key != TO || key != REPLY_TO || key != SUBJECT)
+      if (key != CORRELATION_ID && key != FROM && key != TO && key != REPLY_TO && key != SUBJECT)
       {
         metaData.emplace(key, value);
       }
