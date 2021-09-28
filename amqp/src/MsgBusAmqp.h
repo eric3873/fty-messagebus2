@@ -54,9 +54,9 @@ namespace fty::messagebus::amqp
 
     [[nodiscard]] fty::Expected<void> connect();
 
-    fty::Expected<void> send(const Message& message);
     fty::Expected<void> receive(const std::string& address, MessageListener messageListener, const std::string& filter = {});
     fty::Expected<void> unreceive(const std::string& address);
+    fty::Expected<void> send(const Message& message);
 
     // Sync request with timeout
     fty::Expected<Message> request(const Message& message, int receiveTimeOut);

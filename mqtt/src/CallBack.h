@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include <fty/messagebus/MessageBus.h>
 #include <fty/messagebus/Message.h>
+#include <fty/messagebus/MessageBus.h>
 #include <fty/messagebus/utils/MsgBusPoolWorker.hpp>
 
 #include <map>
@@ -30,7 +30,6 @@
 #include <mqtt/client.h>
 #include <string>
 #include <thread>
-
 
 namespace fty::messagebus::mqtt
 {

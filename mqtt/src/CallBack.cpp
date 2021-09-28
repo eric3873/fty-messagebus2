@@ -21,13 +21,13 @@
 
 /*
 @header
-    fty_common_messagebus_mqtt_call_back.cpp -
+    CallBack.cpp -
 @discuss
 @end
 */
 
 #include "CallBack.h"
-#include "fty/messagebus/Message.h"
+#include <fty/messagebus/Message.h>
 
 #include <fty_log.h>
 
@@ -76,7 +76,8 @@ namespace fty::messagebus::mqtt
 {
   size_t NB_WORKERS = 16;
 
-  CallBack::CallBack() : ::mqtt::callback()
+  CallBack::CallBack()
+    : ::mqtt::callback()
   {
     m_poolWorkers = std::make_shared<utils::PoolWorker>(NB_WORKERS);
   }
@@ -142,21 +143,20 @@ namespace fty::messagebus::mqtt
         // Delegate to the pool worker
         logTrace("Notify received from topic: '{}'", topic);
         m_poolWorkers->offload([this, clientPointer, topic](MessageListener listener, const Message& mqttMsg) {
-
-
-          if(listener) {
+          if (listener)
+          {
             logTrace("Trigger callback...");
             listener(mqttMsg);
             logTrace("Trigger callback... Done.");
-          } else {
+          }
+          else
+          {
             logTrace("No callback to trigger");
           }
 
-
-
           // Unsubscribe only reply
           auto iterator = mqttMsg.metaData().find(SUBJECT);
-          if (clientPointer && (iterator != mqttMsg.metaData().end() /*&& iterator->second == ANSWER_USER_PROPERTY*/))
+          if (clientPointer && (iterator != mqttMsg.metaData().end()))
           {
             clientPointer->unsubscribe(topic);
             this->eraseSubscriptions(topic);

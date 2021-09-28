@@ -79,27 +79,6 @@ namespace fty::messagebus::amqp
     return {};
   }
 
-  fty::Expected<void> MsgBusAmqp::unreceive(const std::string& address)
-  {
-    if (!isServiceAvailable())
-    {
-      logDebug("Service not available");
-      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
-    }
-
-    try
-    {
-      m_subScriptions.at(address)->cancel();
-      logTrace("{} - unsubscribed on: '{}'", m_clientName, address);
-      return {};
-    }
-    catch (...)
-    {
-      logDebug("Unsubscribed ({})", to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-    }
-  }
-
   fty::Expected<void> MsgBusAmqp::receive(const std::string& address, MessageListener messageListener, const std::string& filter)
   {
     if (!isServiceAvailable())
@@ -119,6 +98,27 @@ namespace fty::messagebus::amqp
 
     logDebug("Waiting to receive msg from: {} Accepted", address);
     return {};
+  }
+
+  fty::Expected<void> MsgBusAmqp::unreceive(const std::string& address)
+  {
+    if (!isServiceAvailable())
+    {
+      logDebug("Service not available");
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+    }
+
+    try
+    {
+      m_subScriptions.at(address)->cancel();
+      logTrace("{} - unsubscribed on: '{}'", m_clientName, address);
+      return {};
+    }
+    catch (...)
+    {
+      logError("Unsubscribed (Rejected)");
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    }
   }
 
   fty::Expected<void> MsgBusAmqp::send(const Message& message)
@@ -141,7 +141,7 @@ namespace fty::messagebus::amqp
 
     if (false)
     {
-      logDebug("Message sent ({})", DELIVERY_STATE_REJECTED);
+      logError("Message sent (Rejected)");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
@@ -172,7 +172,7 @@ namespace fty::messagebus::amqp
       bool messageArrived = requester.tryConsumeMessageFor(response, receiveTimeOut);
       if (!messageArrived)
       {
-        logDebug("No message arrive in time!");
+        logError("No message arrive in time!");
         return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_TIMEOUT));
       }
 

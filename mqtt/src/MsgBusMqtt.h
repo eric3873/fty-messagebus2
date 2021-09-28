@@ -56,21 +56,17 @@ namespace fty::messagebus::mqtt
 
     [[nodiscard]] fty::Expected<void> connect();
 
-    // Pub/Sub pattern
-    fty::Expected<void> publish(const std::string& topic, const Message& message) ;
-    fty::Expected<void> subscribe(const std::string& topic, MessageListener messageListener) ;
-    fty::Expected<void> unsubscribe(const std::string& topic) ;
+    fty::Expected<void> receive(const std::string& address, MessageListener messageListener);
+    fty::Expected<void> unreceive(const std::string& address);
+    fty::Expected<void> send(const Message& message);
 
-    // Req/Rep pattern
-    fty::Expected<void> sendRequest(const std::string& requestQueue, const Message& message) ;
-    fty::Expected<void> sendRequest(const std::string& requestQueue, const Message& message, MessageListener messageListener) ;
-    fty::Expected<void> sendReply(const std::string& replyQueue, const Message& message) ;
-    fty::Expected<void> receive(const std::string& queue, MessageListener messageListener) ;
+    // Sync request with timeout
+    fty::Expected<Message> request(const Message& message, int receiveTimeOut);
 
-    // Sync queue
-    fty::Expected<Message> request(const std::string& requestQueue, const Message& message, int receiveTimeOut) ;
-
-    const std::string & clientName() const { return m_clientName; }
+    const std::string& clientName() const
+    {
+      return m_clientName;
+    }
 
   private:
     std::string m_clientName{};

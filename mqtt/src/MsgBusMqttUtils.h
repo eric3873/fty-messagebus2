@@ -77,24 +77,4 @@ namespace fty::messagebus::mqtt
     return props;
   }
 
-  inline const std::string getCorrelationId(const Message& message)
-  {
-    auto iterator = message.metaData().find(CORRELATION_ID);
-    if (iterator == message.metaData().end() || iterator->second == "")
-    {
-      throw std::runtime_error("Request must have a correlation id.");
-    }
-    return iterator->second;
-  }
-
-  inline const std::string getReplyQueue(const Message& message)
-  {
-    auto iterator = message.metaData().find(REPLY_TO);
-    if (iterator == message.metaData().end() || iterator->second == "")
-    {
-      throw std::runtime_error("Request must have a reply to.");
-    }
-    return iterator->second;
-  }
-
 } // namespace fty::messagebus::mqtt

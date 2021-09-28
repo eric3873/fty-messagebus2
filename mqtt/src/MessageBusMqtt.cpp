@@ -61,17 +61,17 @@ namespace fty::messagebus::mqtt
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
 
     //Send
-    return m_busMqtt->sendRequest(msg.to(), msg);
+    return m_busMqtt->send(msg);
   }
 
   fty::Expected<void> MessageBusMqtt::subscribe(const std::string& queue, std::function<void(const Message&)>&& func) noexcept
   {
-    return m_busMqtt->subscribe(queue, func);
+    return m_busMqtt->receive(queue, func);
   }
 
-  fty::Expected<void> MessageBusMqtt::unsubscribe(const std::string& queue) noexcept
+  fty::Expected<void> MessageBusMqtt::unsubscribe(const std::string& address) noexcept
   {
-    return m_busMqtt->unsubscribe(queue);
+    return m_busMqtt->unreceive(address);
   }
 
   fty::Expected<Message> MessageBusMqtt::request(const Message& msg, int timeOut) noexcept
@@ -83,7 +83,7 @@ namespace fty::messagebus::mqtt
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
 
     //Send
-    return m_busMqtt->request(msg.to(), msg, timeOut);
+    return m_busMqtt->request(msg, timeOut);
   }
 
   const std::string& MessageBusMqtt::clientName() const noexcept
