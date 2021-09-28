@@ -50,8 +50,6 @@ namespace
 
   void replyerMessageListener(const Message& message)
   {
-    logInfo("Replyer messageListener");
-
     logDebug("Message arrived: '{}'", message.toString());
 
     auto mathQuery = MathOperation(message.userData());
