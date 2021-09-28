@@ -20,6 +20,7 @@
 */
 
 #include "fty/messagebus/mqtt/MessageBusMqtt.h"
+#include <fty/messagebus/MessageBusStatus.h>
 
 #include "CallBack.h"
 #include "MsgBusMqtt.h"
@@ -44,7 +45,8 @@ namespace fty::messagebus::mqtt
   }
 
   MessageBusMqtt::~MessageBusMqtt()
-  {}
+  {
+  }
 
   fty::Expected<void> MessageBusMqtt::connect() noexcept
   {
@@ -55,7 +57,8 @@ namespace fty::messagebus::mqtt
   {
     logDebug("Send message");
     //Sanity check
-    if(! msg.isValidMessage()) return fty::unexpected(DELIVERY_STATE_REJECTED);
+    if (!msg.isValidMessage())
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
 
     //Send
     return m_busMqtt->sendRequest(msg.to(), msg);
@@ -74,21 +77,23 @@ namespace fty::messagebus::mqtt
   fty::Expected<Message> MessageBusMqtt::request(const Message& msg, int timeOut) noexcept
   {
     //Sanity check
-    if(! msg.isValidMessage()) return fty::unexpected(DELIVERY_STATE_REJECTED);
-    if(! msg.needReply()) return fty::unexpected(DELIVERY_STATE_REJECTED);
+    if (!msg.isValidMessage())
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    if (!msg.needReply())
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
 
     //Send
     return m_busMqtt->request(msg.to(), msg, timeOut);
   }
 
-  const std::string & MessageBusMqtt::clientName() const noexcept
+  const std::string& MessageBusMqtt::clientName() const noexcept
   {
     return m_busMqtt->clientName();
   }
 
   static const std::string g_identity(BUS_INDENTITY_MQTT);
 
-  const std::string & MessageBusMqtt::identity() const noexcept
+  const std::string& MessageBusMqtt::identity() const noexcept
   {
     return g_identity;
   }

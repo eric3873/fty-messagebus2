@@ -30,6 +30,7 @@
 #include "MsgBusMqttUtils.h"
 
 #include <fty/messagebus/utils.h>
+#include <fty/messagebus/MessageBusStatus.h>
 #include <fty_log.h>
 
 #include <mqtt/async_client.h>
@@ -126,12 +127,12 @@ namespace fty::messagebus::mqtt
     catch (const ::mqtt::exception& e)
     {
       logError("Error to connect with the Mqtt server, reason: {}", e.get_message().c_str());
-      return fty::unexpected(COM_STATE_CONNECT_FAILED);
+      return fty::unexpected(to_string(ComState::COM_STATE_CONNECT_FAILED));
     }
     catch (const std::exception& e)
     {
       logError("unexpected error: {}", e.what());
-      return fty::unexpected(COM_STATE_CONNECT_FAILED);
+      return fty::unexpected(to_string(ComState::COM_STATE_CONNECT_FAILED));
     }
 
     return {};
@@ -142,7 +143,7 @@ namespace fty::messagebus::mqtt
     if (!isServiceAvailable(m_asynClient))
     {
       logDebug("Service not available");
-      return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
     logDebug("Publishing on topic: {}", topic.c_str());
@@ -161,7 +162,7 @@ namespace fty::messagebus::mqtt
     if(! m_asynClient->publish(pubMsg)->wait_for(TIMEOUT)) {
       //message rejected
       logDebug("Message rejected");
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
     logDebug("Message published (Accepted)");
@@ -174,7 +175,7 @@ namespace fty::messagebus::mqtt
     if (!isServiceAvailable(m_asynClient))
     {
       logDebug("Service not available");
-      return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
 
@@ -186,8 +187,8 @@ namespace fty::messagebus::mqtt
     });
 
     if(! m_asynClient->subscribe(topic, QOS)->wait_for(TIMEOUT)) {
-      logDebug("Subscribed ({})", DELIVERY_STATE_REJECTED);
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      logDebug("Subscribed ({})", to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
     logDebug("Subscribed (Accepted)");
@@ -200,14 +201,14 @@ namespace fty::messagebus::mqtt
     if (!isServiceAvailable(m_asynClient))
     {
       logDebug("Service not available");
-      return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
     logTrace("{} - unsubscribed for topic '{}'", m_clientName.c_str(), topic.c_str());
     if(! m_asynClient->unsubscribe(topic)->wait_for(TIMEOUT))
     {
-      logDebug("Unsubscribed ({})", DELIVERY_STATE_REJECTED);
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      logDebug("Unsubscribed ({})", to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
     m_cb.eraseSubscriptions(topic);
@@ -220,7 +221,7 @@ namespace fty::messagebus::mqtt
     if (!isServiceAvailable(m_asynClient))
     {
       logDebug("Service not available");
-      return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
     m_cb.setSubscriptions(queue, messageListener);
@@ -239,7 +240,7 @@ namespace fty::messagebus::mqtt
 
     if(! m_asynClient->subscribe(queue, QOS)->wait_for(TIMEOUT)) {
       logDebug("Waiting to receive msg from: {} {}", queue.c_str(), DELIVERY_STATE_REJECTED);
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
     logDebug("Waiting to receive msg from: {} Accepted");
@@ -251,7 +252,7 @@ namespace fty::messagebus::mqtt
     if (!isServiceAvailable(m_asynClient))
     {
       logDebug("Service not available");
-      return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
     logDebug("Request sent to {}", requestQueue.c_str() );
@@ -275,8 +276,8 @@ namespace fty::messagebus::mqtt
                     .finalize();
 
     if(! m_asynClient->publish(reqMsg)->wait_for(TIMEOUT) ){
-      logDebug("Request sent ({})", DELIVERY_STATE_REJECTED);
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      logDebug("Request sent ({})", to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
     logDebug("Request sent (Accepted)");
@@ -298,7 +299,7 @@ namespace fty::messagebus::mqtt
     if (!isServiceAvailable(m_asynClient))
     {
       logDebug("Service not available");
-      return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
     // Adding all meta data inside mqtt properties
@@ -315,8 +316,8 @@ namespace fty::messagebus::mqtt
                       .finalize();
 
     if(! m_asynClient->publish(replyMsg)->wait_for(TIMEOUT) ) {
-      logDebug("Reply sent ({})", DELIVERY_STATE_REJECTED);
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      logDebug("Reply sent ({})", to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
     logDebug("Reply sent (Accepted)");
@@ -329,7 +330,7 @@ namespace fty::messagebus::mqtt
     try{
       if (! (isServiceAvailable(m_asynClient) && isServiceAvailable(m_synClient))) {
         logDebug("Service not available");
-        return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
       }
 
       Message replyMsg;
@@ -345,7 +346,7 @@ namespace fty::messagebus::mqtt
       if (!messageArrived)
       {
         logDebug("No message arrive in time!");
-        return fty::unexpected(DELIVERY_STATE_TIMEOUT);
+        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_TIMEOUT));
       }
 
       logDebug("Message arrived ({})", msg->get_payload_str().c_str());
