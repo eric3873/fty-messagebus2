@@ -80,7 +80,8 @@ namespace fty::messagebus::amqp
   {
     proton::message protonMsg;
 
-    protonMsg.to(message.to());
+    // Fill in replyTo and CorrelationId only if there are not empty, otherwise filled in with empty values,
+    // the filtering on correlationId with proton library does not work.
     if (!message.replyTo().empty())
     {
       protonMsg.reply_to(message.replyTo());
@@ -89,6 +90,7 @@ namespace fty::messagebus::amqp
     {
       protonMsg.correlation_id(message.correlationId());
     }
+    protonMsg.to(message.to());
     protonMsg.subject(message.subject());
     protonMsg.user(message.from());
     protonMsg.id(message.from());

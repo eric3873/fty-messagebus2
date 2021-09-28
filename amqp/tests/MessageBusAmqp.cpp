@@ -20,7 +20,7 @@
 */
 
 #include <fty/messagebus/Message.h>
-#include <fty/messagebus/MessageBus.h>
+#include <fty/messagebus/MessageBusStatus.h>
 #include <fty/messagebus/amqp/MessageBusAmqp.h>
 
 #include <catch2/catch.hpp>
@@ -176,7 +176,7 @@ namespace
 
     auto replyMsg = msgBus.request(request, MAX_TIMEOUT);
     REQUIRE(!replyMsg);
-    REQUIRE(replyMsg.error() == DELIVERY_STATE_TIMEOUT);
+    REQUIRE(from_deliveryState_state(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
   }
 
   TEST_CASE("Amqp async request", "[send]")
