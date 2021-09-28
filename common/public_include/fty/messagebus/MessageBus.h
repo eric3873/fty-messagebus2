@@ -25,7 +25,7 @@
 #include <string>
 
 #include <fty/expected.h>
-#include <fty/messagebus/Message.h>
+#include "fty/messagebus/Message.h"
 
 namespace fty::messagebus
 {
@@ -94,17 +94,5 @@ namespace fty::messagebus
     virtual [[nodiscard]] const Identity & identity() const noexcept = 0 ;
 
   };
-
-  constexpr const char* COM_STATE_LOST = "COM_STATE_LOST";
-  constexpr const char* COM_STATE_NO_CONTACT = "COM_STATE_NO_CONTACT";
-  constexpr const char* COM_STATE_CONNECT_FAILED = "COM_STATE_CONNECT_FAILED";
-
-  constexpr const char* DELIVERY_STATE_REJECTED = "DELIVERY_STATE_REJECTED";
-  constexpr const char* DELIVERY_STATE_TIMEOUT = "DELIVERY_STATE_TIMEOUT";
-  constexpr const char* DELIVERY_STATE_NOT_SUPPORTED = "DELIVERY_STATE_NOT_SUPPORTED";
-  constexpr const char* DELIVERY_STATE_PENDING = "DELIVERY_STATE_PENDING";
-  constexpr const char* DELIVERY_STATE_BUSY = "DELIVERY_STATE_BUSY";
-  constexpr const char* DELIVERY_STATE_ABORTED = "DELIVERY_STATE_ABORTED";
-  constexpr const char* DELIVERY_STATE_UNAVAILABLE = "DELIVERY_STATE_UNAVAILABLE";
 
 } // namespace fty::messagebus

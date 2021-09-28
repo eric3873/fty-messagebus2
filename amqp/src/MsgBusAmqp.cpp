@@ -22,6 +22,7 @@
 #include "MsgBusAmqp.h"
 #include "MsgBusAmqpUtils.h"
 
+#include <fty/messagebus/MessageBusStatus.h>
 #include <fty/messagebus/utils.h>
 #include <fty_log.h>
 
@@ -72,7 +73,7 @@ namespace fty::messagebus::amqp
     catch (const std::exception& e)
     {
       logError("unexpected error: {}", e.what());
-      return fty::unexpected(COM_STATE_CONNECT_FAILED);
+      return fty::unexpected(to_string(ComState::COM_STATE_CONNECT_FAILED));
     }
 
     return {};
@@ -83,7 +84,7 @@ namespace fty::messagebus::amqp
     if (!isServiceAvailable())
     {
       logDebug("Service not available");
-      return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
     try
@@ -94,8 +95,8 @@ namespace fty::messagebus::amqp
     }
     catch (...)
     {
-      logDebug("Unsubscribed ({})", DELIVERY_STATE_REJECTED);
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      logDebug("Unsubscribed ({})", to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
   }
 
@@ -104,7 +105,7 @@ namespace fty::messagebus::amqp
     if (!isServiceAvailable())
     {
       logDebug("Service not available");
-      return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
     logDebug("Waiting to receive msg from: {}", address);
@@ -125,7 +126,7 @@ namespace fty::messagebus::amqp
     if (!isServiceAvailable())
     {
       logDebug("Service not available");
-      return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
     logDebug("Sending message {}", message.toString());
@@ -141,7 +142,7 @@ namespace fty::messagebus::amqp
     if (false)
     {
       logDebug("Message sent ({})", DELIVERY_STATE_REJECTED);
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
     logDebug("Message sent (Accepted)");
@@ -155,7 +156,7 @@ namespace fty::messagebus::amqp
       if (!isServiceAvailable())
       {
         logDebug("Service not available");
-        return fty::unexpected(DELIVERY_STATE_UNAVAILABLE);
+        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
       }
 
       logDebug("Sending message {}", message.toString());
@@ -172,7 +173,7 @@ namespace fty::messagebus::amqp
       if (!messageArrived)
       {
         logDebug("No message arrive in time!");
-        return fty::unexpected(DELIVERY_STATE_TIMEOUT);
+        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_TIMEOUT));
       }
 
       logDebug("Message arrived ({})", proton::to_string(*response));

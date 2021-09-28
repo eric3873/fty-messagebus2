@@ -20,13 +20,13 @@
 */
 
 #include "fty/messagebus/amqp/MessageBusAmqp.h"
-
 #include "MsgBusAmqp.h"
 
 #include <fty/expected.h>
-#include <memory>
-
+#include <fty/messagebus/MessageBusStatus.h>
 #include <fty_log.h>
+
+#include <memory>
 
 namespace fty::messagebus::amqp
 {
@@ -48,7 +48,7 @@ namespace fty::messagebus::amqp
     //Sanity check
     if (!msg.isValidMessage())
     {
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
     //Send
@@ -69,9 +69,9 @@ namespace fty::messagebus::amqp
   {
     //Sanity check
     if (!msg.isValidMessage())
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     if (!msg.needReply())
-      return fty::unexpected(DELIVERY_STATE_REJECTED);
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
 
     //Send
     return m_busAmqp->request(msg, timeOut);
