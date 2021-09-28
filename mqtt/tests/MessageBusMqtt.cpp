@@ -129,6 +129,8 @@ namespace
 
   TEST_CASE("Mqtt request sync", "[request]")
   {
+    std::string syncTestQueue = "/test/message/sync/request";
+
     auto msgBus = mqtt::MessageBusMqtt("MqttSyncRequestTestCase", MQTT_SERVER_URI);
     auto returnVal1 = msgBus.connect();
     REQUIRE(returnVal1);
@@ -136,11 +138,11 @@ namespace
     auto returnVal2 = s_msgBus.connect();
     REQUIRE(returnVal2);
 
-    auto returnVal3 = s_msgBus.subscribe("/test/message/sync/request", replyerAddOK);
+    auto returnVal3 = s_msgBus.subscribe(syncTestQueue, replyerAddOK);
     REQUIRE(returnVal3);
 
     // Send synchronous request
-    Message request = Message::buildRequest("MqttSyncRequestTestCase", "/test/message/sync/request", "TEST", "/test/message/sync/response", "test:");
+    Message request = Message::buildRequest("MqttSyncRequestTestCase", syncTestQueue, "TEST", syncTestQueue + "/reply", "test:");
     std::cerr << "Request to send:\n" + request.toString() << std::endl;
 
     auto replyMsg = msgBus.request(request, MAX_TIMEOUT);
@@ -150,6 +152,8 @@ namespace
 
   TEST_CASE("Mqtt request sync timeout", "[request]")
   {
+    std::string syncTimeOutTestQueue = "/test/message/synctimeout/request";
+
     auto msgBus = mqtt::MessageBusMqtt("MqttSyncRequestTestCase", MQTT_SERVER_URI);
     auto returnVal1 = msgBus.connect();
     REQUIRE(returnVal1);
@@ -157,11 +161,11 @@ namespace
     auto returnVal2 = s_msgBus.connect();
     REQUIRE(returnVal2);
 
-    auto returnVal3 = s_msgBus.subscribe("/test/message/synctimeout/request", replyerTimeout);
+    auto returnVal3 = s_msgBus.subscribe(syncTimeOutTestQueue, replyerTimeout);
     REQUIRE(returnVal3);
 
     // Send synchronous request
-    Message request = Message::buildRequest("MqttSyncRequestTestCase", "/test/message/synctimeout/request", "TEST", "/test/message/ssynctimeout/response", "test:");
+    Message request = Message::buildRequest("MqttSyncRequestTestCase", syncTimeOutTestQueue, "TEST", syncTimeOutTestQueue + "/reply", "test:");
     std::cerr << "Request to send:\n" + request.toString() << std::endl;
 
     auto replyMsg = msgBus.request(request, MAX_TIMEOUT);
@@ -171,6 +175,8 @@ namespace
 
   TEST_CASE("Mqtt async request", "[send]")
   {
+    std::string asyncTestQueue = "/test/message/async/request";
+
     auto msgBus = mqtt::MessageBusMqtt("MqttAsyncRequestTestCase", MQTT_SERVER_URI);
     auto returnVal1 = msgBus.connect();
     REQUIRE(returnVal1);
@@ -178,11 +184,11 @@ namespace
     auto returnVal2 = s_msgBus.connect();
     REQUIRE(returnVal2);
 
-    auto returnVal3 = s_msgBus.subscribe("/test/message/async/request", replyerAddOK);
+    auto returnVal3 = s_msgBus.subscribe(asyncTestQueue, replyerAddOK);
     REQUIRE(returnVal3);
 
     // Send synchronous request
-    Message request = Message::buildRequest("MqttAsyncRequestTestCase", "/test/message/async/request", "TEST", "/test/message/async/reply", "test");
+    Message request = Message::buildRequest("MqttAsyncRequestTestCase", asyncTestQueue, "TEST", asyncTestQueue + "/reply", "test");
     std::cerr << "Request to send:\n" + request.toString() << std::endl;
 
     auto replyMsg = msgBus.send(request);
