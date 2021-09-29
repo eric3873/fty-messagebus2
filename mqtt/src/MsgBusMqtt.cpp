@@ -86,24 +86,19 @@ namespace fty::messagebus::mqtt
     m_synClient = std::make_shared<::mqtt::client>(m_endpoint, utils::getClientId("sync-" + m_clientName), opts);
 
     // Connection options
-    ::mqtt::connect_options connOpts;
+    ::mqtt::connect_options connOpts = ::mqtt::connect_options_builder()
+                      .clean_session(false)
+                      .mqtt_version(MQTTVERSION_5)
+                      .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
+                      .automatic_reconnect(true)
+                      .clean_start(true)
+                      .finalize();
+
+        
+
     if(!m_willTopic.empty()) {
-      connOpts = ::mqtt::connect_options_builder()
-                      .clean_session(false)
-                      .mqtt_version(MQTTVERSION_5)
-                      .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
-                      .automatic_reconnect(true)
-                      .clean_start(true)
-                      .will(::mqtt::message(m_willTopic, {m_willMessage}, QOS, true))
-                      .finalize();
-    } else {
-      connOpts = ::mqtt::connect_options_builder()
-                      .clean_session(false)
-                      .mqtt_version(MQTTVERSION_5)
-                      .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
-                      .automatic_reconnect(true)
-                      .clean_start(true)
-                      .finalize();
+      ::mqtt::will_options willOptions(::mqtt::message(m_willTopic, {m_willMessage}, QOS, true));
+      connOpts.set_will(willOptions);
     }
      
     try
