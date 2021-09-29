@@ -15,11 +15,6 @@ if(BUILD_AMQP)
   add_subdirectory(amqp)
 endif()
 
-# Malamute samples
-if(BUILD_MALAMUTE)
-  add_subdirectory(malamute)
-endif()
-
 # Mqtt samples
 if(BUILD_MQTT)
   add_subdirectory(mqtt)
