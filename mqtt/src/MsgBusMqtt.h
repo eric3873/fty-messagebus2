@@ -48,9 +48,11 @@ namespace fty::messagebus::mqtt
   public:
     MsgBusMqtt() = delete;
 
-    MsgBusMqtt(const std::string& clientName, const std::string& endpoint)
+    MsgBusMqtt(const std::string& clientName, const std::string& endpoint, const std::string& willTopic = "", const std::string& willMessage = DISAPPEARED_MSG)
       : m_clientName(clientName)
-      , m_endpoint(endpoint){};
+      , m_endpoint(endpoint)
+      , m_willTopic(willTopic)
+      , m_willMessage(willMessage){};
 
     ~MsgBusMqtt();
 
@@ -69,8 +71,10 @@ namespace fty::messagebus::mqtt
     }
 
   private:
-    std::string m_clientName{};
-    std::string m_endpoint{};
+    std::string m_clientName;
+    std::string m_endpoint;
+    std::string m_willTopic;
+    std::string m_willMessage;
 
     // Asynchronous and synchronous mqtt client
     AsynClientPointer m_asynClient;
@@ -78,7 +82,5 @@ namespace fty::messagebus::mqtt
 
     // Call back
     CallBack m_cb;
-
-    void sendServiceStatus(const std::string& message);
   };
 } // namespace fty::messagebus::mqtt

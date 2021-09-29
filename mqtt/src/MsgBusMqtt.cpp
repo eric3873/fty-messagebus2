@@ -65,7 +65,6 @@ namespace fty::messagebus::mqtt
     if (isServiceAvailable(m_asynClient))
     {
       logDebug("Asynchronous client cleaning");
-      sendServiceStatus(DISCONNECTED_MSG);
       m_asynClient->disable_callbacks();
       m_asynClient->stop_consuming();
       m_asynClient->disconnect()->wait();
@@ -87,15 +86,26 @@ namespace fty::messagebus::mqtt
     m_synClient = std::make_shared<::mqtt::client>(m_endpoint, utils::getClientId("sync-" + m_clientName), opts);
 
     // Connection options
-    auto connOpts = ::mqtt::connect_options_builder()
+    ::mqtt::connect_options connOpts;
+    if(!m_willTopic.empty()) {
+      connOpts = ::mqtt::connect_options_builder()
                       .clean_session(false)
                       .mqtt_version(MQTTVERSION_5)
                       .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
                       .automatic_reconnect(true)
-                      //.automatic_reconnect(std::chrono::seconds(1), std::chrono::seconds(5))
                       .clean_start(true)
-                      .will(::mqtt::message{DISCOVERY_TOPIC + m_clientName + DISCOVERY_TOPIC_SUBJECT, {DISAPPEARED_MSG}, QOS, true})
+                      .will(::mqtt::message(m_willTopic, {m_willMessage}, QOS, true))
                       .finalize();
+    } else {
+      connOpts = ::mqtt::connect_options_builder()
+                      .clean_session(false)
+                      .mqtt_version(MQTTVERSION_5)
+                      .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
+                      .automatic_reconnect(true)
+                      .clean_start(true)
+                      .finalize();
+    }
+     
     try
     {
       // Start consuming _before_ connecting, because we could get a flood
@@ -122,7 +132,6 @@ namespace fty::messagebus::mqtt
       });
 
       logInfo("{} => connect status: sync client: {}, async client: {}", m_clientName.c_str(), m_asynClient->is_connected() ? "true" : "false", m_synClient->is_connected() ? "true" : "false");
-      sendServiceStatus(CONNECTED_MSG);
     }
     catch (const ::mqtt::exception& e)
     {
@@ -243,22 +252,6 @@ namespace fty::messagebus::mqtt
     catch (std::exception& e)
     {
       return fty::unexpected(e.what());
-    }
-  }
-
-  void MsgBusMqtt::sendServiceStatus(const std::string& message)
-  {
-    if (isServiceAvailable(m_asynClient))
-    {
-      auto topic = DISCOVERY_TOPIC + m_clientName + DISCOVERY_TOPIC_SUBJECT;
-      auto msg = ::mqtt::message_ptr_builder()
-                   .topic(topic)
-                   .payload(message)
-                   .qos(::mqtt::ReasonCode::GRANTED_QOS_2)
-                   .retained(true)
-                   .finalize();
-      bool status = m_asynClient->publish(msg)->wait_for(TIMEOUT);
-      logInfo("Service status {} => {} [%d]", m_clientName.c_str(), message.c_str(), status);
     }
   }
 
