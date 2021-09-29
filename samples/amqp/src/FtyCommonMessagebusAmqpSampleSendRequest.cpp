@@ -78,7 +78,7 @@ int main(int argc, char** argv)
 
   auto bus = amqp::MessageBusAmqp(argv[0]);
 
-  //Connect to the bus
+  // Bus connection
   fty::Expected<void> connectionRet = bus.connect();
   if (!connectionRet)
   {
@@ -90,24 +90,7 @@ int main(int argc, char** argv)
 
   Message request = Message::buildRequest("MathsOperationsRequester", requestQueue, "MathsOperations", replyQueue, operationQuery.serialize());
 
-  if (strcmp(argv[2], "async") == 0)
-  {
-
-    fty::Expected<void> subscribRet = bus.receive(replyQueue, responseMessageListener);
-    if (!subscribRet)
-    {
-      logError("Error while subscribing {}", subscribRet.error());
-      return EXIT_FAILURE;
-    }
-
-    fty::Expected<void> sendRet = bus.send(request);
-    if (!sendRet)
-    {
-      logError("Error while sending: {}", sendRet.error());
-      return EXIT_FAILURE;
-    }
-  }
-  else
+  if (strcmp(argv[2], "sync") == 0)
   {
     _continue = false;
 
@@ -125,6 +108,37 @@ int main(int argc, char** argv)
     }
 
     responseMessageListener(reply.value());
+  }
+  else
+  {
+    if (strcmp(argv[2], "async") == 0)
+    {
+
+      fty::Expected<void> subscribRet = bus.receive(replyQueue, responseMessageListener);
+      if (!subscribRet)
+      {
+        logError("Error while subscribing {}", subscribRet.error());
+        return EXIT_FAILURE;
+      }
+    }
+    else
+    {
+      // Simple send message
+      _continue = false;
+    }
+
+    fty::Expected<void> sendRet = bus.send(request);
+    if (!sendRet)
+    {
+      logError("Error while sending: {}", sendRet.error());
+      return EXIT_FAILURE;
+    }
+    auto ret = bus.send(request);
+    if (!ret)
+    {
+      logError("Error while sending: {}", ret.error());
+      return EXIT_FAILURE;
+    }
   }
 
   while (_continue)
