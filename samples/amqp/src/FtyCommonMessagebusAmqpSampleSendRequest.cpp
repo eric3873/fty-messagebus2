@@ -93,7 +93,7 @@ int main(int argc, char** argv)
   if (strcmp(argv[2], "async") == 0)
   {
 
-    fty::Expected<void> subscribRet = bus.subscribe(replyQueue, responseMessageListener);
+    fty::Expected<void> subscribRet = bus.receive(replyQueue, responseMessageListener);
     if (!subscribRet)
     {
       logError("Error while subscribing {}", subscribRet.error());

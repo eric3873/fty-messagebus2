@@ -53,7 +53,7 @@ int main(int /*argc*/, char** argv)
   }
 
   //Subscrib to the bus
-  fty::Expected<void> subscribRet = bus.subscribe("/etn/samples/daemon-basic/mailbox", processMessage);
+  fty::Expected<void> subscribRet = bus.receive("/etn/samples/daemon-basic/mailbox", processMessage);
   if(! subscribRet) {
     logError("Error while subscribing {}", subscribRet.error());
     return EXIT_FAILURE;

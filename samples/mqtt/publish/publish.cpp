@@ -48,7 +48,7 @@ int main(int /*argc*/, char** argv)
   }
 
   //Subscrib to the bus
-  fty::Expected<void> subscribRet = bus.subscribe("/etn/samples/publish", messageListener);
+  fty::Expected<void> subscribRet = bus.receive("/etn/samples/publish", messageListener);
   if(! subscribRet) {
     logError("Error while subscribing {}", subscribRet.error());
     return EXIT_FAILURE;

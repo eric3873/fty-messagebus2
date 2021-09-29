@@ -98,7 +98,7 @@ int main(int argc, char** argv)
 
   logInfo("{} - starting...", argv[0]);
 
-  auto replyQueue = std::string{argv[1]};
+  auto address = std::string{argv[1]};
 
   // Install a signal handler
   std::signal(SIGINT, signalHandler);
@@ -111,7 +111,7 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  fty::Expected<void> subscribRet = bus.subscribe(replyQueue, replyerMessageListener);
+  fty::Expected<void> subscribRet = bus.receive(address, replyerMessageListener);
   if (!subscribRet)
   {
     logError("Error while subscribing {}", subscribRet.error());

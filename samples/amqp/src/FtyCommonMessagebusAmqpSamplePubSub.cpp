@@ -84,7 +84,7 @@ int main(int /*argc*/, char** argv)
     return EXIT_FAILURE;
   }
 
-  fty::Expected<void> subscribRet = bus.subscribe(SAMPLE_TOPIC, messageListener);
+  fty::Expected<void> subscribRet = bus.receive(SAMPLE_TOPIC, messageListener);
   if (!subscribRet)
   {
     logError("Error while subscribing {}", subscribRet.error());

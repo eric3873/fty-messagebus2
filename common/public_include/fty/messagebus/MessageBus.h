@@ -54,25 +54,25 @@ namespace fty::messagebus
 
 
     /// Register a listener to a address using function
-    /// @param queue the address to subscribe
-    /// @param func the function to subscribe
+    /// @param address the address to receive
+    /// @param func the function to receive
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> subscribe(const std::string& address, MessageListener && func) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> receive(const std::string& address, MessageListener && func) noexcept = 0 ;
 
-    /// Unsubscribe from a queue
-    /// @param queue the address to unsubscribe
+    /// Unsubscribe from a address
+    /// @param address the address to unsubscribe
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> unsubscribe(const std::string& address) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> unreceive(const std::string& address) noexcept = 0 ;
 
     /// Register a listener to a address using class
     /// @example
     ///     bus.subsribe("address", &MyCls::onMessage, this);
-    /// @param address the address to subscribe
-    /// @param fnc the member function to subscribe
+    /// @param address the address to receive
+    /// @param fnc the member function to receive
     /// @param cls class instance
     /// @return Success or error
     template <typename Func, typename Cls>
-    [[nodiscard]] fty::Expected<void> subscribe(const std::string& address, Func&& fnc, Cls* cls) noexcept
+    [[nodiscard]] fty::Expected<void> receive(const std::string& address, Func&& fnc, Cls* cls) noexcept
     {
         return registerListener(address, [f = std::move(fnc), c = cls](const Message& msg) -> void {
             std::invoke(f, *c, Message(msg));

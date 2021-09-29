@@ -55,12 +55,12 @@ namespace fty::messagebus::amqp
     return m_busAmqp->send(msg);
   }
 
-  fty::Expected<void> MessageBusAmqp::subscribe(const std::string& address, std::function<void(const Message&)>&& func) noexcept
+  fty::Expected<void> MessageBusAmqp::receive(const std::string& address, std::function<void(const Message&)>&& func) noexcept
   {
     return m_busAmqp->receive(address, func);
   }
 
-  fty::Expected<void> MessageBusAmqp::unsubscribe(const std::string& address) noexcept
+  fty::Expected<void> MessageBusAmqp::unreceive(const std::string& address) noexcept
   {
     return m_busAmqp->unreceive(address);
   }

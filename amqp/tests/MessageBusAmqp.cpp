@@ -125,7 +125,7 @@ namespace
     auto returnVal2 = msgBus2.connect();
     REQUIRE(returnVal2);
 
-    auto returnVal3 = msgBus2.subscribe(sendTestQueue, messageListener);
+    auto returnVal3 = msgBus2.receive(sendTestQueue, messageListener);
     REQUIRE(returnVal3);
 
     // Send synchronous request
@@ -150,7 +150,7 @@ namespace
     auto returnVal1 = msgBus.connect();
     REQUIRE(returnVal1);
 
-    auto returnVal3 = msgBus.subscribe(syncTestQueue, replyerAddOK);
+    auto returnVal3 = msgBus.receive(syncTestQueue, replyerAddOK);
     REQUIRE(returnVal3);
 
     // Send synchronous request
@@ -186,7 +186,7 @@ namespace
     auto returnVal1 = msgBus.connect();
     REQUIRE(returnVal1);
 
-    auto returnVal3 = s_msgBus.subscribe(asyncTestQueue, replyerAddOK);
+    auto returnVal3 = s_msgBus.receive(asyncTestQueue, replyerAddOK);
     REQUIRE(returnVal3);
 
     // Send synchronous request
@@ -200,13 +200,13 @@ namespace
     std::this_thread::sleep_for(std::chrono::seconds(MAX_TIMEOUT));
   }
 
-  // TEST_CASE("Amqp publish subscribe", "[hide]")
+  // TEST_CASE("Amqp publish receive", "[hide]")
   // {
   //   auto msgBus = MsgBusAmqp("AmqpPubSubTestCase", AMQP_SERVER_URI);
   //   DeliveryState state;
 
   //   // TODO see only for subscribing
-  //   state = msgBus.subscribe(TEST_TOPIC, {});
+  //   state = msgBus.receive(TEST_TOPIC, {});
   //   REQUIRE(state == DeliveryState::DELI_STATE_ACCEPTED);
 
   //   state = msgBus.publish(TEST_TOPIC, RESPONSE);

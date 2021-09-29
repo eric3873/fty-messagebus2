@@ -110,7 +110,7 @@ namespace
     auto returnVal2 = msgBus2.connect();
     REQUIRE(returnVal2);
 
-    auto returnVal3 = msgBus2.subscribe("/test/message/send", messageListener);
+    auto returnVal3 = msgBus2.receive("/test/message/send", messageListener);
     REQUIRE(returnVal3);
 
     // Send synchronous request
@@ -138,7 +138,7 @@ namespace
     auto returnVal2 = s_msgBus.connect();
     REQUIRE(returnVal2);
 
-    auto returnVal3 = s_msgBus.subscribe(syncTestQueue, replyerAddOK);
+    auto returnVal3 = s_msgBus.receive(syncTestQueue, replyerAddOK);
     REQUIRE(returnVal3);
 
     // Send synchronous request
@@ -161,7 +161,7 @@ namespace
     auto returnVal2 = s_msgBus.connect();
     REQUIRE(returnVal2);
 
-    auto returnVal3 = s_msgBus.subscribe(syncTimeOutTestQueue, replyerTimeout);
+    auto returnVal3 = s_msgBus.receive(syncTimeOutTestQueue, replyerTimeout);
     REQUIRE(returnVal3);
 
     // Send synchronous request
@@ -184,7 +184,7 @@ namespace
     auto returnVal2 = s_msgBus.connect();
     REQUIRE(returnVal2);
 
-    auto returnVal3 = s_msgBus.subscribe(asyncTestQueue, replyerAddOK);
+    auto returnVal3 = s_msgBus.receive(asyncTestQueue, replyerAddOK);
     REQUIRE(returnVal3);
 
     // Send synchronous request
