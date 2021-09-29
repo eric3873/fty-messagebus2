@@ -51,9 +51,9 @@ namespace fty::messagebus::mqtt
   {
   public:
     MessageBusMqtt( const ClientName& clientName = utils::getClientId("MessageBusMqtt"),
-                    const Endpoint& endpoint = DEFAULT_MQTT_ENDPOINT/*,
-                    const std::string& connectionStateTopic = "",
-                    bool reportConnectionState = true*/);
+                    const Endpoint& endpoint = DEFAULT_MQTT_ENDPOINT,
+                    const std::string& willTopic = "",
+                    const std::string& willMessage = "");
 
 
     ~MessageBusMqtt();
