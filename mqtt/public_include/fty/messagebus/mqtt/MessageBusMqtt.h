@@ -28,22 +28,11 @@
 namespace fty::messagebus::mqtt
 {
   // Default mqtt end point
-  static auto constexpr DEFAULT_MQTT_ENDPOINT{"tcp://localhost:1883"};
+  static auto constexpr DEFAULT_ENDPOINT{"tcp://localhost:1883"};
+  static auto constexpr BUS_IDENTITY{"MQTT"};
 
-  static auto constexpr BUS_INDENTITY_MQTT{"MQTT"};
-
-  /*static auto constexpr SECURE_MQTT_END_POINT{"tcp://localhost:8883"};
-
-  // Mqtt default delimiter
-  static auto constexpr MQTT_DELIMITER{'/'};
-
-  // Topic
-  static const std::string PREFIX_TOPIC = "/etn/t";
-
-  // Queues
-  static const std::string PREFIX_QUEUE = "/etn/q/";
-  static const std::string PREFIX_REQUEST_QUEUE = PREFIX_QUEUE + "request";
-  static const std::string PREFIX_REPLY_QUEUE = PREFIX_QUEUE + "reply";*/
+  static auto constexpr QOS{"QOS"};
+  static auto constexpr RETAIN{"RETAIN"};
 
   class MsgBusMqtt;
 
@@ -51,9 +40,8 @@ namespace fty::messagebus::mqtt
   {
   public:
     MessageBusMqtt( const ClientName& clientName = utils::getClientId("MessageBusMqtt"),
-                    const Endpoint& endpoint = DEFAULT_MQTT_ENDPOINT/*,
-                    const std::string& connectionStateTopic = "",
-                    bool reportConnectionState = true*/);
+                    const Endpoint& endpoint = DEFAULT_ENDPOINT,
+                    const Message& will = {});
 
 
     ~MessageBusMqtt();

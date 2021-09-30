@@ -29,4 +29,12 @@ namespace
     REQUIRE(reply->isValidMessage());
     REQUIRE(!reply->needReply());
   }
+
+  TEST_CASE("Set message property", "[Message]")
+  {
+    Message msg;
+    msg.setMetaDataValue("TEST", "test");
+    REQUIRE(msg.getMetaDataValue("TEST") == "test");
+    REQUIRE(msg.getMetaDataValue("UNKNOWN") == "");
+  }
 }

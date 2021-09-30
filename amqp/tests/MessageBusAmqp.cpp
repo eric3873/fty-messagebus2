@@ -107,7 +107,7 @@ namespace
 
   TEST_CASE("Amqp identify implementation", "[identity]")
   {
-    REQUIRE(s_msgBus.identity() == amqp::BUS_INDENTITY_AMQP);
+    REQUIRE(s_msgBus.identity() == amqp::BUS_IDENTITY_AMQP);
   }
 
   TEST_CASE("Mqtt send", "[send]")

@@ -64,6 +64,11 @@ namespace fty::messagebus
     return value;
   }
 
+  void Message::setMetaDataValue(const std::string& key, const std::string& data)
+  {
+    m_metadata[key] = data;
+  }
+
   std::string Message::correlationId() const
   {
     return getMetaDataValue(CORRELATION_ID);
@@ -71,7 +76,7 @@ namespace fty::messagebus
 
   void Message::correlationId(const std::string& correlationId)
   {
-    m_metadata[CORRELATION_ID] = correlationId;
+    setMetaDataValue(CORRELATION_ID, correlationId);
   }
 
   std::string Message::from() const
@@ -81,7 +86,7 @@ namespace fty::messagebus
 
   void Message::from(const std::string& from)
   {
-    m_metadata[FROM] = from;
+    setMetaDataValue(FROM, from);
   }
 
   std::string Message::to() const
@@ -91,7 +96,7 @@ namespace fty::messagebus
 
   void Message::to(const std::string& to)
   {
-    m_metadata[TO] = to;
+    setMetaDataValue(TO,to);
   }
 
   std::string Message::replyTo() const
@@ -101,7 +106,7 @@ namespace fty::messagebus
 
   void Message::replyTo(const std::string& replyTo)
   {
-    m_metadata[REPLY_TO] = replyTo;
+    setMetaDataValue(REPLY_TO, replyTo);
   }
 
   std::string Message::subject() const
@@ -111,7 +116,7 @@ namespace fty::messagebus
 
   void Message::subject(const std::string& subject)
   {
-    m_metadata[SUBJECT] = subject;
+    setMetaDataValue(SUBJECT, subject);
   }
 
   std::string Message::status() const
@@ -121,7 +126,7 @@ namespace fty::messagebus
 
   void Message::status(const std::string& status)
   {
-    m_metadata[STATUS] = status;
+    setMetaDataValue(STATUS, status);
   }
 
   bool Message::isValidMessage() const
@@ -159,9 +164,11 @@ namespace fty::messagebus
     return reply;
   }
 
-  Message Message::buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData)
+  Message Message::buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData, const MetaData& meta)
   {
     Message msg;
+    msg.m_metadata = meta;
+
     msg.from(from);
     msg.to(to);
     msg.subject(subject);
@@ -172,9 +179,9 @@ namespace fty::messagebus
     return msg;
   }
 
-  Message Message::buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData)
+  Message Message::buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData, const MetaData& meta)
   {
-    Message msg = buildMessage(from, to, subject, userData);
+    Message msg = buildMessage(from, to, subject, userData, meta);
     msg.replyTo(replyTo);
 
     return msg;

@@ -24,33 +24,19 @@
 #include "CallBack.h"
 
 #include <fty/expected.h>
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 
 namespace fty::messagebus::mqtt
 {
-  // Default mqtt end point
-  static auto constexpr DEFAULT_MQTT_END_POINT{"tcp://localhost:1883"};
-  static auto constexpr SECURE_MQTT_END_POINT{"tcp://localhost:8883"};
-
-  // Mqtt default delimiter
-  static auto constexpr MQTT_DELIMITER{'/'};
-
-  // Mqtt will topic
-  static auto constexpr DISCOVERY_TOPIC{"/etn/t/service/"};
-  static auto constexpr DISCOVERY_TOPIC_SUBJECT{"/status"};
-
-  // Mqtt will message
-  static auto constexpr CONNECTED_MSG{"CONNECTED"};
-  static auto constexpr DISCONNECTED_MSG{"DISCONNECTED"};
-  static auto constexpr DISAPPEARED_MSG{"DISAPPEARED"};
-
   class MsgBusMqtt
   {
   public:
     MsgBusMqtt() = delete;
 
-    MsgBusMqtt(const std::string& clientName, const std::string& endpoint)
+    MsgBusMqtt(const std::string& clientName, const std::string& endpoint, const Message& will = Message())
       : m_clientName(clientName)
-      , m_endpoint(endpoint){};
+      , m_endpoint(endpoint)
+      , m_will(will) {};
 
     ~MsgBusMqtt();
 
@@ -69,8 +55,9 @@ namespace fty::messagebus::mqtt
     }
 
   private:
-    std::string m_clientName{};
-    std::string m_endpoint{};
+    std::string m_clientName;
+    std::string m_endpoint;
+    Message m_will;
 
     // Asynchronous and synchronous mqtt client
     AsynClientPointer m_asynClient;
@@ -78,7 +65,5 @@ namespace fty::messagebus::mqtt
 
     // Call back
     CallBack m_cb;
-
-    void sendServiceStatus(const std::string& message);
   };
 } // namespace fty::messagebus::mqtt

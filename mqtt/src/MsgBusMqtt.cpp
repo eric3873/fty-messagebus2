@@ -27,7 +27,6 @@
 */
 
 #include "MsgBusMqtt.h"
-#include "MsgBusMqttUtils.h"
 
 #include <fty/messagebus/MessageBusStatus.h>
 #include <fty/messagebus/utils.h>
@@ -51,13 +50,83 @@ namespace
 namespace fty::messagebus::mqtt
 {
   using namespace fty::messagebus;
-
   using duration = int64_t;
 
   duration KEEP_ALIVE = 20;
-  static auto constexpr QOS = ::mqtt::ReasonCode::GRANTED_QOS_2;
-  static auto constexpr RETAINED = false; //true;
+  static auto constexpr _QOS = ::mqtt::ReasonCode::GRANTED_QOS_2;
   auto constexpr TIMEOUT = std::chrono::seconds(5);
+
+  static const MetaData getMetaDataFromMqttProperties(const ::mqtt::properties& props)
+  {
+    MetaData metaData{};
+
+    // User properties
+    if (props.contains(::mqtt::property::USER_PROPERTY))
+    {
+      std::string key, value;
+      for (size_t i = 0; i < props.count(::mqtt::property::USER_PROPERTY); i++)
+      {
+        std::tie(key, value) = ::mqtt::get<::mqtt::string_pair>(props, ::mqtt::property::USER_PROPERTY, i);
+        metaData.emplace(key, value);
+      }
+    }
+    // Req/Rep pattern properties
+    if (props.contains(::mqtt::property::CORRELATION_DATA))
+    {
+      metaData.emplace(CORRELATION_ID, ::mqtt::get<std::string>(props, ::mqtt::property::CORRELATION_DATA));
+    }
+
+    if (props.contains(::mqtt::property::RESPONSE_TOPIC))
+    {
+      metaData.emplace(REPLY_TO, ::mqtt::get<std::string>(props, ::mqtt::property::RESPONSE_TOPIC));
+    }
+    return metaData;
+  }
+
+  static const ::mqtt::properties getMqttPropertiesFromMetaData(const MetaData& metaData)
+  {
+    auto props = ::mqtt::properties{};
+    for (const auto&[key, value] : metaData)
+    {
+      if (key == REPLY_TO)
+      {
+        std::string correlationId = metaData.find(CORRELATION_ID)->second;
+        props.add({::mqtt::property::CORRELATION_DATA, correlationId});
+        props.add({::mqtt::property::RESPONSE_TOPIC, value});
+      }
+      else if (key != CORRELATION_ID)
+      {
+        props.add({::mqtt::property::USER_PROPERTY, key, value});
+      }
+    }
+    return props;
+  }
+
+  static ::mqtt::message_ptr buildMessageForMqtt(const Message & message)
+  {
+      // Adding all meta data inside mqtt properties
+    auto props = getMqttPropertiesFromMetaData(message.metaData());
+
+    //get retain
+    bool retain = (message.getMetaDataValue(mqtt::RETAIN) == "true");
+
+    //get QoS
+    ::mqtt::ReasonCode QoS = ::mqtt::ReasonCode::GRANTED_QOS_2;
+    if(message.getMetaDataValue(mqtt::QOS) == "1") {
+      QoS = ::mqtt::ReasonCode::GRANTED_QOS_1;
+    } else if (message.getMetaDataValue(mqtt::QOS) == "0") {
+      QoS = ::mqtt::ReasonCode::GRANTED_QOS_0;
+    }
+
+    auto msgToSend = ::mqtt::message_ptr_builder()
+                    .topic(message.to())
+                    .payload(message.userData())
+                    .qos(QoS)
+                    .properties(props)
+                    .retained(retain)
+                    .finalize();
+    return msgToSend;
+  }
 
   MsgBusMqtt::~MsgBusMqtt()
   {
@@ -65,7 +134,6 @@ namespace fty::messagebus::mqtt
     if (isServiceAvailable(m_asynClient))
     {
       logDebug("Asynchronous client cleaning");
-      sendServiceStatus(DISCONNECTED_MSG);
       m_asynClient->disable_callbacks();
       m_asynClient->stop_consuming();
       m_asynClient->disconnect()->wait();
@@ -87,15 +155,21 @@ namespace fty::messagebus::mqtt
     m_synClient = std::make_shared<::mqtt::client>(m_endpoint, utils::getClientId("sync-" + m_clientName), opts);
 
     // Connection options
-    auto connOpts = ::mqtt::connect_options_builder()
+    ::mqtt::connect_options connOpts = ::mqtt::connect_options_builder()
                       .clean_session(false)
                       .mqtt_version(MQTTVERSION_5)
                       .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
                       .automatic_reconnect(true)
-                      //.automatic_reconnect(std::chrono::seconds(1), std::chrono::seconds(5))
                       .clean_start(true)
-                      .will(::mqtt::message{DISCOVERY_TOPIC + m_clientName + DISCOVERY_TOPIC_SUBJECT, {DISAPPEARED_MSG}, QOS, true})
                       .finalize();
+
+        
+
+    if(m_will.isValidMessage()) {
+      ::mqtt::will_options willOptions(*buildMessageForMqtt(m_will));
+      connOpts.set_will(willOptions);
+    }
+     
     try
     {
       // Start consuming _before_ connecting, because we could get a flood
@@ -122,7 +196,6 @@ namespace fty::messagebus::mqtt
       });
 
       logInfo("{} => connect status: sync client: {}, async client: {}", m_clientName.c_str(), m_asynClient->is_connected() ? "true" : "false", m_synClient->is_connected() ? "true" : "false");
-      sendServiceStatus(CONNECTED_MSG);
     }
     catch (const ::mqtt::exception& e)
     {
@@ -153,7 +226,7 @@ namespace fty::messagebus::mqtt
       m_cb.onMessageArrived(msg);
     });
 
-    if (!m_asynClient->subscribe(address, QOS)->wait_for(TIMEOUT))
+    if (!m_asynClient->subscribe(address, _QOS)->wait_for(TIMEOUT))
     {
       logError("Receive (Rejected)");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
@@ -194,16 +267,7 @@ namespace fty::messagebus::mqtt
 
     logDebug("Sending message {}", message.toString());
 
-    // Adding all meta data inside mqtt properties
-    auto props = getMqttPropertiesFromMetaData(message.metaData());
-
-    auto msgToSend = ::mqtt::message_ptr_builder()
-                    .topic(message.to())
-                    .payload(message.userData())
-                    .qos(QOS)
-                    .properties(props)
-                    .retained(RETAINED)
-                    .finalize();
+    auto msgToSend = buildMessageForMqtt(message);
 
     if (!m_asynClient->publish(msgToSend)->wait_for(TIMEOUT))
     {
@@ -226,7 +290,7 @@ namespace fty::messagebus::mqtt
       }
 
       ::mqtt::const_message_ptr msg;
-      m_synClient->subscribe(message.replyTo(), QOS);
+      m_synClient->subscribe(message.replyTo(), _QOS);
       send(message);
 
       auto messageArrived = m_synClient->try_consume_message_for(&msg, std::chrono::seconds(receiveTimeOut));
@@ -243,22 +307,6 @@ namespace fty::messagebus::mqtt
     catch (std::exception& e)
     {
       return fty::unexpected(e.what());
-    }
-  }
-
-  void MsgBusMqtt::sendServiceStatus(const std::string& message)
-  {
-    if (isServiceAvailable(m_asynClient))
-    {
-      auto topic = DISCOVERY_TOPIC + m_clientName + DISCOVERY_TOPIC_SUBJECT;
-      auto msg = ::mqtt::message_ptr_builder()
-                   .topic(topic)
-                   .payload(message)
-                   .qos(::mqtt::ReasonCode::GRANTED_QOS_2)
-                   .retained(true)
-                   .finalize();
-      bool status = m_asynClient->publish(msg)->wait_for(TIMEOUT);
-      logInfo("Service status {} => {} [%d]", m_clientName.c_str(), message.c_str(), status);
     }
   }
 

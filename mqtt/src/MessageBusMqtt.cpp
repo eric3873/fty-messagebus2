@@ -38,10 +38,11 @@
 namespace fty::messagebus::mqtt
 {
   MessageBusMqtt::MessageBusMqtt(const ClientName& clientName,
-                                 const Endpoint& endpoint)
+                                 const Endpoint& endpoint,
+                                 const Message& will)
     : MessageBus()
   {
-    m_busMqtt = std::make_shared<MsgBusMqtt>(clientName, endpoint);
+    m_busMqtt = std::make_shared<MsgBusMqtt>(clientName, endpoint, will);
   }
 
   MessageBusMqtt::~MessageBusMqtt()
@@ -91,7 +92,7 @@ namespace fty::messagebus::mqtt
     return m_busMqtt->clientName();
   }
 
-  static const std::string g_identity(BUS_INDENTITY_MQTT);
+  static const std::string g_identity(BUS_IDENTITY);
 
   const std::string& MessageBusMqtt::identity() const noexcept
   {

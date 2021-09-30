@@ -97,7 +97,7 @@ namespace
 
   TEST_CASE("Mqtt identify implementation", "[identity]")
   {
-    REQUIRE(s_msgBus.identity() == mqtt::BUS_INDENTITY_MQTT);
+    REQUIRE(s_msgBus.identity() == mqtt::BUS_IDENTITY);
   }
 
   TEST_CASE("Mqtt send", "[send]")
