@@ -69,6 +69,12 @@ namespace fty::messagebus::amqp
     logDebug("Connecting to {} ...", m_endpoint);
     try
     {
+    //   m_connectionPointer = std::make_shared<Connection>(m_endpoint);
+    //   std::thread thrd([=]() {
+    //     proton::container(*m_connectionPointer).run();
+    //   });
+    //   thrd.detach();
+    //   std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     catch (const std::exception& e)
     {
@@ -89,11 +95,11 @@ namespace fty::messagebus::amqp
 
     logDebug("Waiting to receive msg from: {}", address);
 
-    ReceiverPointer receiver = std::make_shared<Receiver>(m_endpoint, address, messageListener, filter);
+    AmqpClientPointer client = std::make_shared<AmqpClient>(m_endpoint, address, messageListener, filter);
     std::thread thrd([=]() {
-      proton::container(*receiver).run();
+      proton::container(*client).run();
     });
-    m_subScriptions.emplace(std::make_pair(address, receiver));
+    m_subScriptions.emplace(std::make_pair(address, client));
     thrd.detach();
 
     logDebug("Waiting to receive msg from: {} Accepted", address);
@@ -110,7 +116,7 @@ namespace fty::messagebus::amqp
 
     try
     {
-      m_subScriptions.at(address)->cancel();
+      m_subScriptions.at(address)->close();
       logTrace("{} - unsubscribed on: '{}'", m_clientName, address);
       return {};
     }
@@ -132,11 +138,14 @@ namespace fty::messagebus::amqp
     logDebug("Sending message {}", message.toString());
     proton::message msgToSend = getAmqpMessage(message);
 
-    Sender sender = Sender(m_endpoint, message.to());
+    // m_connectionPointer->openSender(msgToSend.to());
+    // m_connectionPointer->sendMsg(msgToSend);
+
+    AmqpClient client = AmqpClient(m_endpoint, message.to());
     std::thread thrd([&]() {
-      proton::container(sender).run();
+      proton::container(client).run();
     });
-    sender.sendMsg(msgToSend);
+    client.sendMsg(msgToSend);
     thrd.join();
 
     if (false)
@@ -162,14 +171,16 @@ namespace fty::messagebus::amqp
       logDebug("Sending message {}", message.toString());
       proton::message msgToSend = getAmqpMessage(message);
 
-      Requester requester(m_endpoint, msgToSend);
+      Requester client(m_endpoint, msgToSend);
+      //AmqpClient client(m_endpoint, msgToSend.to(), {}, proton::to_string(msgToSend.correlation_id()));
       std::thread thrd([&]() {
-        proton::container(requester).run();
+        proton::container(client).run();
       });
+      //client.sendMsg(msgToSend);
       thrd.detach();
 
       MessagePointer response = std::make_shared<proton::message>();
-      bool messageArrived = requester.tryConsumeMessageFor(response, receiveTimeOut);
+      bool messageArrived = client.tryConsumeMessageFor(response, receiveTimeOut);
       if (!messageArrived)
       {
         logError("No message arrive in time!");

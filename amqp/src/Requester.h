@@ -50,7 +50,7 @@
 
 namespace fty::messagebus::amqp
 {
-  //static auto constexpr AMQP_CORREL_ID = "JMSCorrelationID";
+  static auto constexpr AMQP_CORREL_ID = "JMSCorrelationID";
 
   using proton::receiver_options;
   using proton::source_options;

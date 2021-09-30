@@ -23,9 +23,8 @@
 
 #include <fty/expected.h>
 
-#include "Receiver.h"
+#include "AmqpClient.h"
 #include "Requester.h"
-#include "Sender.h"
 
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
@@ -35,11 +34,9 @@ namespace fty::messagebus::amqp
 {
 
   using Container = proton::container;
-  //using ClientPointer = std::shared_ptr<Client>;
   using ContainerPointer = std::shared_ptr<Container>;
   using MessagePointer = std::shared_ptr<proton::message>;
-  using ReceiverPointer = std::shared_ptr<Receiver>;
-  using SenderPointer = std::shared_ptr<Sender>;
+  using AmqpClientPointer = std::shared_ptr<AmqpClient>;
 
   class MsgBusAmqp
   {
@@ -70,7 +67,7 @@ namespace fty::messagebus::amqp
     std::string m_clientName{};
     std::string m_endpoint{};
 
-    std::map<std::string, ReceiverPointer> m_subScriptions;
+    std::map<std::string, AmqpClientPointer> m_subScriptions;
   };
 
 } // namespace fty::messagebus::amqp

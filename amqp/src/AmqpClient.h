@@ -21,46 +21,64 @@
 
 #pragma once
 
+#include "MsgBusAmqpUtils.h"
+#include <fty/messagebus/MessageBus.h>
+
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
+#include <proton/delivery.hpp>
 #include <proton/message.hpp>
 #include <proton/messaging_handler.hpp>
-
+#include <proton/receiver_options.hpp>
+#include <proton/source_options.hpp>
 #include <proton/tracker.hpp>
+#include <proton/work_queue.hpp>
 
 #include <future>
 
 namespace fty::messagebus::amqp
 {
 
-  class Sender : public proton::messaging_handler
+  class AmqpClient : public proton::messaging_handler
   {
-  private:
-    std::string m_url;
-    std::string m_address;
-
-    // Synchronization
-    std::mutex m_lock;
-    std::condition_variable m_cv;
-    std::condition_variable m_cvSenderReady;
-    // Sender
-    proton::sender m_sender;
-
   public:
-    Sender(const std::string& url, const std::string& address)
-      : m_url(url)
-      , m_address(address)
+    AmqpClient(const std::string& url, const std::string& address)
+      : AmqpClient(url, address, {})
     {
     }
 
-    ~Sender() = default;
+    AmqpClient(const std::string& url, const std::string& address, MessageListener messageListener, const std::string& filter = {});
+
+    ~AmqpClient() = default;
 
     void on_container_start(proton::container& container) override;
     void on_connection_open(proton::connection& connection) override;
     void on_sender_open(proton::sender& sender) override;
+    void on_receiver_open(proton::receiver& receiver) override;
+    void on_message(proton::delivery& delivery, proton::message& msg) override;
 
+    bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
     void sendMsg(const proton::message& msg);
     void close();
+
+  private:
+    std::string m_url;
+    std::string m_address;
+    MessageListener m_messageListener;
+    std::string m_filter;
+
+    // Synchronization
+    std::mutex m_lock;
+    std::condition_variable m_cv;
+    std::condition_variable m_cvAmqpClientReady;
+    std::promise<proton::message> m_promise;
+    std::future<proton::message> m_future;
+    // AmqpClient
+    proton::sender m_sender;
+    // Receiver
+    proton::receiver m_receiver;
+
+    proton::source_options setFilter(const std::string& selector_str);
   };
 
 } // namespace fty::messagebus::amqp

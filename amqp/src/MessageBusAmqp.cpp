@@ -57,7 +57,12 @@ namespace fty::messagebus::amqp
 
   fty::Expected<void> MessageBusAmqp::receive(const std::string& address, std::function<void(const Message&)>&& func) noexcept
   {
-    return m_busAmqp->receive(address, func);
+    return m_busAmqp->receive(address, func, {});
+  }
+
+  fty::Expected<void> MessageBusAmqp::receive(const std::string& address, std::function<void(const Message&)>&& func, const std::string& filter) noexcept
+  {
+    return m_busAmqp->receive(address, func, filter);
   }
 
   fty::Expected<void> MessageBusAmqp::unreceive(const std::string& address) noexcept
