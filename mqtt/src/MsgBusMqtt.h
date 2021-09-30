@@ -24,6 +24,7 @@
 #include "CallBack.h"
 
 #include <fty/expected.h>
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 
 namespace fty::messagebus::mqtt
 {

@@ -82,7 +82,7 @@ namespace fty::messagebus::amqp
     return m_busAmqp->clientName();
   }
 
-  static const std::string g_identity(BUS_INDENTITY_AMQP);
+  static const std::string g_identity(BUS_IDENTITY_AMQP);
 
   const std::string& MessageBusAmqp::identity() const noexcept
   {

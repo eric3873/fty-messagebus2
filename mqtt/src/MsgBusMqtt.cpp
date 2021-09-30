@@ -53,8 +53,7 @@ namespace fty::messagebus::mqtt
   using duration = int64_t;
 
   duration KEEP_ALIVE = 20;
-  static auto constexpr QOS = ::mqtt::ReasonCode::GRANTED_QOS_2;
-  static auto constexpr RETAINED = false; //true;
+  static auto constexpr _QOS = ::mqtt::ReasonCode::GRANTED_QOS_2;
   auto constexpr TIMEOUT = std::chrono::seconds(5);
 
   static const MetaData getMetaDataFromMqttProperties(const ::mqtt::properties& props)
@@ -108,12 +107,23 @@ namespace fty::messagebus::mqtt
       // Adding all meta data inside mqtt properties
     auto props = getMqttPropertiesFromMetaData(message.metaData());
 
+    //get retain
+    bool retain = (message.getMetaDataValue(mqtt::RETAIN) == "true");
+
+    //get QoS
+    ::mqtt::ReasonCode QoS = ::mqtt::ReasonCode::GRANTED_QOS_2;
+    if(message.getMetaDataValue(mqtt::QOS) == "1") {
+      QoS = ::mqtt::ReasonCode::GRANTED_QOS_1;
+    } else if (message.getMetaDataValue(mqtt::QOS) == "0") {
+      QoS = ::mqtt::ReasonCode::GRANTED_QOS_0;
+    }
+
     auto msgToSend = ::mqtt::message_ptr_builder()
                     .topic(message.to())
                     .payload(message.userData())
-                    .qos(QOS)
+                    .qos(QoS)
                     .properties(props)
-                    .retained(RETAINED)
+                    .retained(retain)
                     .finalize();
     return msgToSend;
   }
@@ -216,7 +226,7 @@ namespace fty::messagebus::mqtt
       m_cb.onMessageArrived(msg);
     });
 
-    if (!m_asynClient->subscribe(address, QOS)->wait_for(TIMEOUT))
+    if (!m_asynClient->subscribe(address, _QOS)->wait_for(TIMEOUT))
     {
       logError("Receive (Rejected)");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
@@ -257,16 +267,7 @@ namespace fty::messagebus::mqtt
 
     logDebug("Sending message {}", message.toString());
 
-    // Adding all meta data inside mqtt properties
-    auto props = getMqttPropertiesFromMetaData(message.metaData());
-
-    auto msgToSend = ::mqtt::message_ptr_builder()
-                    .topic(message.to())
-                    .payload(message.userData())
-                    .qos(QOS)
-                    .properties(props)
-                    .retained(RETAINED)
-                    .finalize();
+    auto msgToSend = buildMessageForMqtt(message);
 
     if (!m_asynClient->publish(msgToSend)->wait_for(TIMEOUT))
     {
@@ -289,7 +290,7 @@ namespace fty::messagebus::mqtt
       }
 
       ::mqtt::const_message_ptr msg;
-      m_synClient->subscribe(message.replyTo(), QOS);
+      m_synClient->subscribe(message.replyTo(), _QOS);
       send(message);
 
       auto messageArrived = m_synClient->try_consume_message_for(&msg, std::chrono::seconds(receiveTimeOut));

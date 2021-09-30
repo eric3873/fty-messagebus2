@@ -28,8 +28,11 @@
 namespace fty::messagebus::mqtt
 {
   // Default mqtt end point
-  static auto constexpr DEFAULT_MQTT_ENDPOINT{"tcp://localhost:1883"};
-  static auto constexpr BUS_INDENTITY_MQTT{"MQTT"};
+  static auto constexpr DEFAULT_ENDPOINT{"tcp://localhost:1883"};
+  static auto constexpr BUS_IDENTITY{"MQTT"};
+
+  static auto constexpr QOS{"QOS"};
+  static auto constexpr RETAIN{"RETAIN"};
 
   class MsgBusMqtt;
 
@@ -37,7 +40,7 @@ namespace fty::messagebus::mqtt
   {
   public:
     MessageBusMqtt( const ClientName& clientName = utils::getClientId("MessageBusMqtt"),
-                    const Endpoint& endpoint = DEFAULT_MQTT_ENDPOINT,
+                    const Endpoint& endpoint = DEFAULT_ENDPOINT,
                     const Message& will = {});
 
 

@@ -92,7 +92,7 @@ namespace fty::messagebus::mqtt
     return m_busMqtt->clientName();
   }
 
-  static const std::string g_identity(BUS_INDENTITY_MQTT);
+  static const std::string g_identity(BUS_IDENTITY);
 
   const std::string& MessageBusMqtt::identity() const noexcept
   {
