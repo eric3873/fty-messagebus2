@@ -70,6 +70,9 @@ namespace fty::messagebus
     std::string status() const;
     void status(const std::string& status);
 
+    std::string getMetaDataValue(const std::string& key) const;
+    void setMetaDataValue(const std::string& key, const std::string& data);
+
     bool isValidMessage() const;
     bool isRequest() const;
     bool needReply() const;
@@ -85,10 +88,6 @@ namespace fty::messagebus
   protected:
     MetaData m_metadata;
     UserData m_data;
-
-  private:
-
-    std::string getMetaDataValue(const std::string& key) const;
   };
 
 } // namespace fty::messagebus
