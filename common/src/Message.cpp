@@ -164,9 +164,11 @@ namespace fty::messagebus
     return reply;
   }
 
-  Message Message::buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData)
+  Message Message::buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData, const MetaData& meta)
   {
     Message msg;
+    msg.m_metadata = meta;
+
     msg.from(from);
     msg.to(to);
     msg.subject(subject);
@@ -177,9 +179,9 @@ namespace fty::messagebus
     return msg;
   }
 
-  Message Message::buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData)
+  Message Message::buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData, const MetaData& meta)
   {
-    Message msg = buildMessage(from, to, subject, userData);
+    Message msg = buildMessage(from, to, subject, userData, meta);
     msg.replyTo(replyTo);
 
     return msg;

@@ -78,8 +78,8 @@ namespace fty::messagebus
     bool needReply() const;
 
     fty::Expected<Message> buildReply(const UserData& userData, const std::string& status = STATUS_OK) const;
-    static Message buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData = {});
-    static Message buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData = {});
+    static Message buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData = {}, const MetaData& meta = {});
+    static Message buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData = {}, const MetaData& meta = {});
 
     MetaData getUndefinedProperties() const;
 
