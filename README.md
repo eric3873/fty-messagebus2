@@ -5,13 +5,12 @@
 This project aims to provide somme common methods to address communication over several message bus.
 It provide an high level interface to handle comunication of Message. The format of the Message also defined in this project.
 
-It comes today with 3 implementations:
+It comes today with 2 implementations:
 
 * MQTT
 * AMQP
-* Malamute
 
-Those 3 implementations are implementing the fty-commom-messagebus2 interface and are carring Message.
+Those 2 implementations are implementing the fty-commom-messagebus2 interface and are carring Message.
 
 ## Interface & Message
 
@@ -37,7 +36,6 @@ The interfaces is documentation is available in the [header](common/public_inclu
 ## Dependencies
 
 * [fty-cmake](https://github.com/42ity/fty-cmake/)
-* [fty_common_mlm](https://github.com/42ity/fty-common-mlm)
 * [fty_common_logging](https://github.com/42ity/fty-common-logging)
 * [PahoMqttC](https://github.com/eclipse/paho.mqtt.c)
 * [PahoMqttCpp](https://github.com/eclipse/paho.mqtt.cpp)
@@ -50,6 +48,13 @@ To build fty-common-messagebus2 project run:
 
 ```cmake
 cmake -B build -DBUILD_ALL=ON
+Equal to
+cmake -B build -DBUILD_AMQP=ON -DBUILD_MQTT=ON
+
+To have sample and tests
+cmake -B build -DBUILD_SAMPLES=ON -DBUILD_TESTING=ON
+
+And
 cmake --build build
 ```
 
@@ -59,7 +64,6 @@ cmake --build build
 |------------------------------|----------------------------------------------|-----------------------|-------------------------|
 | BUILD_ALL                    | Build all addons                             | ON\|OFF               | ON                      |
 | BUILD_AMQP                   | Enable AMQP addon                            | ON\|OFF               | ON                      |
-| BUILD_MALAMUTE               | Enable Malamute addon                        | ON\|OFF               | ON                      |
 | BUILD_MQTT                   | Enable Mqtt addon                            | ON\|OFF               | ON                      |
 | BUILD_SAMPLES                | Enable samples build                         | ON\|OFF               | OFF                     |
 | BUILD_TESTING                | Add test compilation                         | ON\|OFF               | ON                      |
@@ -76,7 +80,7 @@ etn_target(${PROJECT_NAME}
     .....
   USES
     .....
-    fty-common-messagebus2-<bus name>
+    fty-common-messagebus2-<amqp|mqtt>
     .....
 )
 ```
@@ -96,12 +100,6 @@ See all samples in samples folder.
 * [PubSub](samples/amqp/src/FtyCommonMessagebusAmqpSamplePubSub.cpp)
 * [WaitRequest](samples/amqp/src/FtyCommonMessagebusAmqpSampleAsyncReply.cpp)
 * [SendRequest](samples/amqp/src/FtyCommonMessagebusAmqpSampleSendRequest.cpp)
-
-### Malamute samples
-
-* [PubSub](samples/malamute/src/FtyCommonMessagebusMlmSamplePubSub.cpp)
-* [WaitRequest](samples/malamute/src/FtyCommonMessagebusMlmSampleReply.cpp)
-* [SendRequest](samples/malamute/src/FtyCommonMessagebusMlmSampleRequest.cpp)
 
 ## Change log
 
