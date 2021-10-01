@@ -58,7 +58,7 @@ namespace fty::messagebus::mqtt
 
   static const MetaData getMetaDataFromMqttProperties(const ::mqtt::properties& props)
   {
-    MetaData metaData{};
+    Message message;
 
     // User properties
     if (props.contains(::mqtt::property::USER_PROPERTY))
@@ -67,32 +67,31 @@ namespace fty::messagebus::mqtt
       for (size_t i = 0; i < props.count(::mqtt::property::USER_PROPERTY); i++)
       {
         std::tie(key, value) = ::mqtt::get<::mqtt::string_pair>(props, ::mqtt::property::USER_PROPERTY, i);
-        metaData.emplace(key, value);
+        message.setMetaDataValue(key, value);
       }
     }
     // Req/Rep pattern properties
     if (props.contains(::mqtt::property::CORRELATION_DATA))
     {
-      metaData.emplace(CORRELATION_ID, ::mqtt::get<std::string>(props, ::mqtt::property::CORRELATION_DATA));
+      message.correlationId(::mqtt::get<std::string>(props, ::mqtt::property::CORRELATION_DATA));
     }
 
     if (props.contains(::mqtt::property::RESPONSE_TOPIC))
     {
-      metaData.emplace(REPLY_TO, ::mqtt::get<std::string>(props, ::mqtt::property::RESPONSE_TOPIC));
+      message.replyTo(::mqtt::get<std::string>(props, ::mqtt::property::RESPONSE_TOPIC));
     }
-    return metaData;
+    return message.metaData();
   }
 
-  static const ::mqtt::properties getMqttPropertiesFromMetaData(const MetaData& metaData)
+  static const ::mqtt::properties getMqttProperties(const Message& message)
   {
     auto props = ::mqtt::properties{};
-    for (const auto&[key, value] : metaData)
+    for (const auto&[key, value] : message.metaData())
     {
       if (key == REPLY_TO)
       {
-        std::string correlationId = metaData.find(CORRELATION_ID)->second;
-        props.add({::mqtt::property::CORRELATION_DATA, correlationId});
-        props.add({::mqtt::property::RESPONSE_TOPIC, value});
+        props.add({::mqtt::property::CORRELATION_DATA, message.correlationId()});
+        props.add({::mqtt::property::RESPONSE_TOPIC, message.replyTo()});
       }
       else if (key != CORRELATION_ID)
       {
@@ -102,10 +101,10 @@ namespace fty::messagebus::mqtt
     return props;
   }
 
-  static ::mqtt::message_ptr buildMessageForMqtt(const Message & message)
+  static ::mqtt::message_ptr buildMessageForMqtt(const Message& message)
   {
       // Adding all meta data inside mqtt properties
-    auto props = getMqttPropertiesFromMetaData(message.metaData());
+    auto props = getMqttProperties(message);
 
     //get retain
     bool retain = (message.getMetaDataValue(mqtt::RETAIN) == "true");
@@ -163,13 +162,11 @@ namespace fty::messagebus::mqtt
                       .clean_start(true)
                       .finalize();
 
-        
-
     if(m_will.isValidMessage()) {
       ::mqtt::will_options willOptions(*buildMessageForMqtt(m_will));
       connOpts.set_will(willOptions);
     }
-     
+
     try
     {
       // Start consuming _before_ connecting, because we could get a flood
