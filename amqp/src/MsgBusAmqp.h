@@ -21,10 +21,9 @@
 
 #pragma once
 
-#include <fty/expected.h>
-
 #include "AmqpClient.h"
-#include "Requester.h"
+
+#include <fty/expected.h>
 
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
@@ -33,8 +32,6 @@
 namespace fty::messagebus::amqp
 {
 
-  using Container = proton::container;
-  using ContainerPointer = std::shared_ptr<Container>;
   using MessagePointer = std::shared_ptr<proton::message>;
   using AmqpClientPointer = std::shared_ptr<AmqpClient>;
 
