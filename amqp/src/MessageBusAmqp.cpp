@@ -50,14 +50,8 @@ namespace fty::messagebus::amqp
     {
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
-
     //Send
     return m_busAmqp->send(msg);
-  }
-
-  fty::Expected<void> MessageBusAmqp::receive(const std::string& address, std::function<void(const Message&)>&& func) noexcept
-  {
-    return m_busAmqp->receive(address, func, {});
   }
 
   fty::Expected<void> MessageBusAmqp::receive(const std::string& address, std::function<void(const Message&)>&& func, const std::string& filter) noexcept

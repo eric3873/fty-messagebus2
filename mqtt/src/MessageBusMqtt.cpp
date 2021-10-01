@@ -65,7 +65,7 @@ namespace fty::messagebus::mqtt
     return m_busMqtt->send(msg);
   }
 
-  fty::Expected<void> MessageBusMqtt::receive(const std::string& queue, std::function<void(const Message&)>&& func) noexcept
+  fty::Expected<void> MessageBusMqtt::receive(const std::string& queue, std::function<void(const Message&)>&& func, const std::string& /*filter*/) noexcept
   {
     return m_busMqtt->receive(queue, func);
   }

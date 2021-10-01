@@ -57,7 +57,7 @@ namespace fty::messagebus
     /// @param address the address to receive
     /// @param func the function to receive
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> receive(const std::string& address, MessageListener && func) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> receive(const std::string& address, MessageListener && func, const std::string& filter = {}) noexcept = 0 ;
 
     /// Unsubscribe from a address
     /// @param address the address to unsubscribe
