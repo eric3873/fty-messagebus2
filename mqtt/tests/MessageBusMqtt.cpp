@@ -1,6 +1,4 @@
 /*  =========================================================================
-    MessageBusMqtt.cpp - description
-
     Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
@@ -170,7 +168,7 @@ namespace
 
     auto replyMsg = msgBus.request(request, MAX_TIMEOUT);
     REQUIRE(!replyMsg);
-    REQUIRE(from_deliveryState_state(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
+    REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
   }
 
   TEST_CASE("Mqtt async request", "[send]")

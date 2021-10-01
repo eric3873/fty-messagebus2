@@ -1,6 +1,4 @@
 /*  =========================================================================
-    MessageBusAmqp.cpp - class description
-
     Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
@@ -44,13 +42,10 @@ namespace fty::messagebus::amqp
 
   fty::Expected<void> MessageBusAmqp::send(const Message& msg) noexcept
   {
-    logDebug("Send message");
-    //Sanity check
     if (!msg.isValidMessage())
     {
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
-    //Send
     return m_busAmqp->send(msg);
   }
 
@@ -72,7 +67,7 @@ namespace fty::messagebus::amqp
     if (!msg.needReply())
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
 
-    //Send
+    // Send request
     return m_busAmqp->request(msg, timeOut);
   }
 

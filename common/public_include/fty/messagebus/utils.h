@@ -1,5 +1,5 @@
 /*  =========================================================================
-    Copyright (C) 2014 - 2020 Eaton
+    Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -23,10 +23,16 @@
 
 namespace fty::messagebus::utils
 {
+  /// Generate an unique UUID
+  /// @return Uuid built
   const std::string generateUuid();
 
+  /// Generate an id
+  /// @return Id built
   const std::string generateId();
 
+  /// Generate a client id based on clock and prefix
+  /// @return Client id built
   const std::string getClientId(const std::string& prefix);
 
 } // namespace fty::messagebus::utils

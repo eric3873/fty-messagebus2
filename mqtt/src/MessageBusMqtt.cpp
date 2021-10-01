@@ -1,6 +1,4 @@
 /*  =========================================================================
-    MessageBusMqtt.cpp - class description
-
     Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
@@ -56,12 +54,10 @@ namespace fty::messagebus::mqtt
 
   fty::Expected<void> MessageBusMqtt::send(const Message& msg) noexcept
   {
-    logDebug("Send message");
-    //Sanity check
     if (!msg.isValidMessage())
+    {
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-
-    //Send
+    }
     return m_busMqtt->send(msg);
   }
 
@@ -83,7 +79,7 @@ namespace fty::messagebus::mqtt
     if (!msg.needReply())
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
 
-    //Send
+    // Sendrequest
     return m_busMqtt->request(msg, timeOut);
   }
 

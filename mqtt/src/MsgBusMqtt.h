@@ -1,6 +1,4 @@
 /*  =========================================================================
-    MsgBusMqtt.h - class description
-
     Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
@@ -22,9 +20,6 @@
 #pragma once
 
 #include "CallBack.h"
-
-#include <fty/expected.h>
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 
 namespace fty::messagebus::mqtt
 {

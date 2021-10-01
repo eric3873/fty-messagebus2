@@ -1,6 +1,4 @@
 /*  =========================================================================
-    MsgBusMqtt.cpp - class description
-
     Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
@@ -19,16 +17,10 @@
     =========================================================================
 */
 
-/*
-@header
-    MsgBusMqtt -
-@discuss
-@end
-*/
-
 #include "MsgBusMqtt.h"
 
 #include <fty/messagebus/MessageBusStatus.h>
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 #include <fty/messagebus/utils.h>
 #include <fty_log.h>
 
@@ -86,7 +78,7 @@ namespace fty::messagebus::mqtt
   static const ::mqtt::properties getMqttProperties(const Message& message)
   {
     auto props = ::mqtt::properties{};
-    for (const auto&[key, value] : message.metaData())
+    for (const auto& [key, value] : message.metaData())
     {
       if (key == REPLY_TO)
       {
@@ -103,7 +95,7 @@ namespace fty::messagebus::mqtt
 
   static ::mqtt::message_ptr buildMessageForMqtt(const Message& message)
   {
-      // Adding all meta data inside mqtt properties
+    // Adding all meta data inside mqtt properties
     auto props = getMqttProperties(message);
 
     //get retain
@@ -111,19 +103,22 @@ namespace fty::messagebus::mqtt
 
     //get QoS
     ::mqtt::ReasonCode QoS = ::mqtt::ReasonCode::GRANTED_QOS_2;
-    if(message.getMetaDataValue(mqtt::QOS) == "1") {
+    if (message.getMetaDataValue(mqtt::QOS) == "1")
+    {
       QoS = ::mqtt::ReasonCode::GRANTED_QOS_1;
-    } else if (message.getMetaDataValue(mqtt::QOS) == "0") {
+    }
+    else if (message.getMetaDataValue(mqtt::QOS) == "0")
+    {
       QoS = ::mqtt::ReasonCode::GRANTED_QOS_0;
     }
 
     auto msgToSend = ::mqtt::message_ptr_builder()
-                    .topic(message.to())
-                    .payload(message.userData())
-                    .qos(QoS)
-                    .properties(props)
-                    .retained(retain)
-                    .finalize();
+                       .topic(message.to())
+                       .payload(message.userData())
+                       .qos(QoS)
+                       .properties(props)
+                       .retained(retain)
+                       .finalize();
     return msgToSend;
   }
 
@@ -155,14 +150,15 @@ namespace fty::messagebus::mqtt
 
     // Connection options
     ::mqtt::connect_options connOpts = ::mqtt::connect_options_builder()
-                      .clean_session(false)
-                      .mqtt_version(MQTTVERSION_5)
-                      .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
-                      .automatic_reconnect(true)
-                      .clean_start(true)
-                      .finalize();
+                                         .clean_session(false)
+                                         .mqtt_version(MQTTVERSION_5)
+                                         .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
+                                         .automatic_reconnect(true)
+                                         .clean_start(true)
+                                         .finalize();
 
-    if(m_will.isValidMessage()) {
+    if (m_will.isValidMessage())
+    {
       ::mqtt::will_options willOptions(*buildMessageForMqtt(m_will));
       connOpts.set_will(willOptions);
     }

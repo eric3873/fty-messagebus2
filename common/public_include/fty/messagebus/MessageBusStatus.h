@@ -1,7 +1,7 @@
 /*  =========================================================================
     MessageBusStatus - class description
 
-    Copyright (C) 2014 - 2020 Eaton
+    Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -130,7 +130,7 @@ namespace fty::messagebus
     return "UNDEFINED";
   }
 
-  inline DeliveryState from_deliveryState_state(const std::string& deliveryState)
+  inline DeliveryState from_deliveryState(const std::string& deliveryState)
   {
     if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_UNKNOWN))
     {

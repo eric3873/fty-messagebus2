@@ -1,6 +1,4 @@
 /*  =========================================================================
-    ftyCommonMessagebusAmqpSamplePubSub - description
-
     Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
@@ -17,13 +15,6 @@
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
-*/
-
-/*
-@header
-    ftyCommonMessagebusAmqpSamplePubSub -
-@discuss
-@end
 */
 
 #include <fty/messagebus/amqp/MessageBusAmqp.h>

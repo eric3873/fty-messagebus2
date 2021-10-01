@@ -1,7 +1,7 @@
 /*  =========================================================================
     fty_common_messagebus_dto - class description
 
-    Copyright (C) 2014 - 2020 Eaton
+    Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@ namespace fty::sample::dto
   {
     std::string foo;
     std::string bar;
-    
+
     FooBar() = default;
     FooBar(const std::string& _foo, const std::string& _bar)
       : foo(_foo)

@@ -1,6 +1,4 @@
 /*  =========================================================================
-    MsgBusAmqp.cpp - class description
-
     Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
@@ -69,12 +67,12 @@ namespace fty::messagebus::amqp
     logDebug("Connecting to {} ...", m_endpoint);
     try
     {
-    //   m_connectionPointer = std::make_shared<Connection>(m_endpoint);
-    //   std::thread thrd([=]() {
-    //     proton::container(*m_connectionPointer).run();
-    //   });
-    //   thrd.detach();
-    //   std::this_thread::sleep_for(std::chrono::seconds(1));
+      //   m_connectionPointer = std::make_shared<Connection>(m_endpoint);
+      //   std::thread thrd([=]() {
+      //     proton::container(*m_connectionPointer).run();
+      //   });
+      //   thrd.detach();
+      //   std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     catch (const std::exception& e)
     {

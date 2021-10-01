@@ -1,5 +1,5 @@
 /*  =========================================================================
-    Copyright (C) 2014 - 2020 Eaton
+    Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -19,10 +19,9 @@
 
 #pragma once
 
+#include <fty/expected.h>
 #include <map>
 #include <string>
-
-#include <fty/expected.h>
 
 namespace fty::messagebus
 {
@@ -34,8 +33,8 @@ namespace fty::messagebus
 
   // Metadata user property
   static constexpr auto CORRELATION_ID = "CORRELATION_ID";
-  static constexpr auto FROM = "FROM"; //ClientId of the message
-  static constexpr auto TO = "TO"; //Queue of destination
+  static constexpr auto FROM = "FROM";         //ClientId of the message
+  static constexpr auto TO = "TO";             //Queue of destination
   static constexpr auto REPLY_TO = "REPLY_TO"; //Queue for the reply
   static constexpr auto SUBJECT = "SUBJECT";
   static constexpr auto STATUS = "STATUS";

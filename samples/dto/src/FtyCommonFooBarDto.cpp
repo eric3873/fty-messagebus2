@@ -1,7 +1,7 @@
 /*  =========================================================================
     FtyCommonMessageBusDto - class description
 
-    Copyright (C) 2014 - 2020 Eaton
+    Copyright (C) 2014 - 2021 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

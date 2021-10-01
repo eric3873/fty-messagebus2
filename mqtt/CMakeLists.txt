@@ -25,7 +25,7 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
     paho-mqtt3as
     paho-mqtt3c
   FLAGS
-    "-fmax-errors=2"
+    "-fmax-errors=1"
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
