@@ -42,12 +42,8 @@ namespace fty::messagebus::amqp
   class AmqpClient : public proton::messaging_handler
   {
   public:
-    AmqpClient(const std::string& url, const std::string& address)
-      : AmqpClient(url, address, {})
-    {
-    }
 
-    AmqpClient(const std::string& url, const std::string& address, MessageListener messageListener, const std::string& filter = {});
+    AmqpClient(const std::string& url, const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
 
     ~AmqpClient() = default;
 
@@ -58,22 +54,21 @@ namespace fty::messagebus::amqp
     void on_message(proton::delivery& delivery, proton::message& msg) override;
 
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
-    void sendMsg(const proton::message& msg);
+    void send(const proton::message& msg);
     void close();
 
   private:
     std::string m_url;
     std::string m_address;
-    MessageListener m_messageListener;
     std::string m_filter;
+    MessageListener m_messageListener;
 
     // Synchronization
     std::mutex m_lock;
-    std::condition_variable m_cv;
-    std::condition_variable m_cvAmqpClientReady;
+    std::condition_variable m_senderReady;
     std::promise<proton::message> m_promise;
     std::future<proton::message> m_future;
-    // AmqpClient
+    // Sender
     proton::sender m_sender;
     // Receiver
     proton::receiver m_receiver;

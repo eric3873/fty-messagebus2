@@ -32,11 +32,11 @@ namespace fty::messagebus::amqp
   using MessageListener = fty::messagebus::MessageListener;
   using fty::messagebus::Message;
 
-  AmqpClient::AmqpClient(const std::string& url, const std::string& address, MessageListener messageListener, const std::string& filter)
+  AmqpClient::AmqpClient(const std::string& url, const std::string& address, const std::string& filter, MessageListener messageListener)
     : m_url(url)
     , m_address(address)
-    , m_messageListener(std::move(messageListener))
     , m_filter(filter)
+    , m_messageListener(std::move(messageListener))
   {
     m_future = m_promise.get_future();
   }
@@ -58,50 +58,50 @@ namespace fty::messagebus::amqp
   {
     logDebug("on_connection_open for target address: {}", m_address);
 
-    //if (m_messageListener)
     if (!m_filter.empty())
     {
+      // Receiver with filtering, so reply, the filtering for this implementation is only on correlationId
       proton::source_options opts;
-      // if (!m_filter.empty())
-      // {
-        std::ostringstream correlIdFilter;
-        correlIdFilter << AMQP_CORREL_ID;
-        correlIdFilter << "='";
-        correlIdFilter << m_filter;
-        correlIdFilter << "'";
-        logDebug("CorrelId filter: {}", correlIdFilter.str());
-        opts = setFilter(correlIdFilter.str());
-      //}
+      std::ostringstream correlIdFilter;
+      correlIdFilter << AMQP_CORREL_ID;
+      correlIdFilter << "='";
+      correlIdFilter << m_filter;
+      correlIdFilter << "'";
+      logDebug("CorrelId filter: {}", correlIdFilter.str());
+      opts = setFilter(correlIdFilter.str());
+
       m_receiver = connection.open_receiver(m_address, proton::receiver_options().source(opts));
     }
     else if (m_messageListener)
     {
+      // Receiver without filtering, so request or subscription
       m_receiver = connection.open_receiver(m_address);
     }
     else
     {
+      // Sender only
       connection.open_sender(m_address);
     }
   }
 
   void AmqpClient::on_sender_open(proton::sender& sender)
   {
-    logDebug("on_sender_open for target address: {}", sender.source().address());
+    logDebug("On sender open for target address: {}", sender.source().address());
     std::unique_lock<std::mutex> l(m_lock);
     m_sender = sender;
-    m_cvAmqpClientReady.notify_all();
+    m_senderReady.notify_all();
   }
 
   void AmqpClient::on_receiver_open(proton::receiver& receiver)
   {
-    logDebug("on_receiver_open for target address: {}", receiver.source().address());
+    logDebug("On receiver open for target address: {}", receiver.source().address());
   }
 
-  void AmqpClient::sendMsg(const proton::message& msg)
+  void AmqpClient::send(const proton::message& msg)
   {
     logDebug("Init sender waiting...");
     std::unique_lock<std::mutex> l(m_lock);
-    m_cvAmqpClientReady.wait(l);
+    m_senderReady.wait(l);
     logDebug("sender ready on {}", msg.to());
 
     m_sender.work_queue().add([=]() {
@@ -131,7 +131,16 @@ namespace fty::messagebus::amqp
     logDebug("Message arrived {}", proton::to_string(msg));
     delivery.accept();
     Message amqpMsg(getMetaData(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
-    m_receiver.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
+    if (m_receiver && m_messageListener)
+    {
+      // Asynchronous reply or any subscription
+      m_receiver.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
+    }
+    else
+    {
+      // Synchronous reply
+      m_promise.set_value(msg);
+    }
   }
 
   proton::source_options AmqpClient::setFilter(const std::string& selector)
@@ -156,13 +165,15 @@ namespace fty::messagebus::amqp
   void AmqpClient::close()
   {
     std::lock_guard<std::mutex> l(m_lock);
-    logDebug("Closing sender for {}", m_address);
+    logDebug("Closing...");
     if (m_sender)
     {
+      logDebug("Closing sender for {}", m_address);
       m_sender.connection().close();
     }
     if (m_receiver)
     {
+      logDebug("Closing receiver for {}", m_address);
       m_receiver.connection().close();
     }
     logDebug("Closed");

@@ -96,7 +96,7 @@ namespace fty::messagebus
 
   void Message::to(const std::string& to)
   {
-    setMetaDataValue(TO,to);
+    setMetaDataValue(TO, to);
   }
 
   std::string Message::replyTo() const
@@ -158,7 +158,6 @@ namespace fty::messagebus
     reply.subject(subject());
     reply.correlationId(correlationId());
     reply.status(status);
-
     reply.m_data = userData;
 
     return reply;
@@ -172,8 +171,6 @@ namespace fty::messagebus
     msg.from(from);
     msg.to(to);
     msg.subject(subject);
-    msg.correlationId(utils::generateUuid());
-
     msg.m_data = userData;
 
     return msg;
@@ -183,6 +180,7 @@ namespace fty::messagebus
   {
     Message msg = buildMessage(from, to, subject, userData, meta);
     msg.replyTo(replyTo);
+    msg.correlationId(utils::generateUuid());
 
     return msg;
   }
