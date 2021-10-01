@@ -53,9 +53,11 @@ namespace fty::messagebus
 
     MetaData& metaData();
     const MetaData& metaData() const;
+    void metaData(const MetaData& metaData);
 
     UserData& userData();
     const UserData& userData() const;
+    void userData(const UserData& userData);
 
     std::string correlationId() const;
     void correlationId(const std::string& correlationId);

@@ -38,19 +38,29 @@ namespace fty::messagebus
     return m_metadata;
   }
 
-  UserData& Message::userData()
-  {
-    return m_data;
-  }
-
   const MetaData& Message::metaData() const
   {
     return m_metadata;
   }
 
+  void Message::metaData(const MetaData& metaData)
+  {
+    m_metadata = metaData;
+  }
+
+  UserData& Message::userData()
+  {
+    return m_data;
+  }
+
   const UserData& Message::userData() const
   {
     return m_data;
+  }
+
+  void Message::userData(const UserData& userData)
+  {
+    m_data = userData;
   }
 
   std::string Message::getMetaDataValue(const std::string& key) const
@@ -158,7 +168,7 @@ namespace fty::messagebus
     reply.subject(subject());
     reply.correlationId(correlationId());
     reply.status(status);
-    reply.m_data = userData;
+    reply.userData(userData);
 
     return reply;
   }
@@ -171,7 +181,7 @@ namespace fty::messagebus
     msg.from(from);
     msg.to(to);
     msg.subject(subject);
-    msg.m_data = userData;
+    msg.userData(userData);;
 
     return msg;
   }
