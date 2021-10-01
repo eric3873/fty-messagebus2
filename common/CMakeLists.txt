@@ -20,8 +20,10 @@ etn_target(shared fty-common-messagebus2
 
 set_target_properties(fty-common-messagebus2 PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 
-# Test target
-etn_test_target(fty-common-messagebus2
-SOURCES
-  tests/*.cpp
-)
+## Tests
+if(BUILD_TESTING)
+  etn_test_target(${PROJECT_NAME}
+    SOURCES
+      tests/*.cpp
+  )
+endif()
