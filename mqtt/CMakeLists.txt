@@ -19,7 +19,7 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
   USES_PUBLIC
     fty-common-messagebus2
   USES_PRIVATE
-    fty_common_messagebus_utils
+    fty-common-messagebus-utils
     fty_common_logging
     paho-mqttpp3
     paho-mqtt3as

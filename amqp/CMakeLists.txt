@@ -19,12 +19,12 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
   USES_PUBLIC
     fty-common-messagebus2
   USES_PRIVATE
-    fty_common_messagebus_utils
+    fty-common-messagebus-utils
     fty_common_logging
     Proton::cpp
   FLAGS
     "-fmax-errors=1"
-    #"-w"
+    # "-w"
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
