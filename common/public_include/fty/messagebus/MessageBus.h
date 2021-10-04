@@ -56,6 +56,7 @@ namespace fty::messagebus
     /// Register a listener to a address using function
     /// @param address the address to receive
     /// @param func the function to receive
+    /// @param filter constraint the receiver with a filter
     /// @return Success or error
     virtual [[nodiscard]] fty::Expected<void> receive(const std::string& address, MessageListener && func, const std::string& filter = {}) noexcept = 0 ;
 
