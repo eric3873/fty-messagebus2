@@ -139,6 +139,16 @@ namespace fty::messagebus
     setMetaDataValue(STATUS, status);
   }
 
+  std::string Message::id() const
+  {
+    return getMetaDataValue(MESSAGE_ID);
+  }
+
+  void Message::id(const std::string& msgId)
+  {
+    setMetaDataValue(MESSAGE_ID, msgId);
+  }
+
   bool Message::isValidMessage() const
   {
     return ((!subject().empty()) && (!from().empty()) && (!to().empty()));

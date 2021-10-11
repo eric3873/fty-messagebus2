@@ -33,6 +33,7 @@ namespace fty::messagebus
 
   // Metadata user property
   static constexpr auto CORRELATION_ID = "CORRELATION_ID";
+  static constexpr auto MESSAGE_ID = "MESSAGE_ID";
   static constexpr auto FROM = "FROM";         //ClientId of the message
   static constexpr auto TO = "TO";             //Queue of destination
   static constexpr auto REPLY_TO = "REPLY_TO"; //Queue for the reply
@@ -70,6 +71,8 @@ namespace fty::messagebus
     void subject(const std::string& subject);
     std::string status() const;
     void status(const std::string& status);
+    std::string id() const;
+    void id(const std::string& id);
 
     std::string getMetaDataValue(const std::string& key) const;
     void setMetaDataValue(const std::string& key, const std::string& data);
