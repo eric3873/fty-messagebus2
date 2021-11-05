@@ -20,6 +20,7 @@
 #pragma once
 
 #include "AmqpClient.h"
+#include "AmqpClient2.h"
 
 #include <fty/expected.h>
 
@@ -32,6 +33,7 @@ namespace fty::messagebus::amqp
 
   using MessagePointer = std::shared_ptr<proton::message>;
   using AmqpClientPointer = std::shared_ptr<AmqpClient>;
+  using AmqpClientPointer2 = std::shared_ptr<AmqpClient2>;
 
   class MsgBusAmqp
   {
@@ -63,6 +65,7 @@ namespace fty::messagebus::amqp
     std::string m_endpoint{};
 
     std::map<std::string, AmqpClientPointer> m_subScriptions;
+    AmqpClientPointer2 m_amqpClientPointer;
   };
 
 } // namespace fty::messagebus::amqp

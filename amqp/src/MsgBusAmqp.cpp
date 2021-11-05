@@ -67,12 +67,12 @@ namespace fty::messagebus::amqp
     logDebug("Connecting to {} ...", m_endpoint);
     try
     {
-      //   m_connectionPointer = std::make_shared<Connection>(m_endpoint);
-      //   std::thread thrd([=]() {
-      //     proton::container(*m_connectionPointer).run();
-      //   });
-      //   thrd.detach();
-      //   std::this_thread::sleep_for(std::chrono::seconds(1));
+      m_amqpClientPointer =std::make_shared<AmqpClient2>(m_endpoint, "");
+        std::thread thrd([=]() {
+          proton::container(*m_amqpClientPointer).run();
+        });
+        thrd.detach();
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
     catch (const std::exception& e)
     {
@@ -136,14 +136,17 @@ namespace fty::messagebus::amqp
     logDebug("Sending message {}", message.toString());
     proton::message msgToSend = getAmqpMessage(message);
 
-    AmqpClient client = AmqpClient(m_endpoint, message.to());
-    std::thread thrd([&]() {
-      proton::container(client).run();
-    });
-    client.send(msgToSend);
-    thrd.join();
+    bool msgSent = m_amqpClientPointer->send(msgToSend);
+    //std::this_thread::sleep_for(std::chrono::seconds(5));
 
-    if (false)
+    // AmqpClient client = AmqpClient(m_endpoint, message.to());
+    // std::thread thrd([&]() {
+    //   proton::container(client).run();
+    // });
+    // client.send(msgToSend);
+    // thrd.join();
+
+    if (!msgSent)
     {
       logError("Message sent (Rejected)");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));

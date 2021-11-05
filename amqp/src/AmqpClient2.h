@@ -37,13 +37,13 @@
 namespace fty::messagebus::amqp
 {
 
-  class AmqpClient : public proton::messaging_handler
+  class AmqpClient2 : public proton::messaging_handler
   {
   public:
 
-    AmqpClient(const std::string& url, const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
+    AmqpClient2(const std::string& url, const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
 
-    ~AmqpClient() = default;
+    ~AmqpClient2() = default;
 
     void on_container_start(proton::container& container) override;
     void on_connection_open(proton::connection& connection) override;
@@ -53,7 +53,7 @@ namespace fty::messagebus::amqp
 
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
     void receive(const proton::message& msg, MessageListener messageListener);
-    void send(const proton::message& msg);
+    bool send(const proton::message& msg);
     void close();
 
   private:
@@ -67,12 +67,20 @@ namespace fty::messagebus::amqp
     std::condition_variable m_senderReady;
     std::promise<proton::message> m_promise;
     std::future<proton::message> m_future;
+
+    std::promise<void> m_promise2;
+    std::future<void> m_future2;
+
     // Sender
     proton::sender m_sender;
     // Receiver
     proton::receiver m_receiver;
 
+    proton::connection m_connection;
+
     proton::source_options setFilter(const std::string& selector_str);
+
+    proton::message m_message;
   };
 
 } // namespace fty::messagebus::amqp
