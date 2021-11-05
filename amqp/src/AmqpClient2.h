@@ -21,6 +21,7 @@
 
 #include "MsgBusAmqpUtils.h"
 #include <fty/messagebus/MessageBus.h>
+#include <fty/messagebus/MessageBusStatus.h>
 
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
@@ -41,7 +42,7 @@ namespace fty::messagebus::amqp
   {
   public:
 
-    AmqpClient2(const std::string& url, const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
+    AmqpClient2(const std::string& url, const std::string& address = {}, const std::string& filter = {}, MessageListener messageListener = {});
 
     ~AmqpClient2() = default;
 
@@ -51,9 +52,11 @@ namespace fty::messagebus::amqp
     void on_receiver_open(proton::receiver& receiver) override;
     void on_message(proton::delivery& delivery, proton::message& msg) override;
 
+    fty::messagebus::ComState connected();
+
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
-    void receive(const proton::message& msg, MessageListener messageListener);
-    bool send(const proton::message& msg);
+    fty::messagebus::DeliveryState receive(const std::string& address, MessageListener messageListener, const std::string& filter = {});
+    fty::messagebus::DeliveryState send(const proton::message& msg);
     void close();
 
   private:
@@ -61,6 +64,8 @@ namespace fty::messagebus::amqp
     std::string m_address;
     std::string m_filter;
     MessageListener m_messageListener;
+
+    fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::COM_STATE_UNKNOWN;
 
     // Synchronization
     std::mutex m_lock;
@@ -71,6 +76,9 @@ namespace fty::messagebus::amqp
     std::promise<void> m_promise2;
     std::future<void> m_future2;
 
+    std::promise<fty::messagebus::ComState> m_connectPromise;
+    std::future<fty::messagebus::ComState> m_connectFuture;
+
     // Sender
     proton::sender m_sender;
     // Receiver
@@ -78,7 +86,7 @@ namespace fty::messagebus::amqp
 
     proton::connection m_connection;
 
-    proton::source_options setFilter(const std::string& selector_str);
+    proton::receiver_options getReceiverOptions(const std::string& selector_str) const;
 
     proton::message m_message;
   };

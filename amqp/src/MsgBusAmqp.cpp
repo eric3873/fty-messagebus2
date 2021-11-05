@@ -24,15 +24,6 @@
 #include <fty/messagebus/utils.h>
 #include <fty_log.h>
 
-namespace
-{
-  // TODO implement it
-  bool isServiceAvailable()
-  {
-    return true;
-  }
-} // namespace
-
 namespace fty::messagebus::amqp
 {
   using namespace fty::messagebus;
@@ -63,24 +54,37 @@ namespace fty::messagebus::amqp
 
   fty::Expected<void> MsgBusAmqp::connect()
   {
-
     logDebug("Connecting to {} ...", m_endpoint);
     try
     {
-      m_amqpClientPointer =std::make_shared<AmqpClient2>(m_endpoint, "");
-        std::thread thrd([=]() {
-          proton::container(*m_amqpClientPointer).run();
-        });
-        thrd.detach();
-        std::this_thread::sleep_for(std::chrono::seconds(1));
+      m_amqpSenderClient =std::make_shared<AmqpClient2>(m_endpoint);
+      std::thread thrdSender([=]() {
+        proton::container(*m_amqpSenderClient).run();
+      });
+      thrdSender.detach();
+
+      m_amqpReceiverClient =std::make_shared<AmqpClient2>(m_endpoint);
+      std::thread thrdReceiver([=]() {
+        proton::container(*m_amqpReceiverClient).run();
+      });
+      thrdReceiver.detach();
+
+      if (m_amqpSenderClient->connected() != ComState::COM_STATE_OK)
+      {
+        return fty::unexpected(to_string(m_amqpSenderClient->connected()));
+      }
     }
     catch (const std::exception& e)
     {
       logError("unexpected error: {}", e.what());
       return fty::unexpected(to_string(ComState::COM_STATE_CONNECT_FAILED));
     }
-
     return {};
+  }
+
+  bool MsgBusAmqp::isServiceAvailable()
+  {
+    return (m_amqpSenderClient->connected() == ComState::COM_STATE_OK)? true : false;
   }
 
   fty::Expected<void> MsgBusAmqp::receive(const std::string& address, MessageListener messageListener, const std::string& filter)
@@ -136,7 +140,7 @@ namespace fty::messagebus::amqp
     logDebug("Sending message {}", message.toString());
     proton::message msgToSend = getAmqpMessage(message);
 
-    bool msgSent = m_amqpClientPointer->send(msgToSend);
+    auto msgSent = m_amqpSenderClient->send(msgToSend);
     //std::this_thread::sleep_for(std::chrono::seconds(5));
 
     // AmqpClient client = AmqpClient(m_endpoint, message.to());
@@ -146,7 +150,7 @@ namespace fty::messagebus::amqp
     // client.send(msgToSend);
     // thrd.join();
 
-    if (!msgSent)
+    if (msgSent != DeliveryState::DELIVERY_STATE_ACCEPTED)
     {
       logError("Message sent (Rejected)");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));

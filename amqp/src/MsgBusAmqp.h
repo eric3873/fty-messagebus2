@@ -60,12 +60,15 @@ namespace fty::messagebus::amqp
       return m_clientName;
     }
 
+    bool isServiceAvailable();
+
   private:
     std::string m_clientName{};
     std::string m_endpoint{};
 
     std::map<std::string, AmqpClientPointer> m_subScriptions;
-    AmqpClientPointer2 m_amqpClientPointer;
+    AmqpClientPointer2 m_amqpSenderClient;
+    AmqpClientPointer2 m_amqpReceiverClient;
   };
 
 } // namespace fty::messagebus::amqp
