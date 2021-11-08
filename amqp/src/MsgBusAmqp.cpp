@@ -38,11 +38,11 @@ namespace fty::messagebus::amqp
       logDebug("Cleaning Amqp ressources for: {}", m_clientName);
       try
       {
-        // for (const auto& [key, receiv] : m_subScriptions)
-        // {
-          logDebug("Cleaning: {}...");//, key);
-          //receiv.cancel();
-        // }
+        for (const auto& [key, receiver] : m_subScriptions)
+        {
+          logDebug("Cleaning: {}...", key);
+          receiver->close();
+        }
         logDebug("{} cleaned", m_clientName);
       }
       catch (const std::exception& e)
@@ -57,21 +57,15 @@ namespace fty::messagebus::amqp
     logDebug("Connecting to {} ...", m_endpoint);
     try
     {
-      m_amqpSenderClient =std::make_shared<AmqpClient2>(m_endpoint);
+      m_amqpClient =std::make_shared<AmqpClient>(m_endpoint);
       std::thread thrdSender([=]() {
-        proton::container(*m_amqpSenderClient).run();
+        proton::container(*m_amqpClient).run();
       });
       thrdSender.detach();
 
-      m_amqpReceiverClient =std::make_shared<AmqpClient2>(m_endpoint);
-      std::thread thrdReceiver([=]() {
-        proton::container(*m_amqpReceiverClient).run();
-      });
-      thrdReceiver.detach();
-
-      if (m_amqpSenderClient->connected() != ComState::COM_STATE_OK || m_amqpReceiverClient->connected() != ComState::COM_STATE_OK)
+      if (m_amqpClient->connected() != ComState::COM_STATE_OK)
       {
-        return fty::unexpected(to_string(m_amqpSenderClient->connected()));
+        return fty::unexpected(to_string(m_amqpClient->connected()));
       }
     }
     catch (const std::exception& e)
@@ -84,8 +78,7 @@ namespace fty::messagebus::amqp
 
   bool MsgBusAmqp::isServiceAvailable()
   {
-    return ((m_amqpSenderClient && m_amqpSenderClient->connected() == ComState::COM_STATE_OK) &&
-            (m_amqpReceiverClient && m_amqpReceiverClient->connected() == ComState::COM_STATE_OK))? true : false;
+    return (m_amqpClient && (m_amqpClient->connected() == ComState::COM_STATE_OK))? true : false;
   }
 
   fty::Expected<void> MsgBusAmqp::receive(const std::string& address, MessageListener messageListener, const std::string& filter)
@@ -96,14 +89,11 @@ namespace fty::messagebus::amqp
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
-    //auto receiver = m_amqpSenderClient->receive(address, messageListener, filter);
-
-    auto receiver = std::make_shared<AmqpClient2>(m_endpoint);//, address, filter, messageListener);
+    auto receiver = std::make_shared<AmqpClient>(m_endpoint);
     std::thread thrd([=]() {
       proton::container(*receiver).run();
     });
     auto received = receiver->receive(address, filter, messageListener);
-    //m_subScriptions.emplace(std::make_pair(address, client));
     m_subScriptions.try_emplace(address, receiver);
     thrd.detach();
 
@@ -128,6 +118,7 @@ namespace fty::messagebus::amqp
     try
     {
       m_subScriptions.at(address)->close();
+      m_subScriptions.erase(address);
       logTrace("{} - unsubscribed on: '{}'", m_clientName, address);
       return {};
     }
@@ -149,17 +140,7 @@ namespace fty::messagebus::amqp
     logDebug("Sending message {}", message.toString());
     proton::message msgToSend = getAmqpMessage(message);
 
-    //auto msgSent = m_amqpSenderClient->send(msgToSend);
-    //std::this_thread::sleep_for(std::chrono::seconds(5));
-
-    // AmqpClient client = AmqpClient(m_endpoint, message.to());
-    // std::thread thrd([&]() {
-    //   proton::container(client).run();
-    // });
-    // client.send(msgToSend);
-    // thrd.join();
-
-    auto sender = AmqpClient2(m_endpoint);//, message.to());
+    auto sender = AmqpClient(m_endpoint);
     std::thread thrd([&]() {
       proton::container(sender).run();
     });
@@ -189,13 +170,7 @@ namespace fty::messagebus::amqp
       logDebug("Sending message {}", message.toString());
       proton::message msgToSend = getAmqpMessage(message);
 
-      // AmqpClient client(m_endpoint, msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
-      // std::thread thrd([&]() {
-      //   proton::container(client).run();
-      // });
-      // thrd.detach();
-
-      AmqpClient2 requester(m_endpoint, msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
+      AmqpClient requester(m_endpoint);
       std::thread thrd([&]() {
         proton::container(requester).run();
       });
@@ -203,10 +178,8 @@ namespace fty::messagebus::amqp
       thrd.detach();
       send(message);
 
-
       MessagePointer response = std::make_shared<proton::message>();
       bool messageArrived = requester.tryConsumeMessageFor(response, receiveTimeOut);
-      //bool messageArrived = m_amqpSenderClient->tryConsumeMessageFor(response, receiveTimeOut);
 
       if (!messageArrived)
       {

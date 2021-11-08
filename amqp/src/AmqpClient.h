@@ -21,6 +21,7 @@
 
 #include "MsgBusAmqpUtils.h"
 #include <fty/messagebus/MessageBus.h>
+#include <fty/messagebus/MessageBusStatus.h>
 
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
@@ -33,6 +34,7 @@
 #include <proton/work_queue.hpp>
 
 #include <future>
+#include <map>
 
 namespace fty::messagebus::amqp
 {
@@ -41,38 +43,43 @@ namespace fty::messagebus::amqp
   {
   public:
 
-    AmqpClient(const std::string& url, const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
-
-    ~AmqpClient() = default;
+    AmqpClient(const std::string& url);
+    ~AmqpClient();
 
     void on_container_start(proton::container& container) override;
     void on_connection_open(proton::connection& connection) override;
     void on_sender_open(proton::sender& sender) override;
     void on_receiver_open(proton::receiver& receiver) override;
     void on_message(proton::delivery& delivery, proton::message& msg) override;
+    void on_error(const proton::error_condition& error) override;
 
+    fty::messagebus::ComState connected();
+    fty::messagebus::DeliveryState receive(const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
+    fty::messagebus::DeliveryState send(const proton::message& msg);
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
-    void receive(const proton::message& msg, MessageListener messageListener);
-    void send(const proton::message& msg);
     void close();
 
   private:
     std::string m_url;
-    std::string m_address;
-    std::string m_filter;
     MessageListener m_messageListener;
+    // Proton connection
+    proton::connection m_connection;
+    // Proton message
+    proton::message m_message;
+    // Default communication state
+    fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::COM_STATE_UNKNOWN;
 
     // Synchronization
     std::mutex m_lock;
-    std::condition_variable m_senderReady;
-    std::promise<proton::message> m_promise;
-    std::future<proton::message> m_future;
-    // Sender
-    proton::sender m_sender;
-    // Receiver
-    proton::receiver m_receiver;
 
-    proton::source_options setFilter(const std::string& selector_str);
+    // Set of promise
+    std::promise<fty::messagebus::ComState> m_connectPromise;
+    std::future<fty::messagebus::ComState> m_connectFuture;
+    std::promise<void> m_promiseSender;
+    std::promise<void> m_promiseReceiver;
+    std::promise<proton::message> m_promiseSyncRequest;
+
+    proton::receiver_options getReceiverOptions(const std::string& selector_str) const;
   };
 
 } // namespace fty::messagebus::amqp
