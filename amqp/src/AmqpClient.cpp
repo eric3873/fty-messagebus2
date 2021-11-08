@@ -76,6 +76,8 @@ namespace fty::messagebus::amqp
   void AmqpClient::on_receiver_open(proton::receiver& receiver)
   {
     logDebug("Waiting any message on target address: {}", receiver.source().address());
+    // Record receiver to have the possibility to unreceive it (i.e. close it)
+    m_receiver = receiver;
     m_promiseReceiver.set_value();
   }
 
@@ -194,13 +196,13 @@ namespace fty::messagebus::amqp
     if (m_connection && m_messageListener)
     {
       // Asynchronous reply or any subscription
-      logDebug("Asynchronous reply");
+      logDebug("Asynchronous mode");
       m_connection.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
     }
     else
     {
       // Synchronous reply
-      logDebug("Synchronous reply");
+      logDebug("Synchronous mode");
       m_promiseSyncRequest.set_value(msg);
     }
   }
@@ -224,6 +226,16 @@ namespace fty::messagebus::amqp
     receiverOptions.source(opts);
 
     return receiverOptions;
+  }
+
+  void AmqpClient::unreceive()
+  {
+    if (m_receiver)
+    {
+      logDebug("Closing receiver");
+      m_receiver.close();
+    }
+
   }
 
   void AmqpClient::close()

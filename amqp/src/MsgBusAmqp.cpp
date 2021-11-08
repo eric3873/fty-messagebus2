@@ -117,8 +117,14 @@ namespace fty::messagebus::amqp
 
     try
     {
-      m_subScriptions.at(address)->close();
-      m_subScriptions.erase(address);
+      auto iterator = m_subScriptions.find(address);
+      if (iterator != m_subScriptions.end())
+      {
+        logDebug("Unreceive founded: '{}'", address);
+        m_subScriptions.at(address)->unreceive();
+        m_subScriptions.erase(address);
+      }
+
       logTrace("{} - unsubscribed on: '{}'", m_clientName, address);
       return {};
     }

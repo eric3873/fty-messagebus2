@@ -57,22 +57,23 @@ namespace fty::messagebus::amqp
     fty::messagebus::DeliveryState receive(const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
     fty::messagebus::DeliveryState send(const proton::message& msg);
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
+    void unreceive();
     void close();
 
   private:
     std::string m_url;
     MessageListener m_messageListener;
-    // Proton connection
+    // Proton object
     proton::connection m_connection;
-    // Proton message
+    proton::receiver m_receiver;
     proton::message m_message;
     // Default communication state
     fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::COM_STATE_UNKNOWN;
 
-    // Synchronization
+    // Mutex
     std::mutex m_lock;
 
-    // Set of promise
+    // Set of promise for synchronization
     std::promise<fty::messagebus::ComState> m_connectPromise;
     std::future<fty::messagebus::ComState> m_connectFuture;
     std::promise<void> m_promiseSender;
