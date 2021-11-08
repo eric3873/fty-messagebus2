@@ -101,6 +101,7 @@ namespace fty::messagebus::amqp
   void AmqpClient2::on_receiver_open(proton::receiver& receiver)
   {
     logDebug("On receiver open for target address: {}", receiver.source().address());
+    m_promise2.set_value();
   }
 
   ComState AmqpClient2::connected()
@@ -145,8 +146,8 @@ namespace fty::messagebus::amqp
 
   DeliveryState AmqpClient2::receive(const std::string& address, MessageListener messageListener, const std::string& filter)
   {
-    //m_future2 = m_promise2.get_future();
-    logDebug("Receiving message from {} ...", address);
+    m_future2 = m_promise2.get_future();
+    logDebug("Set receiver to wait message(s) from {} ...", address);
     proton::receiver_options receiverOptions;
 
     if (!filter.empty())
@@ -161,9 +162,22 @@ namespace fty::messagebus::amqp
       receiverOptions = getReceiverOptions(correlIdFilter.str());
     }
 
+    //m_receiverListener.emplace(std::make_pair(address, messageListener));
+    //m_receiverListener.emplace(address, messageListener);
+    m_receiverListener.try_emplace(address, messageListener);
+
     m_connection.work_queue().add([=]() {
       m_connection.open_receiver(address, receiverOptions);
     });
+
+    if (m_future2.wait_for(TIMEOUT) != std::future_status::timeout)
+    {
+      return DeliveryState::DELIVERY_STATE_ACCEPTED;
+    }
+    else
+    {
+      return DeliveryState::DELIVERY_STATE_REJECTED;
+    }
 
     return DeliveryState::DELIVERY_STATE_ACCEPTED;
   }
@@ -195,14 +209,18 @@ namespace fty::messagebus::amqp
     logDebug("Message arrived {}", proton::to_string(msg));
     delivery.accept();
     Message amqpMsg(getMetaData(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
-    if (m_receiver && m_messageListener)
+
+    auto iterator = m_receiverListener.find(msg.address());
+    if (m_connection && iterator != m_receiverListener.end())
     {
       // Asynchronous reply or any subscription
-      m_receiver.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
+      logDebug("Asynchronous reply");
+      m_connection.work_queue().add(proton::make_work(iterator->second, amqpMsg));
     }
     else
     {
       // Synchronous reply
+      logDebug("Synchronous reply");
       m_promise.set_value(msg);
     }
   }

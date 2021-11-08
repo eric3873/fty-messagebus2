@@ -34,6 +34,7 @@
 #include <proton/work_queue.hpp>
 
 #include <future>
+#include <map>
 
 namespace fty::messagebus::amqp
 {
@@ -78,6 +79,8 @@ namespace fty::messagebus::amqp
 
     std::promise<fty::messagebus::ComState> m_connectPromise;
     std::future<fty::messagebus::ComState> m_connectFuture;
+
+    std::map<std::string, MessageListener> m_receiverListener;
 
     // Sender
     proton::sender m_sender;

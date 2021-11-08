@@ -38,11 +38,11 @@ namespace fty::messagebus::amqp
       logDebug("Cleaning Amqp ressources for: {}", m_clientName);
       try
       {
-        for (const auto& [key, receiv] : m_subScriptions)
-        {
-          logDebug("Cleaning: {}...", key);
+        // for (const auto& [key, receiv] : m_subScriptions)
+        // {
+          logDebug("Cleaning: {}...");//, key);
           //receiv.cancel();
-        }
+        // }
         logDebug("{} cleaned", m_clientName);
       }
       catch (const std::exception& e)
@@ -69,7 +69,7 @@ namespace fty::messagebus::amqp
       });
       thrdReceiver.detach();
 
-      if (m_amqpSenderClient->connected() != ComState::COM_STATE_OK)
+      if (m_amqpSenderClient->connected() != ComState::COM_STATE_OK || m_amqpReceiverClient->connected() != ComState::COM_STATE_OK)
       {
         return fty::unexpected(to_string(m_amqpSenderClient->connected()));
       }
@@ -84,7 +84,8 @@ namespace fty::messagebus::amqp
 
   bool MsgBusAmqp::isServiceAvailable()
   {
-    return (m_amqpSenderClient->connected() == ComState::COM_STATE_OK)? true : false;
+    return ((m_amqpSenderClient && m_amqpSenderClient->connected() == ComState::COM_STATE_OK) &&
+            (m_amqpReceiverClient && m_amqpReceiverClient->connected() == ComState::COM_STATE_OK))? true : false;
   }
 
   fty::Expected<void> MsgBusAmqp::receive(const std::string& address, MessageListener messageListener, const std::string& filter)
@@ -97,12 +98,21 @@ namespace fty::messagebus::amqp
 
     logDebug("Waiting to receive msg from: {}", address);
 
-    AmqpClientPointer client = std::make_shared<AmqpClient>(m_endpoint, address, filter, messageListener);
-    std::thread thrd([=]() {
-      proton::container(*client).run();
-    });
-    m_subScriptions.emplace(std::make_pair(address, client));
-    thrd.detach();
+    // AmqpClientPointer client = std::make_shared<AmqpClient>(m_endpoint, address, filter, messageListener);
+    // std::thread thrd([=]() {
+    //   proton::container(*client).run();
+    // });
+
+    auto receiver = m_amqpSenderClient->receive(address, messageListener, filter);
+
+    // m_subScriptions.emplace(std::make_pair(address, client));
+    // thrd.detach();
+
+    if (receiver != DeliveryState::DELIVERY_STATE_ACCEPTED)
+    {
+      logError("Message receive (Rejected)");
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    }
 
     logDebug("Waiting to receive msg from: {} Accepted", address);
     return {};

@@ -47,7 +47,7 @@ namespace
   {
     bool g_received = false;
     auto s_msgBus = fty::messagebus::amqp::MessageBusAmqp("TestCase", AMQP_SERVER_URI);
-    auto returnVal2 = s_msgBus.connect();
+    //auto returnVal2 = s_msgBus.connect();
   } // namespace
 
   // Replyer listener
@@ -73,7 +73,7 @@ namespace
   // message listener
   void messageListener(const Message& message)
   {
-    std::cout << "messageListener: " << message.toString() << std ::endl;
+    std::cout << "Msg arrived: " << message.toString() << std ::endl;
     g_received = true;
   }
 
@@ -178,24 +178,28 @@ namespace
     REQUIRE(g_received);
   }
 
-  // TEST_CASE("Amqp publish receive", "[pub]")
-  // {
-  //   std::string topic = "topic://test.message.pubsub";
-  //   auto msgBusPub = amqp::MessageBusAmqp("AmqpPubTestCase", AMQP_SERVER_URI);
-  //   auto msgBusSub = amqp::MessageBusAmqp("AmqpSubTestCase", AMQP_SERVER_URI);
+  TEST_CASE("Amqp publish receive", "[pub]")
+  {
+    std::string topic = "topic://test.message.pubsub";
 
-  //   auto returnVal3 = msgBusSub.receive(topic, messageListener);
-  //   REQUIRE(returnVal3);
+    auto msgBusPub = amqp::MessageBusAmqp("AmqpPubTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusPub.connect());
 
-  //   Message msg = Message::buildMessage("AmqpPubSubTestCase", topic, "TEST", QUERY);
-  //   g_received = false;
+    auto msgBusSub = amqp::MessageBusAmqp("AmqpSubTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusSub.connect());
 
-  //   auto statePub = msgBusPub.send(msg);
-  //   REQUIRE(statePub == DeliveryState::DELIVERY_STATE_ACCEPTED);
+    auto returnVal3 = msgBusSub.receive(topic, messageListener);
+    REQUIRE(returnVal3);
 
-  //   // Wait to process publish
-  //   std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-  //   REQUIRE(g_received);
-  // }
+    Message msg = Message::buildMessage("AmqpPubSubTestCase", topic, "TEST", QUERY);
+    g_received = false;
+
+    auto statePub = msgBusPub.send(msg);
+    REQUIRE(statePub == DeliveryState::DELIVERY_STATE_ACCEPTED);
+
+    // // Wait to process publish
+    std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
+    REQUIRE(g_received);
+  }
 
 } // namespace
