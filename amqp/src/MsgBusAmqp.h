@@ -32,7 +32,7 @@ namespace fty::messagebus::amqp
 {
 
   using MessagePointer = std::shared_ptr<proton::message>;
-  using AmqpClientPointer = std::shared_ptr<AmqpClient>;
+  using AmqpClientPointer = std::shared_ptr<AmqpClient2>;
   using AmqpClientPointer2 = std::shared_ptr<AmqpClient2>;
 
   class MsgBusAmqp

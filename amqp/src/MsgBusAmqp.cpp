@@ -96,19 +96,18 @@ namespace fty::messagebus::amqp
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
-    logDebug("Waiting to receive msg from: {}", address);
+    //auto receiver = m_amqpSenderClient->receive(address, messageListener, filter);
 
-    // AmqpClientPointer client = std::make_shared<AmqpClient>(m_endpoint, address, filter, messageListener);
-    // std::thread thrd([=]() {
-    //   proton::container(*client).run();
-    // });
+    auto receiver = std::make_shared<AmqpClient2>(m_endpoint);//, address, filter, messageListener);
+    std::thread thrd([=]() {
+      proton::container(*receiver).run();
+    });
+    auto received = receiver->receive(address, filter, messageListener);
+    //m_subScriptions.emplace(std::make_pair(address, client));
+    m_subScriptions.try_emplace(address, receiver);
+    thrd.detach();
 
-    auto receiver = m_amqpSenderClient->receive(address, messageListener, filter);
-
-    // m_subScriptions.emplace(std::make_pair(address, client));
-    // thrd.detach();
-
-    if (receiver != DeliveryState::DELIVERY_STATE_ACCEPTED)
+    if (received != DeliveryState::DELIVERY_STATE_ACCEPTED)
     {
       logError("Message receive (Rejected)");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
@@ -150,7 +149,7 @@ namespace fty::messagebus::amqp
     logDebug("Sending message {}", message.toString());
     proton::message msgToSend = getAmqpMessage(message);
 
-    auto msgSent = m_amqpSenderClient->send(msgToSend);
+    //auto msgSent = m_amqpSenderClient->send(msgToSend);
     //std::this_thread::sleep_for(std::chrono::seconds(5));
 
     // AmqpClient client = AmqpClient(m_endpoint, message.to());
@@ -159,6 +158,13 @@ namespace fty::messagebus::amqp
     // });
     // client.send(msgToSend);
     // thrd.join();
+
+    auto sender = AmqpClient2(m_endpoint);//, message.to());
+    std::thread thrd([&]() {
+      proton::container(sender).run();
+    });
+    auto msgSent = sender.send(msgToSend);
+    thrd.join();
 
     if (msgSent != DeliveryState::DELIVERY_STATE_ACCEPTED)
     {
@@ -183,15 +189,25 @@ namespace fty::messagebus::amqp
       logDebug("Sending message {}", message.toString());
       proton::message msgToSend = getAmqpMessage(message);
 
-      AmqpClient client(m_endpoint, msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
+      // AmqpClient client(m_endpoint, msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
+      // std::thread thrd([&]() {
+      //   proton::container(client).run();
+      // });
+      // thrd.detach();
+
+      AmqpClient2 requester(m_endpoint, msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
       std::thread thrd([&]() {
-        proton::container(client).run();
+        proton::container(requester).run();
       });
+      requester.receive(msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
       thrd.detach();
       send(message);
 
+
       MessagePointer response = std::make_shared<proton::message>();
-      bool messageArrived = client.tryConsumeMessageFor(response, receiveTimeOut);
+      bool messageArrived = requester.tryConsumeMessageFor(response, receiveTimeOut);
+      //bool messageArrived = m_amqpSenderClient->tryConsumeMessageFor(response, receiveTimeOut);
+
       if (!messageArrived)
       {
         logError("No message arrive in time!");

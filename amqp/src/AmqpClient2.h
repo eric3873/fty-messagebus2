@@ -50,13 +50,14 @@ namespace fty::messagebus::amqp
     void on_container_start(proton::container& container) override;
     void on_connection_open(proton::connection& connection) override;
     void on_sender_open(proton::sender& sender) override;
+    //void on_sendable(proton::sender& sender) override;
     void on_receiver_open(proton::receiver& receiver) override;
     void on_message(proton::delivery& delivery, proton::message& msg) override;
 
     fty::messagebus::ComState connected();
 
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
-    fty::messagebus::DeliveryState receive(const std::string& address, MessageListener messageListener, const std::string& filter = {});
+    fty::messagebus::DeliveryState receive(const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
     fty::messagebus::DeliveryState send(const proton::message& msg);
     void close();
 
@@ -74,8 +75,11 @@ namespace fty::messagebus::amqp
     std::promise<proton::message> m_promise;
     std::future<proton::message> m_future;
 
-    std::promise<void> m_promise2;
-    std::future<void> m_future2;
+    std::promise<void> m_promiseSender;
+    //std::future<void> m_future2;
+
+    std::promise<void> m_promiseReceiver;
+    std::future<void> m_futureReceiver;
 
     std::promise<fty::messagebus::ComState> m_connectPromise;
     std::future<fty::messagebus::ComState> m_connectFuture;
