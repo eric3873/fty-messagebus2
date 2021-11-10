@@ -29,7 +29,7 @@ int main(int argc, char** argv)
   //Check the argument
   if(argc != 2) {
     std::cerr << argv[0] << " usage:" << std::endl;
-    std::cerr << "\t" << argv[0] << "<string to change>" << std::endl;
+    std::cerr << "\t" << argv[0] << " <string to change>" << std::endl;
     return EXIT_FAILURE;
   }
 

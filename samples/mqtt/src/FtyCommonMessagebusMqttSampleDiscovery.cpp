@@ -19,21 +19,17 @@
     =========================================================================
 */
 
-/*
-@header
-    FtyCommonMessagebusMqttSampleDiscovery -
-@discuss
-@end
-*/
-
-#include <fty/messagebus/MessageBusMqtt.hpp>
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 
 #include <csignal>
 #include <fty_log.h>
 #include <iostream>
+#include <thread>
 
 namespace
 {
+  using namespace fty::messagebus;
+
   static bool _continue = true;
 
   static void signalHandler(int signal)
@@ -51,7 +47,14 @@ int main(int /*argc*/, char** argv)
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
 
-  auto msgBus = fty::messagebus::MessageBusMqtt();
+  auto msgBus = mqtt::MessageBusMqtt();
+  //Connect to the bus
+  fty::Expected<void> connectionRet = msgBus.connect();
+  if (!connectionRet)
+  {
+    logError("Error while connecting {}", connectionRet.error());
+    return EXIT_FAILURE;
+  }
 
   while (_continue)
   {

@@ -19,25 +19,20 @@
     =========================================================================
 */
 
-/*
-@header
-    FtyCommonMessagebusMqttSampleSendRequest -
-@discuss
-@end
-*/
-
-#include "fty/messagebus/test/FtyCommonMathDto.hpp"
-#include <fty/messagebus/MessageBusMqtt.hpp>
+#include "fty/sample/dto/FtyCommonMathDto.hpp"
+#include <fty/messagebus/MessageBus.h>
+#include <fty/messagebus/MessageBusStatus.h>
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 
 #include <csignal>
 #include <fty_log.h>
 #include <iostream>
+#include <thread>
 
 namespace
 {
   using namespace fty::messagebus;
-  using namespace fty::messagebus::test;
-
+  using namespace fty::sample::dto;
 
   static bool _continue = true;
   static auto constexpr SYNC_REQUEST_TIMEOUT = 5;
@@ -75,20 +70,40 @@ int main(int argc, char** argv)
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
 
-  auto reqRep = MessageBusMqtt();
+  auto msgBus = mqtt::MessageBusMqtt();
+  //Connect to the bus
+  fty::Expected<void> connectionRet = msgBus.connect();
+  if (!connectionRet)
+  {
+    logError("Error while connecting {}", connectionRet.error());
+    return EXIT_FAILURE;
+  }
 
   auto query = MathOperation(argv[3], std::stoi(argv[4]), std::stoi(argv[5]));
+  //Build the message to send
+  Message msg = Message::buildRequest(argv[0], requestQueue, "mathQuery", requestQueue + "/reply", query.serialize());
 
   if (strcmp(argv[2], "async") == 0)
   {
-    reqRep.sendRequest(requestQueue, query.serialize(), responseMessageListener);
+    fty::Expected<void> subscribRet = msgBus.receive(msg.replyTo(), responseMessageListener);
+    if (!subscribRet)
+    {
+      logError("Error while subscribing {}", subscribRet.error());
+      return EXIT_FAILURE;
+    }
+    fty::Expected<void> sendRet = msgBus.send(msg);
+    if (!sendRet)
+    {
+      logError("Error while sending {}", sendRet.error());
+      return EXIT_FAILURE;
+    }
   }
   else
   {
     _continue = false;
 
-    std::optional<Message> replyMsg = reqRep.sendRequest(requestQueue, query.serialize(), SYNC_REQUEST_TIMEOUT);
-    if (replyMsg.has_value())
+    auto replyMsg = msgBus.request(msg, SYNC_REQUEST_TIMEOUT);
+    if (replyMsg)
     {
       responseMessageListener(replyMsg.value());
     }
