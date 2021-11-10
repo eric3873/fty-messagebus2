@@ -124,12 +124,6 @@ int main(int argc, char** argv)
       logError("Error while sending: {}", sendRet.error());
       return EXIT_FAILURE;
     }
-    auto ret = bus.send(request);
-    if (!ret)
-    {
-      logError("Error while sending: {}", ret.error());
-      return EXIT_FAILURE;
-    }
   }
 
   while (_continue)
