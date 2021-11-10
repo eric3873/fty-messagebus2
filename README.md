@@ -91,7 +91,7 @@ See all samples in samples folder.
 
 ### Mqtt samples
 
-* [PubSub](samples/mqtt/src/FtyCommonMessagebusMqttSamplePubSub.cpp)
+* [PubSub](samples/mqtt/publish/publish.cpp)
 * [WaitRequest](samples/mqtt/src/FtyCommonMessagebusMqttSampleAsyncReply.cpp)
 * [SendRequest](samples/mqtt/src/FtyCommonMessagebusMqttSampleSendRequest.cpp)
 
