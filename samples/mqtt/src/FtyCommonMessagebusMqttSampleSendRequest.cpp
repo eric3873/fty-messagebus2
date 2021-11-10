@@ -36,6 +36,7 @@ namespace
 
   static bool _continue = true;
   static auto constexpr SYNC_REQUEST_TIMEOUT = 5;
+  static auto constexpr MATHS_OPERATOR_REPLY_QUEUE = "/etn/q/reply/maths/operator";
 
   static void signalHandler(int signal)
   {
@@ -81,7 +82,7 @@ int main(int argc, char** argv)
 
   auto query = MathOperation(argv[3], std::stoi(argv[4]), std::stoi(argv[5]));
   //Build the message to send
-  Message msg = Message::buildRequest(argv[0], requestQueue, "mathQuery", requestQueue + "/reply", query.serialize());
+  Message msg = Message::buildRequest(argv[0], requestQueue, "mathQuery", MATHS_OPERATOR_REPLY_QUEUE, query.serialize());
 
   if (strcmp(argv[2], "async") == 0)
   {
