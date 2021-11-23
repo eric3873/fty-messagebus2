@@ -85,6 +85,11 @@ namespace fty::messagebus::amqp
     logError("Protocol error: {}", error.what());
   }
 
+  void AmqpClient::on_transport_error(proton::transport& t)
+  {
+    logError("Transport error: {}", t.error().what());
+  }
+
   ComState AmqpClient::connected()
   {
     if ((m_communicationState == ComState::COM_STATE_UNKNOWN) && (m_connectFuture.wait_for(TIMEOUT) != std::future_status::timeout))

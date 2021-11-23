@@ -31,6 +31,7 @@
 #include <proton/receiver_options.hpp>
 #include <proton/source_options.hpp>
 #include <proton/tracker.hpp>
+#include <proton/transport.hpp>
 #include <proton/work_queue.hpp>
 
 #include <future>
@@ -54,6 +55,7 @@ namespace fty::messagebus::amqp
     void on_receiver_open(proton::receiver& receiver) override;
     void on_message(proton::delivery& delivery, proton::message& msg) override;
     void on_error(const proton::error_condition& error) override;
+    void on_transport_error(proton::transport &t) override;
 
     fty::messagebus::ComState connected();
     fty::messagebus::DeliveryState receive(const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
