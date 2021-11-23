@@ -164,7 +164,7 @@ namespace
     // Send synchronous request
     Message request = Message::buildRequest("AmqpSyncRequestTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:");
 
-    auto replyMsg = msgBus.request(request, 2);
+    auto replyMsg = msgBus.request(request, 1);
     REQUIRE(!replyMsg);
     REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
   }
@@ -216,7 +216,7 @@ namespace
     isRecieved(nbMessageToSend);
   }
 
-  TEST_CASE("Amqp unreceive", "[sub]")
+  TEST_CASE("Amqp unreceive", "[pubSub]")
   {
     std::string topic = "topic://test.message.unreceive";
 
@@ -235,6 +235,21 @@ namespace
 
     REQUIRE(msgBusReceiver.unreceive(topic));
     REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+    isRecieved(1);
+  }
+
+  TEST_CASE("Amqp pub sub with same object", "[pubsub]")
+  {
+    std::string topic = "topic://test.message.sameobject";
+
+    auto msgBus = amqp::MessageBusAmqp("AmqpUnreceiveSenderTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBus.connect());
+
+    REQUIRE(msgBus.receive(topic, messageListener));
+
+    Message msg = Message::buildMessage("AmqpUnreceiveTestCase", topic, "TEST", QUERY);
+    g_msgRecieved.reset();
+    REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
     isRecieved(1);
   }
 
