@@ -63,6 +63,12 @@ namespace
 
     } g_msgRecieved;
 
+    void isRecieved(const int expected)
+    {
+      std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
+      REQUIRE(g_msgRecieved.receiver == expected);
+    }
+
     // Replyer listener
     void replyerAddOK(const Message& message)
     {
@@ -126,9 +132,7 @@ namespace
       REQUIRE(msgBusSender.send(msg));
     }
 
-    // Wait to process the response
-    std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-    REQUIRE(g_msgRecieved.receiver == nbMessageToSend);
+    isRecieved(nbMessageToSend);
   }
 
   TEST_CASE("Amqp request sync", "[request]")
@@ -209,9 +213,7 @@ namespace
       REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
     }
 
-    // Wait to process publish
-    std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-    REQUIRE(g_msgRecieved.receiver == nbMessageToSend);
+    isRecieved(nbMessageToSend);
   }
 
   TEST_CASE("Amqp unreceive", "[sub]")
@@ -229,13 +231,11 @@ namespace
     Message msg = Message::buildMessage("AmqpUnreceiveTestCase", topic, "TEST", QUERY);
     g_msgRecieved.reset();
     REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-    std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-    REQUIRE(g_msgRecieved.receiver == 1);
+    isRecieved(1);
 
     REQUIRE(msgBusReceiver.unreceive(topic));
     REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-    std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-    REQUIRE(g_msgRecieved.receiver == 1);
+    isRecieved(1);
   }
 
 } // namespace
