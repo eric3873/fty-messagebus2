@@ -81,7 +81,6 @@ namespace fty::messagebus::amqp
     std::promise<void> m_promiseReceiver;
     std::promise<proton::message> m_promiseSyncRequest;
 
-    proton::receiver_options getReceiverOptions(const std::string& selector_str) const;
     void setSubscriptions(const std::string& topic, MessageListener messageListener);
   };
 

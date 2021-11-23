@@ -68,7 +68,6 @@ namespace fty::messagebus::amqp
     logDebug("Sending message ...");
     sender.send(m_message);
     sender.connection().close();
-    m_message = {};
     m_promiseSender.set_value();
     logDebug("Message sent");
   }
@@ -109,6 +108,7 @@ namespace fty::messagebus::amqp
     {
       m_promiseSender = std::promise<void>();
       logDebug("Sending message to {} ...", msg.to());
+      m_message.clear();
       m_message = msg;
 
       m_connection.work_queue().add([=]() {
@@ -136,14 +136,6 @@ namespace fty::messagebus::amqp
       proton::receiver_options receiverOptions;
       if (!filter.empty())
       {
-        // Receiver with filtering, so reply, the filtering for this implementation is only on correlationId
-        std::ostringstream correlIdFilter;
-        correlIdFilter << AMQP_CORREL_ID;
-        correlIdFilter << "='";
-        correlIdFilter << filter;
-        correlIdFilter << "'";
-        logDebug("CorrelId filter: {}", correlIdFilter.str());
-        //receiverOptions = getReceiverOptions(correlIdFilter.str());
         setSubscriptions(filter, messageListener);
       }
       else
@@ -196,12 +188,11 @@ namespace fty::messagebus::amqp
 
     if (m_connection)
     {
-      // Asynchronous reply or any subscription
       if (!msg.correlation_id().empty() && msg.reply_to().empty())
       {
-        // A reply message
         if (auto it{m_subscriptions.find(proton::to_string(msg.correlation_id()))}; it != m_subscriptions.end())
         {
+          // Asynchronous reply
           logDebug("Asynchronous mode");
           m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
         }
@@ -216,6 +207,7 @@ namespace fty::messagebus::amqp
       {
         if (auto it{m_subscriptions.find(msg.address())}; it != m_subscriptions.end())
         {
+          // Any subscription
           m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
         }
         else
@@ -223,17 +215,11 @@ namespace fty::messagebus::amqp
           logWarn("Message skipped for {}", msg.address());
         }
       }
-
-      // m_connection.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
-      if (!msg.correlation_id().empty() && msg.reply_to().empty())
-      {
-        //unreceive();
-      }
     }
     else
     {
       // Connection object not set
-      logError("Nothing to do connection object not set");
+      logError("Nothing to do, connection object not set");
     }
   }
 
@@ -248,27 +234,6 @@ namespace fty::messagebus::amqp
     {
       logWarn("Set subscriptions skipped");
     }
-  }
-
-  proton::receiver_options AmqpClient::getReceiverOptions(const std::string& selector) const
-  {
-    proton::receiver_options receiverOptions;
-    proton::source_options opts;
-    proton::source::filter_map map;
-    proton::symbol filterKey("selector");
-    proton::value filterValue;
-    // The value is a specific AMQP "described type": binary string with symbolic descriptor
-    proton::codec::encoder enc(filterValue);
-    enc << proton::codec::start::described()
-        << proton::symbol("apache.org:selector-filter:string")
-        << selector
-        << proton::codec::finish();
-    // In our case, the map has this one element
-    map.put(filterKey, filterValue);
-    opts.filters(map);
-    receiverOptions.source(opts);
-
-    return receiverOptions;
   }
 
   void AmqpClient::unreceive()
