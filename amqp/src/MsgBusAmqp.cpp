@@ -94,8 +94,8 @@ namespace fty::messagebus::amqp
       proton::container(*receiver).run();
     });
     auto received = receiver->receive(address, filter, messageListener);
-    m_subScriptions.emplace(address + "." + filter, receiver);
-    logDebug("m_subScriptions nb: {}, {}", m_subScriptions.size(), address + "." + filter);
+    m_subScriptions.emplace(address, receiver);
+    logDebug("m_subScriptions nb: {}, {}", m_subScriptions.size(), address);
     thrd.detach();
 
     if (received != DeliveryState::DELIVERY_STATE_ACCEPTED)
@@ -118,15 +118,16 @@ namespace fty::messagebus::amqp
 
     try
     {
-      auto iterator = m_subScriptions.find(address);
-      if (iterator != m_subScriptions.end())
+      if (auto it{m_subScriptions.find(address)}; it != m_subScriptions.end())
       {
-        logDebug("Unreceive founded: '{}'", address);
         m_subScriptions.at(address)->unreceive();
         m_subScriptions.erase(address);
+        logTrace("Unsubscribed for: '{}'", address);
       }
-
-      logTrace("{} - unsubscribed on: '{}'", m_clientName, address);
+      else
+      {
+        logWarn("Unreceive not found: '{}'", address);
+      }
       return {};
     }
     catch (...)

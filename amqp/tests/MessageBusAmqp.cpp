@@ -229,11 +229,13 @@ namespace
     Message msg = Message::buildMessage("AmqpUnreceiveTestCase", topic, "TEST", QUERY);
     g_msgRecieved.reset();
     REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+    std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
     REQUIRE(g_msgRecieved.receiver == 1);
 
     REQUIRE(msgBusReceiver.unreceive(topic));
     REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-    REQUIRE(g_msgRecieved.receiver == 2); //1);
+    std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
+    REQUIRE(g_msgRecieved.receiver == 1);
   }
 
 } // namespace
