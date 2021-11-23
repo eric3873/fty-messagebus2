@@ -38,6 +38,8 @@
 
 namespace fty::messagebus::amqp
 {
+  using MessageListener = fty::messagebus::MessageListener;
+  using SubScriptionListener = std::map<std::string, MessageListener>;
 
   class AmqpClient : public proton::messaging_handler
   {
@@ -55,24 +57,23 @@ namespace fty::messagebus::amqp
 
     fty::messagebus::ComState connected();
     fty::messagebus::DeliveryState receive(const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
+    void unreceive();
     fty::messagebus::DeliveryState send(const proton::message& msg);
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
-    void unreceive();
     void close();
 
   private:
     std::string m_url;
-    MessageListener m_messageListener;
+    SubScriptionListener m_subscriptions;
+    // Default communication state
+    fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::COM_STATE_UNKNOWN;
+
     // Proton object
     proton::connection m_connection;
     proton::receiver m_receiver;
     proton::message m_message;
-    // Default communication state
-    fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::COM_STATE_UNKNOWN;
-
     // Mutex
     std::mutex m_lock;
-
     // Set of promise for synchronization
     std::promise<fty::messagebus::ComState> m_connectPromise;
     std::future<fty::messagebus::ComState> m_connectFuture;
@@ -81,6 +82,7 @@ namespace fty::messagebus::amqp
     std::promise<proton::message> m_promiseSyncRequest;
 
     proton::receiver_options getReceiverOptions(const std::string& selector_str) const;
+    void setSubscriptions(const std::string& topic, MessageListener messageListener);
   };
 
 } // namespace fty::messagebus::amqp

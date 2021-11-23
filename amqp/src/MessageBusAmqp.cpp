@@ -63,9 +63,13 @@ namespace fty::messagebus::amqp
   {
     //Sanity check
     if (!msg.isValidMessage())
+    {
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    }
     if (!msg.needReply())
+    {
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    }
 
     // Send request
     return m_busAmqp->request(msg, timeOut);

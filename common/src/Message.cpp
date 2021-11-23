@@ -66,10 +66,9 @@ namespace fty::messagebus
   std::string Message::getMetaDataValue(const std::string& key) const
   {
     std::string value{};
-    auto iterator = m_metadata.find(key);
-    if (iterator != m_metadata.end())
+    if (auto iter{m_metadata.find(key)}; iter != m_metadata.end())
     {
-      value = iterator->second;
+      value = iter->second;
     }
     return value;
   }

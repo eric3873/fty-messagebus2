@@ -88,18 +88,15 @@ namespace fty::messagebus::amqp
 
   ComState AmqpClient::connected()
   {
-    if (m_communicationState == ComState::COM_STATE_UNKNOWN)
+    if ((m_communicationState == ComState::COM_STATE_UNKNOWN) && (m_connectFuture.wait_for(TIMEOUT) != std::future_status::timeout))
     {
-      if (m_connectFuture.wait_for(TIMEOUT) != std::future_status::timeout)
+      try
       {
-        try
-        {
-          m_communicationState = m_connectFuture.get();
-        }
-        catch (const std::future_error& e)
-        {
-          logError("Caught a future_error {}", e.what());
-        }
+        m_communicationState = m_connectFuture.get();
+      }
+      catch (const std::future_error& e)
+      {
+        logError("Caught a future_error {}", e.what());
       }
     }
     return m_communicationState;
@@ -121,7 +118,7 @@ namespace fty::messagebus::amqp
       // Wait the to know if the message has been sent or not
       if (m_promiseSender.get_future().wait_for(TIMEOUT) != std::future_status::timeout)
       {
-        deliveryState =  DeliveryState::DELIVERY_STATE_ACCEPTED;
+        deliveryState = DeliveryState::DELIVERY_STATE_ACCEPTED;
       }
     }
     return deliveryState;
@@ -134,7 +131,6 @@ namespace fty::messagebus::amqp
     {
       logDebug("Set receiver to wait message(s) from {} ...", address);
       m_promiseReceiver = std::promise<void>();
-      m_messageListener = messageListener;
 
       auto futureReceiver = m_promiseReceiver.get_future();
       proton::receiver_options receiverOptions;
@@ -147,7 +143,12 @@ namespace fty::messagebus::amqp
         correlIdFilter << filter;
         correlIdFilter << "'";
         logDebug("CorrelId filter: {}", correlIdFilter.str());
-        receiverOptions = getReceiverOptions(correlIdFilter.str());
+        //receiverOptions = getReceiverOptions(correlIdFilter.str());
+        setSubscriptions(filter, messageListener);
+      }
+      else
+      {
+        setSubscriptions(address, messageListener);
       }
 
       m_connection.work_queue().add([=]() {
@@ -193,17 +194,59 @@ namespace fty::messagebus::amqp
     delivery.accept();
     Message amqpMsg(getMetaData(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
 
-    if (m_connection && m_messageListener)
+    if (m_connection)
     {
       // Asynchronous reply or any subscription
-      logDebug("Asynchronous mode");
-      m_connection.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
+      if (!msg.correlation_id().empty() && msg.reply_to().empty())
+      {
+        // A reply message
+        if (auto it{m_subscriptions.find(proton::to_string(msg.correlation_id()))}; it != m_subscriptions.end())
+        {
+          logDebug("Asynchronous mode");
+          m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
+        }
+        else
+        {
+          // Synchronous reply
+          logDebug("Synchronous mode");
+          m_promiseSyncRequest.set_value(msg);
+        }
+      }
+      else
+      {
+        if (auto it{m_subscriptions.find(msg.address())}; it != m_subscriptions.end())
+        {
+          m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
+        }
+        else
+        {
+          logWarn("Message skipped for {}", msg.address());
+        }
+      }
+
+      // m_connection.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
+      if (!msg.correlation_id().empty() && msg.reply_to().empty())
+      {
+        //unreceive();
+      }
     }
     else
     {
-      // Synchronous reply
-      logDebug("Synchronous mode");
-      m_promiseSyncRequest.set_value(msg);
+      // Connection object not set
+      logError("Nothing to do connection object not set");
+    }
+  }
+
+  void AmqpClient::setSubscriptions(const std::string& address, MessageListener messageListener)
+  {
+    if (auto it{m_subscriptions.find(address)}; it == m_subscriptions.end() && messageListener)
+    {
+      auto ret = m_subscriptions.emplace(address, messageListener);
+      logTrace("Subscriptions emplaced: {} {}", address, ret.second ? "true" : "false");
+    }
+    else
+    {
+      logWarn("Set subscriptions skipped");
     }
   }
 
@@ -235,7 +278,6 @@ namespace fty::messagebus::amqp
       logDebug("Closing receiver");
       m_receiver.close();
     }
-
   }
 
   void AmqpClient::close()

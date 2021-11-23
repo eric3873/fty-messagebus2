@@ -36,7 +36,7 @@ namespace
 
   using namespace fty::messagebus;
 
-  static int MAX_TIMEOUT = 1000;
+  static int MAX_TIMEOUT = 100;
   static const std::string QUERY = "query";
   static const std::string QUERY_2 = "query2";
   static const std::string OK = ":OK";
@@ -45,37 +45,54 @@ namespace
 
   namespace
   {
-    int g_nbMsgReceived = 0;
+    struct MsgReceived
+    {
+      int receiver = 0;
+      int replyer = 0;
+
+      void reset()
+      {
+        receiver = 0;
+        replyer = 0;
+      }
+
+      bool assertValue(const int value)
+      {
+        return (receiver == value && replyer == value);
+      }
+
+    } g_msgRecieved;
+
+    // Replyer listener
+    void replyerAddOK(const Message& message)
+    {
+      g_msgRecieved.replyer++;
+      //Build the response
+      auto response = message.buildReply(message.userData() + OK);
+
+      if (!response)
+      {
+        std::cerr << response.error() << std::endl;
+      }
+
+      //send the response
+      auto msgBus = fty::messagebus::amqp::MessageBusAmqp("TestCase", AMQP_SERVER_URI);
+      auto connected = msgBus.connect();
+      auto msgSent = msgBus.send(response.value());
+      if (!msgSent)
+      {
+        std::cerr << msgSent.error() << std::endl;
+      }
+    }
+
+    // message listener
+    void messageListener(const Message& message)
+    {
+      std::cout << "Msg arrived: " << message.toString() << std ::endl;
+      g_msgRecieved.receiver++;
+    }
+
   } // namespace
-
-  // Replyer listener
-  void replyerAddOK(const Message& message)
-  {
-    std::cout << "replyerListener: " << message.toString() << std ::endl;
-    //Build the response
-    auto response = message.buildReply(message.userData() + OK);
-
-    if (!response)
-    {
-      std::cerr << response.error() << std::endl;
-    }
-
-    //send the response
-    auto msgBus = fty::messagebus::amqp::MessageBusAmqp("TestCase", AMQP_SERVER_URI);
-    auto connected = msgBus.connect();
-    auto msgSent = msgBus.send(response.value());
-    if (!msgSent)
-    {
-      std::cerr << msgSent.error() << std::endl;
-    }
-  }
-
-  // message listener
-  void messageListener(const Message& message)
-  {
-    std::cout << "Msg arrived: " << message.toString() << std ::endl;
-    g_nbMsgReceived++;
-  }
 
   //----------------------------------------------------------------------
   // Test case
@@ -101,9 +118,8 @@ namespace
 
     // Send synchronous request
     Message msg = Message::buildMessage("AmqpMessageTestCase", sendTestQueue, "TEST", QUERY);
-    std::cerr << "Message to send:\n" + msg.toString() << std::endl;
 
-    g_nbMsgReceived = 0;
+    g_msgRecieved.reset();
     int nbMessageToSend = 3;
     for (int i = 0; i < nbMessageToSend; i++)
     {
@@ -112,7 +128,7 @@ namespace
 
     // Wait to process the response
     std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-    REQUIRE(g_nbMsgReceived == nbMessageToSend);
+    REQUIRE(g_msgRecieved.receiver == nbMessageToSend);
   }
 
   TEST_CASE("Amqp request sync", "[request]")
@@ -143,7 +159,6 @@ namespace
 
     // Send synchronous request
     Message request = Message::buildRequest("AmqpSyncRequestTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:");
-    std::cerr << "Request to send:\n" + request.toString() << std::endl;
 
     auto replyMsg = msgBus.request(request, 2);
     REQUIRE(!replyMsg);
@@ -156,22 +171,21 @@ namespace
     auto msgBusRequester = amqp::MessageBusAmqp("AmqpAsyncRequesterTestCase", AMQP_SERVER_URI);
     REQUIRE(msgBusRequester.connect());
 
-    auto msgBusReciever = amqp::MessageBusAmqp("AmqpAsyncReplyerTestCase", AMQP_SERVER_URI);
-    REQUIRE(msgBusReciever.connect());
+    auto msgBusReplyer = amqp::MessageBusAmqp("AmqpAsyncReplyerTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusReplyer.connect());
 
-    // Send asynchronous request
+    // Build asynchronous request and set all receiver
     Message request = Message::buildRequest("AmqpAsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
-    REQUIRE(msgBusReciever.receive(request.to(), replyerAddOK));
-
-    g_nbMsgReceived = 0;
+    REQUIRE(msgBusReplyer.receive(request.to(), replyerAddOK));
     REQUIRE(msgBusRequester.receive(request.replyTo(), messageListener, request.correlationId()));
 
-    REQUIRE(msgBusRequester.send(request));
-
-    // Wait to process the response
-    std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-
-    REQUIRE(g_nbMsgReceived == 1);
+    g_msgRecieved.reset();
+    for (int i = 0; i < 2; i++)
+    {
+      REQUIRE(msgBusRequester.send(request));
+      std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
+      REQUIRE((g_msgRecieved.assertValue(i + 1)));
+    }
   }
 
   TEST_CASE("Amqp publish receive", "[pubSub]")
@@ -187,7 +201,7 @@ namespace
     REQUIRE(msgBusReceiver.receive(topic, messageListener));
 
     Message msg = Message::buildMessage("AmqpPubSubTestCase", topic, "TEST", QUERY);
-    g_nbMsgReceived = 0;
+    g_msgRecieved.reset();
     int nbMessageToSend = 3;
 
     for (int i = 0; i < nbMessageToSend; i++)
@@ -195,9 +209,9 @@ namespace
       REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
     }
 
-    // // Wait to process publish
+    // Wait to process publish
     std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-    REQUIRE(g_nbMsgReceived == nbMessageToSend);
+    REQUIRE(g_msgRecieved.receiver == nbMessageToSend);
   }
 
   TEST_CASE("Amqp unreceive", "[sub]")
@@ -213,13 +227,13 @@ namespace
     REQUIRE(msgBusReceiver.receive(topic, messageListener));
 
     Message msg = Message::buildMessage("AmqpUnreceiveTestCase", topic, "TEST", QUERY);
-    g_nbMsgReceived = 0;
+    g_msgRecieved.reset();
     REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-    REQUIRE(g_nbMsgReceived == 1);
+    REQUIRE(g_msgRecieved.receiver == 1);
 
     REQUIRE(msgBusReceiver.unreceive(topic));
     REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-    REQUIRE(g_nbMsgReceived == 1);
+    REQUIRE(g_msgRecieved.receiver == 2); //1);
   }
 
 } // namespace

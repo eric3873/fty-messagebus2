@@ -57,7 +57,7 @@ namespace fty::messagebus::amqp
     logDebug("Connecting to {} ...", m_endpoint);
     try
     {
-      m_amqpClient =std::make_shared<AmqpClient>(m_endpoint);
+      m_amqpClient = std::make_shared<AmqpClient>(m_endpoint);
       std::thread thrdSender([=]() {
         proton::container(*m_amqpClient).run();
       });
@@ -78,7 +78,7 @@ namespace fty::messagebus::amqp
 
   bool MsgBusAmqp::isServiceAvailable()
   {
-    return (m_amqpClient && (m_amqpClient->connected() == ComState::COM_STATE_OK))? true : false;
+    return (m_amqpClient && (m_amqpClient->connected() == ComState::COM_STATE_OK)) ? true : false;
   }
 
   fty::Expected<void> MsgBusAmqp::receive(const std::string& address, MessageListener messageListener, const std::string& filter)
@@ -94,7 +94,8 @@ namespace fty::messagebus::amqp
       proton::container(*receiver).run();
     });
     auto received = receiver->receive(address, filter, messageListener);
-    m_subScriptions.try_emplace(address, receiver);
+    m_subScriptions.emplace(address + "." + filter, receiver);
+    logDebug("m_subScriptions nb: {}, {}", m_subScriptions.size(), address + "." + filter);
     thrd.detach();
 
     if (received != DeliveryState::DELIVERY_STATE_ACCEPTED)
