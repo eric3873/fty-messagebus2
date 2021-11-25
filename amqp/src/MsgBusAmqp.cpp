@@ -36,19 +36,13 @@ namespace fty::messagebus::amqp
     if (isServiceAvailable())
     {
       logDebug("Cleaning Amqp ressources for: {}", m_clientName);
-      try
+
+      for (const auto& [key, receiver] : m_subScriptions)
       {
-        for (const auto& [key, receiver] : m_subScriptions)
-        {
-          logDebug("Cleaning: {}...", key);
-          receiver->close();
-        }
-        logDebug("{} cleaned", m_clientName);
+        logDebug("Cleaning: {}...", key);
+        receiver->close();
       }
-      catch (const std::exception& e)
-      {
-        logError("Exception: {}", e.what());
-      }
+      logDebug("{} cleaned", m_clientName);
     }
   }
 
@@ -70,7 +64,7 @@ namespace fty::messagebus::amqp
     }
     catch (const std::exception& e)
     {
-      logError("unexpected error: {}", e.what());
+      logError("Unexpected error: {}", e.what());
       return fty::unexpected(to_string(ComState::COM_STATE_CONNECT_FAILED));
     }
     return {};
@@ -116,25 +110,18 @@ namespace fty::messagebus::amqp
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
-    try
+    if (auto it{m_subScriptions.find(address)}; it != m_subScriptions.end())
     {
-      if (auto it{m_subScriptions.find(address)}; it != m_subScriptions.end())
-      {
-        m_subScriptions.at(address)->unreceive();
-        m_subScriptions.erase(address);
-        logTrace("Unsubscribed for: '{}'", address);
-      }
-      else
-      {
-        logWarn("Unreceive not found: '{}'", address);
-      }
-      return {};
+      m_subScriptions.at(address)->unreceive();
+      m_subScriptions.erase(address);
+      logTrace("Unsubscribed for: '{}'", address);
     }
-    catch (...)
+    else
     {
-      logError("Unsubscribed (Rejected)");
+      logError("Unsubscribed '{}' (Rejected)", address);
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
+    return {};
   }
 
   fty::Expected<void> MsgBusAmqp::send(const Message& message)

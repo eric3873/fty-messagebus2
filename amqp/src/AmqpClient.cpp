@@ -51,7 +51,7 @@ namespace fty::messagebus::amqp
     }
     catch (std::exception& e)
     {
-      log_error("Exception {}", e.what());
+      logError("Exception {}", e.what());
       m_connectPromise.set_value(ComState::COM_STATE_CONNECT_FAILED);
     }
   }
@@ -92,15 +92,22 @@ namespace fty::messagebus::amqp
 
   ComState AmqpClient::connected()
   {
-    if ((m_communicationState == ComState::COM_STATE_UNKNOWN) && (m_connectFuture.wait_for(TIMEOUT) != std::future_status::timeout))
+    if ((m_communicationState == ComState::COM_STATE_UNKNOWN))
     {
-      try
+      if (m_connectFuture.wait_for(TIMEOUT) != std::future_status::timeout)
       {
-        m_communicationState = m_connectFuture.get();
+        try
+        {
+          m_communicationState = m_connectFuture.get();
+        }
+        catch (const std::future_error& e)
+        {
+          logError("Caught future error {}", e.what());
+        }
       }
-      catch (const std::future_error& e)
+      else
       {
-        logError("Caught a future_error {}", e.what());
+        m_communicationState = ComState::COM_STATE_CONNECT_FAILED;
       }
     }
     return m_communicationState;
@@ -241,13 +248,16 @@ namespace fty::messagebus::amqp
     }
   }
 
-  void AmqpClient::unreceive()
+  DeliveryState AmqpClient::unreceive()
   {
+    auto deliveryState = DeliveryState::DELIVERY_STATE_UNAVAILABLE;
     if (m_receiver)
     {
       logDebug("Closing receiver");
       m_receiver.close();
+      deliveryState = DeliveryState::DELIVERY_STATE_ACCEPTED;
     }
+    return deliveryState;
   }
 
   void AmqpClient::close()
