@@ -18,7 +18,6 @@
 */
 
 #include <fty/messagebus/mqtt/MessageBusMqtt.h>
-#include <fty/messagebus/MessageBus.h>
 #include <fty/messagebus/MessageBusStatus.h>
 #include <fty/messagebus/Message.h>
 

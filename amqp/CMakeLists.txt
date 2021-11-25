@@ -36,5 +36,7 @@ if(BUILD_TESTING)
       tests/*.cpp
     INCLUDE_DIRS
       src/*.h
+    USES
+      fty-common-messagebus2-mqtt
   )
 endif()
