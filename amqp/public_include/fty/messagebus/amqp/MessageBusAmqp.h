@@ -26,7 +26,7 @@
 namespace fty::messagebus::amqp
 {
   // Default amqp end point
-  static auto constexpr DEFAULT_AMQP_END_POINT{"amqp://127.0.0.1:5672"};
+  static auto constexpr DEFAULT_ENDPOINT{"amqp://127.0.0.1:5672"};
 
   static auto constexpr BUS_IDENTITY{"AMQP"};
 
@@ -36,7 +36,7 @@ namespace fty::messagebus::amqp
   {
   public:
     MessageBusAmqp(const ClientName& clientName = utils::getClientId("MessageBusAmqp"),
-                   const Endpoint& endpoint = DEFAULT_AMQP_END_POINT);
+                   const Endpoint& endpoint = DEFAULT_ENDPOINT);
 
     ~MessageBusAmqp() = default;
 

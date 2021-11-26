@@ -17,6 +17,7 @@
     =========================================================================
 */
 
+#include "MessageBusWrapper.h"
 #include <fty/messagebus/Message.h>
 #include <fty/messagebus/MessageBusStatus.h>
 #include <fty/messagebus/amqp/MessageBusAmqp.h>
@@ -51,8 +52,6 @@ namespace
     static const std::string OK = ":OK";
     static const std::string QUERY_AND_OK = QUERY + OK;
     static const std::string RESPONSE_2 = QUERY_2 + OK;
-    static const std::string QUEUE = "queue:/";
-    static const std::string TOPIC = "topic:/";
 
     // Mutex
     std::mutex m_lock;
@@ -130,58 +129,6 @@ namespace
       std::cout << "Msg arrived: " << message.toString() << std ::endl;
       g_msgRecieved.incReceiver();
     }
-
-    //template <typename T, typename... Args>
-    template <typename T>
-    struct MsgBusFixture
-    {
-      MsgBusFixture(const ClientName& clientName = {}, const Endpoint& endpoint = {})
-        : m_bus(clientName, endpoint.empty() ? getEndpoint() : endpoint)
-      {
-      }
-
-      bool isAmqpMsgBus()
-      {
-        return (typeName().find("amqp") != std::string::npos);
-      }
-
-      const std::string getEndpoint()
-      {
-        return isAmqpMsgBus() ? AMQP_SERVER_URI : MQTT_SERVER_URI;
-      }
-
-      const std::string getIdentity()
-      {
-        return isAmqpMsgBus() ? amqp::BUS_IDENTITY : mqtt::BUS_IDENTITY;
-      }
-
-      const std::string getAddress(const std::string address, const std::string addressType = QUEUE)
-      {
-        if (isAmqpMsgBus())
-        {
-          return addressType + address;
-        }
-        else
-        {
-          return std::regex_replace(address, std::regex("\\."), "/");
-        }
-      }
-
-      const std::string typeName()
-      {
-        int status;
-        std::string tname = typeid(T).name();
-        char* demangled_name = abi::__cxa_demangle(tname.c_str(), NULL, NULL, &status);
-        if (status == 0)
-        {
-          tname = demangled_name;
-          std::free(demangled_name);
-        }
-        return tname;
-      }
-
-      T m_bus;
-    };
 
   } // namespace
 
@@ -279,7 +226,6 @@ namespace
     }
   }
 
-  //   TEST_CASE("Amqp publish receive", "[pubSub]")
   TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Publish subscribe", "[amqp][mqtt][pub]", amqp::MessageBusAmqp /*, mqtt::MessageBusMqtt*/)
   {
     auto context = MsgBusFixture<TestType>("PubTestCase");
