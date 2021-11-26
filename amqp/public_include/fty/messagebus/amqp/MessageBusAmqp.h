@@ -28,7 +28,7 @@ namespace fty::messagebus::amqp
   // Default amqp end point
   static auto constexpr DEFAULT_AMQP_END_POINT{"amqp://127.0.0.1:5672"};
 
-  static auto constexpr BUS_IDENTITY_AMQP{"AMQP"};
+  static auto constexpr BUS_IDENTITY{"AMQP"};
 
   class MsgBusAmqp;
 

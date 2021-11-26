@@ -17,9 +17,9 @@
     =========================================================================
 */
 
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
-#include <fty/messagebus/MessageBusStatus.h>
 #include <fty/messagebus/Message.h>
+#include <fty/messagebus/MessageBusStatus.h>
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 
 #include <catch2/catch.hpp>
 #include <iostream>
@@ -49,13 +49,15 @@ namespace
     //Build the response
     auto response = message.buildReply(message.userData() + "OK");
 
-    if(!response) {
+    if (!response)
+    {
       std::cerr << response.error() << std::endl;
     }
 
     //send the response
     auto returnVal = s_msgBus.send(response.value());
-    if(!returnVal) {
+    if (!returnVal)
+    {
       std::cerr << returnVal.error() << std::endl;
     }
   }
@@ -66,16 +68,18 @@ namespace
     //Build the response
     auto response = message.buildReply(message.userData() + "OK");
 
-    if(!response) {
+    if (!response)
+    {
       std::cerr << response.error() << std::endl;
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(MAX_TIMEOUT+1));
+    std::this_thread::sleep_for(std::chrono::seconds(MAX_TIMEOUT + 1));
 
     //send the response
     auto returnVal = s_msgBus.send(response.value());
 
-    if(!returnVal) {
+    if (!returnVal)
+    {
       std::cerr << returnVal.error() << std::endl;
     }
   }
@@ -132,10 +136,14 @@ namespace
     auto returnVal1 = msgBus.connect();
     REQUIRE(returnVal1);
 
-    auto returnVal2 = s_msgBus.connect();
-    REQUIRE(returnVal2);
+    auto msgBus2 = mqtt::MessageBusMqtt("MqttSyncRequestTestCase2", MQTT_SERVER_URI);
+    auto returnVal2 = msgBus2.connect();
+    REQUIRE(returnVal1);
 
-    auto returnVal3 = s_msgBus.receive(syncTestQueue, replyerAddOK);
+    // auto returnVal2 = s_msgBus.connect();
+    // REQUIRE(returnVal2);
+
+    auto returnVal3 = msgBus2.receive(syncTestQueue, replyerAddOK);
     REQUIRE(returnVal3);
 
     // Send synchronous request
@@ -193,6 +201,13 @@ namespace
 
     // Wait to process the response
     std::this_thread::sleep_for(std::chrono::seconds(MAX_TIMEOUT));
+  }
+
+  TEST_CASE("Mqtt wrong connection", "[messageStatus]")
+  {
+    auto msgBus = mqtt::MessageBusMqtt("AmqpMessageBusStatusTestCase", "tcp://wrong.address.ip.com:5672");
+    auto connectionRet = msgBus.connect();
+    REQUIRE(connectionRet.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
   }
 
 } // namespace
