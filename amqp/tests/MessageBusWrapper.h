@@ -63,14 +63,7 @@ namespace fty::messagebus
 
       const std::string getAddress(const std::string address, const std::string addressType = QUEUE)
       {
-        if (isAmqpMsgBus())
-        {
-          return addressType + address;
-        }
-        else
-        {
-          return std::regex_replace(address, std::regex("\\."), "/");
-        }
+        return isAmqpMsgBus() ? addressType + address : std::regex_replace(address, std::regex("\\."), "/");
       }
 
       const std::string typeName()

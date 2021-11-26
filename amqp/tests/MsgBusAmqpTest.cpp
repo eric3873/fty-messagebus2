@@ -38,18 +38,17 @@ namespace
 
 } // namespace
 
-
 TEST_CASE("Amqp with no connection", "[MsgBusAmqp]")
-  {
-    std::string topic = "topic://test.no.connection";
-    Message msg = Message::buildMessage("AmqpNoConnectionTestCase", topic, "TEST", "QUERY");
+{
+  std::string topic = "topic://test.no.connection";
+  Message msg = Message::buildMessage("AmqpNoConnectionTestCase", topic, "TEST", "QUERY");
 
-    auto msgBus = amqp::MsgBusAmqp("AmqpNoConnectionTestCase", AMQP_SERVER_URI);
-    auto received = msgBus.receive(topic, {});
-    REQUIRE(received.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
-    auto sent = msgBus.send(msg);
-    REQUIRE(sent.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
-  }
+  auto msgBus = amqp::MsgBusAmqp("AmqpNoConnectionTestCase", AMQP_SERVER_URI);
+  auto received = msgBus.receive(topic, {});
+  REQUIRE(received.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+  auto sent = msgBus.send(msg);
+  REQUIRE(sent.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+}
 
 TEST_CASE("Amqp without and with connection", "[MsgBusAmqp]")
 {
