@@ -34,52 +34,53 @@
 
 namespace fty::messagebus
 {
-    static const std::string QUEUE = "queue:/";
-    static const std::string TOPIC = "topic:/";
+  static const std::string QUEUE = "queue:/";
+  static const std::string TOPIC = "topic:/";
 
-    //template <typename T, typename... Args>
-    template <typename T>
-    struct MsgBusFixture
+  template <typename T>
+  static const std::string typeName()
+  {
+    int status;
+    std::string tname = typeid(T).name();
+    char* demangled_name = abi::__cxa_demangle(tname.c_str(), NULL, NULL, &status);
+    if (status == 0)
     {
-      MsgBusFixture(const ClientName& clientName = {}, const Endpoint& endpoint = {})
-        : m_bus(clientName, endpoint.empty() ? getEndpoint() : endpoint)
-      {
-      }
+      tname = demangled_name;
+      std::free(demangled_name);
+    }
+    return tname;
+  }
 
-      bool isAmqpMsgBus()
-      {
-        return (typeName().find("amqp") != std::string::npos);
-      }
+  //template <typename T, typename... Args>
+  template <typename T>
+  struct MsgBusFixture
+  {
+    MsgBusFixture(const ClientName& clientName = {}, const Endpoint& endpoint = {})
+      : m_bus(clientName, endpoint.empty() ? getEndpoint() : endpoint)
+    {
+    }
 
-      const std::string getEndpoint()
-      {
-        return isAmqpMsgBus() ? amqp::DEFAULT_ENDPOINT : mqtt::DEFAULT_ENDPOINT;
-      }
+    bool isAmqpMsgBus()
+    {
+      return (typeName<T>().find("amqp") != std::string::npos);
+    }
 
-      const std::string getIdentity()
-      {
-        return isAmqpMsgBus() ? amqp::BUS_IDENTITY : mqtt::BUS_IDENTITY;
-      }
+    const std::string getEndpoint()
+    {
+      return isAmqpMsgBus() ? amqp::DEFAULT_ENDPOINT : mqtt::DEFAULT_ENDPOINT;
+    }
 
-      const std::string getAddress(const std::string address, const std::string addressType = QUEUE)
-      {
-        return isAmqpMsgBus() ? addressType + address : std::regex_replace(address, std::regex("\\."), "/");
-      }
+    const std::string getIdentity()
+    {
+      return isAmqpMsgBus() ? amqp::BUS_IDENTITY : mqtt::BUS_IDENTITY;
+    }
 
-      const std::string typeName()
-      {
-        int status;
-        std::string tname = typeid(T).name();
-        char* demangled_name = abi::__cxa_demangle(tname.c_str(), NULL, NULL, &status);
-        if (status == 0)
-        {
-          tname = demangled_name;
-          std::free(demangled_name);
-        }
-        return tname;
-      }
+    const std::string getAddress(const std::string address, const std::string addressType = QUEUE)
+    {
+      return isAmqpMsgBus() ? addressType + address : std::regex_replace(address, std::regex("\\."), "/");
+    }
 
-      T m_bus;
-    };
+    T m_bus;
+  };
 
-  } // namespace
+} // namespace fty::messagebus

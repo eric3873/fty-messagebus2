@@ -153,6 +153,7 @@ namespace fty::messagebus::mqtt
                                          .clean_session(false)
                                          .mqtt_version(MQTTVERSION_5)
                                          .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
+                                         .connect_timeout(TIMEOUT)
                                          .automatic_reconnect(true)
                                          .clean_start(true)
                                          .finalize();

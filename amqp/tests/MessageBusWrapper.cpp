@@ -43,10 +43,12 @@ namespace
 #endif
 
   using namespace fty::messagebus;
+  using MsgBusMqtt = mqtt::MessageBusMqtt;
+  using MsgBusAmqp = amqp::MessageBusAmqp;
 
   namespace
   {
-    static int MAX_TIMEOUT = 100;
+    static int MAX_TIMEOUT = 1000;
     static const std::string QUERY = "query";
     static const std::string QUERY_2 = "query2";
     static const std::string OK = ":OK";
@@ -102,6 +104,28 @@ namespace
     }
 
     // Replyer listener
+    // void replyerAddOK(const Message& message)
+    // {
+    //   g_msgRecieved.incReplyer();
+    //   //Build the response
+    //   auto response = message.buildReply(message.userData() + OK);
+
+    //   if (!response)
+    //   {
+    //     std::cerr << response.error() << std::endl;
+    //   }
+
+    //   //send the response
+    //   auto msgBus = fty::messagebus::amqp::MessageBusAmqp("TestCase", AMQP_SERVER_URI);
+    //   auto connected = msgBus.connect();
+    //   auto msgSent = msgBus.send(response.value());
+    //   if (!msgSent)
+    //   {
+    //     std::cerr << msgSent.error() << std::endl;
+    //   }
+    // }
+
+    template<typename T>
     void replyerAddOK(const Message& message)
     {
       g_msgRecieved.incReplyer();
@@ -113,8 +137,9 @@ namespace
         std::cerr << response.error() << std::endl;
       }
 
+      auto endPoint = (typeName<T>().find("amqp") != std::string::npos) ? AMQP_SERVER_URI : MQTT_SERVER_URI;
       //send the response
-      auto msgBus = fty::messagebus::amqp::MessageBusAmqp("TestCase", AMQP_SERVER_URI);
+      auto msgBus = T("TestCase", endPoint);
       auto connected = msgBus.connect();
       auto msgSent = msgBus.send(response.value());
       if (!msgSent)
@@ -132,7 +157,7 @@ namespace
 
   } // namespace
 
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Identify", "[amqp][mqtt][identity]", amqp::MessageBusAmqp, mqtt::MessageBusMqtt)
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Identify", "[amqp][mqtt][identity]", MsgBusMqtt, MsgBusAmqp)
   {
     auto context = MsgBusFixture<TestType>("AmqpUnreceiveReceiverTestCase");
 
@@ -140,7 +165,7 @@ namespace
     REQUIRE(context.m_bus.identity() == context.getIdentity());
   }
 
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Send", "[amqp][mqtt][send]", amqp::MessageBusAmqp /*, mqtt::MessageBusMqtt*/)
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Send", "[amqp][mqtt][send]", MsgBusMqtt, MsgBusAmqp)
   {
     auto context = MsgBusFixture<TestType>("AmqpMessageRecieverSendTestCase");
     std::string sendTestQueue = context.getAddress("/etn.test.message.send");
@@ -164,7 +189,7 @@ namespace
     isRecieved(nbMessageToSend);
   }
 
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Send request sync", "[amqp][mqtt][request][sync]", amqp::MessageBusAmqp /*, mqtt::MessageBusMqtt*/)
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Send sync request", "[amqp][mqtt][request][sync]", MsgBusMqtt, MsgBusAmqp)
   {
     auto context = MsgBusFixture<TestType>("SyncReceiverTestCase");
     std::string syncTestQueue = context.getAddress("/etn.test.message.sync.");
@@ -174,8 +199,8 @@ namespace
     std::cerr << "Request to send:\n" + request.toString() << std::endl;
 
     REQUIRE(context.m_bus.connect());
-    REQUIRE(context.m_bus.receive(request.to(), replyerAddOK));
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    REQUIRE(context.m_bus.receive(request.to(), replyerAddOK<TestType>));
+    std::this_thread::sleep_for(std::chrono::seconds(3));
 
     // Test without connection before.
     auto msgBusRequester = MsgBusFixture<TestType>("AmqpSyncRequesterTestCase").m_bus;
@@ -184,11 +209,11 @@ namespace
 
     // Test with connection after.
     REQUIRE(msgBusRequester.connect());
-    auto replyMsg = msgBusRequester.request(request, MAX_TIMEOUT / 100);
+    auto replyMsg = msgBusRequester.request(request, 5);
     REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
   }
 
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Send request sync timeout reached", "[amqp][mqtt][request][sync]", amqp::MessageBusAmqp /*, mqtt::MessageBusMqtt*/)
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Send request sync timeout reached", "[amqp][mqtt][request][sync]", MsgBusMqtt, MsgBusAmqp)
   {
     auto context = MsgBusFixture<TestType>("SyncRequesterTestCase");
     std::string syncTimeOutTestQueue = context.getAddress("/etn.test.message.synctimeout.");
@@ -203,7 +228,7 @@ namespace
     REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
   }
 
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Send async request", "[amqp][mqtt][request][async]", amqp::MessageBusAmqp /*, mqtt::MessageBusMqtt*/)
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Send async request", "[amqp][mqtt][request][async]", MsgBusMqtt, MsgBusAmqp)
   {
     auto context = MsgBusFixture<TestType>("AsyncRequesterTestCase");
     std::string asyncTestQueue = context.getAddress("/etn.test.message.async.");
@@ -214,19 +239,19 @@ namespace
 
     // Build asynchronous request and set all receiver
     Message request = Message::buildRequest("AmqpAsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
-    REQUIRE(msgBusReplyer.receive(request.to(), replyerAddOK));
+    REQUIRE(msgBusReplyer.receive(request.to(), replyerAddOK<TestType>));
     REQUIRE(context.m_bus.receive(request.replyTo(), messageListener, request.correlationId()));
 
     g_msgRecieved.reset();
     for (int i = 0; i < 2; i++)
     {
       REQUIRE(context.m_bus.send(request));
-      std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
+      std::this_thread::sleep_for(std::chrono::seconds(3));
       REQUIRE((g_msgRecieved.assertValue(i + 1)));
     }
   }
 
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Publish subscribe", "[amqp][mqtt][pub]", amqp::MessageBusAmqp /*, mqtt::MessageBusMqtt*/)
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Publish subscribe", "[amqp][mqtt][pub]", MsgBusMqtt, MsgBusAmqp)
   {
     auto context = MsgBusFixture<TestType>("PubTestCase");
     std::string topic = context.getAddress("/etn.test.message.pubsub", TOPIC);
@@ -249,7 +274,7 @@ namespace
     isRecieved(nbMessageToSend);
   }
 
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Unreceive", "[amqp][mqtt][pub]", amqp::MessageBusAmqp /*, mqtt::MessageBusMqtt*/)
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Unreceive", "[amqp][mqtt][pub]", /*MsgBusMqtt,*/ MsgBusAmqp)
   {
     auto context = MsgBusFixture<TestType>("UnreceiveReceiverTestCase");
     std::string topic = context.getAddress("/etn.test.message.unreceive", TOPIC);
@@ -275,7 +300,7 @@ namespace
     isRecieved(1);
   }
 
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Pub sub with same object", "[amqp][mqtt][pub]", amqp::MessageBusAmqp /*, mqtt::MessageBusMqtt*/)
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Pub sub with same object", "[amqp][mqtt][pub]", MsgBusMqtt, MsgBusAmqp)
   {
     auto context = MsgBusFixture<TestType>("AmqpUnreceiveSenderTestCase");
     std::string topic = context.getAddress("/etn.test.message.sameobject", TOPIC);
@@ -291,13 +316,7 @@ namespace
     isRecieved(1);
   }
 
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Wrong connection", "[amqp][mqtt][messageStatus]", amqp::MessageBusAmqp/*, mqtt::MessageBusMqtt*/)
-  {
-    auto msgBus = MsgBusFixture<TestType>("AmqpUnreceiveSenderTestCase", "tcp://wrong.address.ip.com:5672").m_bus;
-    REQUIRE(msgBus.connect().error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
-  }
-
-  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Wrong message", "[amqp][mqtt][messageStatus]", amqp::MessageBusAmqp, mqtt::MessageBusMqtt)
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Wrong message", "[amqp][mqtt][messageStatus]", MsgBusMqtt, MsgBusAmqp)
   {
     auto msgBus = MsgBusFixture<TestType>("AmqpNoConnectionTestCase").m_bus;
 
@@ -313,6 +332,12 @@ namespace
     request.to("queue://reply");
     // Without reply request reject.
     REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+  }
+
+  TEMPLATE_TEST_CASE_METHOD(MsgBusFixture, "Wrong connection", "[amqp][mqtt][messageStatus]", MsgBusMqtt, MsgBusAmqp)
+  {
+    auto msgBus = MsgBusFixture<TestType>("AmqpUnreceiveSenderTestCase", "tcp://wrong.address.ip.com:5672").m_bus;
+    REQUIRE(msgBus.connect().error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
   }
 
 } // namespace
