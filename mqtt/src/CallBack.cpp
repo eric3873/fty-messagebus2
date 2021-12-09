@@ -114,6 +114,16 @@ namespace fty::messagebus::mqtt
     return m_subscriptions;
   }
 
+  auto CallBack::subscribed(const std::string& topic) -> bool
+  {
+    bool isSubscript = false;
+    if (auto iter{m_subscriptions.find(topic)}; iter != m_subscriptions.end())
+    {
+      isSubscript = true;
+    }
+    return isSubscript;
+  }
+
   void CallBack::setSubscriptions(const std::string& topic, MessageListener messageListener)
   {
     if (auto it{m_subscriptions.find(topic)}; it == m_subscriptions.end())

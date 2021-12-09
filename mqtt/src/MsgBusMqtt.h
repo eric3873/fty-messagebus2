@@ -60,5 +60,7 @@ namespace fty::messagebus::mqtt
 
     // Call back
     CallBack m_cb;
+
+    bool isServiceAvailable();
   };
 } // namespace fty::messagebus::mqtt
