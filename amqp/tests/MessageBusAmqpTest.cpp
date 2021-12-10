@@ -1,289 +1,315 @@
-// /*  =========================================================================
-//     Copyright (C) 2014 - 2021 Eaton
+/*  =========================================================================
+    Copyright (C) 2014 - 2021 Eaton
 
-//     This program is free software; you can redistribute it and/or modify
-//     it under the terms of the GNU General Public License as published by
-//     the Free Software Foundation; either version 2 of the License, or
-//     (at your option) any later version.
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
 
-//     This program is distributed in the hope that it will be useful,
-//     but WITHOUT ANY WARRANTY; without even the implied warranty of
-//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//     GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-//     You should have received a copy of the GNU General Public License along
-//     with this program; if not, write to the Free Software Foundation, Inc.,
-//     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
-//     =========================================================================
-// */
+    You should have received a copy of the GNU General Public License along
+    with this program; if not, write to the Free Software Foundation, Inc.,
+    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+    =========================================================================
+*/
 
-// #include <fty/messagebus/Message.h>
-// #include <fty/messagebus/MessageBusStatus.h>
-// #include <fty/messagebus/amqp/MessageBusAmqp.h>
+#include <fty/messagebus/Message.h>
+#include <fty/messagebus/MessageBusStatus.h>
+#include <fty/messagebus/amqp/MessageBusAmqp.h>
+#include <fty/messagebus/utils.h>
 
-// #include <catch2/catch.hpp>
-// #include <iostream>
+#include <catch2/catch.hpp>
+#include <iostream>
 
-// #include <thread>
+#include <mutex>
+#include <thread>
 
-// namespace
-// {
-// #if defined(EXTERNAL_SERVER_FOR_TEST)
-//   static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
-// #else
-//   static constexpr auto AMQP_SERVER_URI{"amqp://127.0.0.1:5672"};
-// #endif
+namespace
+{
 
-//   using namespace fty::messagebus;
+#if defined(EXTERNAL_SERVER_FOR_TEST)
+  static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
+#else
+  static constexpr auto AMQP_SERVER_URI{"amqp://127.0.0.1:5672"};
+#endif
 
-//   static int MAX_TIMEOUT = 100;
-//   static const std::string QUERY = "query";
-//   static const std::string QUERY_2 = "query2";
-//   static const std::string OK = ":OK";
-//   static const std::string QUERY_AND_OK = QUERY + OK;
-//   static const std::string RESPONSE_2 = QUERY_2 + OK;
+  using namespace fty::messagebus;
+  using namespace fty::messagebus::utils;
 
-//   namespace
-//   {
-//     struct MsgReceived
-//     {
-//       int receiver = 0;
-//       int replyer = 0;
+  auto constexpr TIMEOUT = std::chrono::seconds(2);
+  static const std::string QUERY = "query";
+  static const std::string QUERY_2 = "query2";
+  static const std::string OK = ":OK";
+  static const std::string QUERY_AND_OK = QUERY + OK;
+  static const std::string RESPONSE_2 = QUERY_2 + OK;
 
-//       void reset()
-//       {
-//         receiver = 0;
-//         replyer = 0;
-//       }
+  class MsgReceived
+  {
+  private:
+    // Mutex
+    std::mutex m_lock;
 
-//       bool assertValue(const int value)
-//       {
-//         return (receiver == value && replyer == value);
-//       }
+  public:
+    int receiver;
+    int replyer;
 
-//     } g_msgRecieved;
+    MsgReceived()
+      : receiver(0)
+      , replyer(0)
+    {
+    }
 
-//     void isRecieved(const int expected)
-//     {
-//       std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-//       REQUIRE(g_msgRecieved.receiver == expected);
-//     }
+    void reset()
+    {
+      std::lock_guard<std::mutex> lock(m_lock);
+      receiver = 0;
+      replyer = 0;
+    }
 
-//     // Replyer listener
-//     void replyerAddOK(const Message& message)
-//     {
-//       g_msgRecieved.replyer++;
-//       //Build the response
-//       auto response = message.buildReply(message.userData() + OK);
+    void incReceiver()
+    {
+      std::lock_guard<std::mutex> lock(m_lock);
+      receiver++;
+    }
 
-//       if (!response)
-//       {
-//         std::cerr << response.error() << std::endl;
-//       }
+    void incReplyer()
+    {
+      std::lock_guard<std::mutex> lock(m_lock);
+      replyer++;
+    }
 
-//       //send the response
-//       auto msgBus = fty::messagebus::amqp::MessageBusAmqp("TestCase", AMQP_SERVER_URI);
-//       auto connected = msgBus.connect();
-//       auto msgSent = msgBus.send(response.value());
-//       if (!msgSent)
-//       {
-//         std::cerr << msgSent.error() << std::endl;
-//       }
-//     }
+    bool assertValue(const int expected)
+    {
+      return (receiver == expected && replyer == expected);
+    }
 
-//     // message listener
-//     void messageListener(const Message& message)
-//     {
-//       std::cout << "Msg arrived: " << message.toString() << std ::endl;
-//       g_msgRecieved.receiver++;
-//     }
+    bool isRecieved(const int expected)
+    {
+      return (receiver == expected);
+    }
 
-//   } // namespace
+    void messageListener(const Message& message)
+    {
+      incReceiver();
+      std::cout << "Message arrived " << message.toString() << std::endl;
+    }
 
-//   //----------------------------------------------------------------------
-//   // Test case
-//   //----------------------------------------------------------------------
+    void replyerAddOK(const Message& message)
+    {
+      incReplyer();
+      //Build the response
+      auto response = message.buildReply(message.userData() + OK);
 
-//   TEST_CASE("Amqp identify implementation", "[identity]")
-//   {
-//     auto msgBus = amqp::MessageBusAmqp("AmqpMessageIdentityTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBus.identity() == amqp::BUS_IDENTITY);
-//     REQUIRE(msgBus.clientName() == "AmqpMessageIdentityTestCase");
-//   }
+      if (!response)
+      {
+        std::cerr << response.error() << std::endl;
+      }
 
-//   TEST_CASE("Amqp send", "[send]")
-//   {
-//     std::string sendTestQueue = "queue://test.message.send";
+      //send the response
+      auto msgBus = amqp::MessageBusAmqp("TestCase", AMQP_SERVER_URI);
+      auto connected = msgBus.connect();
+      auto msgSent = msgBus.send(response.value());
+      if (!msgSent)
+      {
+        std::cerr << msgSent.error() << std::endl;
+      }
+    }
+  };
 
-//     auto msgBusReciever = amqp::MessageBusAmqp("AmqpMessageRecieverSendTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBusReciever.connect());
+  //----------------------------------------------------------------------
+  // Test case
+  //----------------------------------------------------------------------
 
-//     auto msgBusSender = amqp::MessageBusAmqp("AmqpMessageSenderSendTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBusSender.connect());
+  TEST_CASE("Identity", "[amqp][identity]")
+  {
+    auto msgBus = amqp::MessageBusAmqp("IdentityTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBus.clientName() == "IdentityTestCase");
+    REQUIRE(msgBus.identity() == amqp::BUS_IDENTITY);
+  }
 
-//     REQUIRE(msgBusReciever.receive(sendTestQueue, messageListener));
+  TEST_CASE("Send", "[amqp][request][send]")
+  {
+    MsgReceived msgReceived{};
+    std::string sendTestQueue = "queue://test.message.send";
 
-//     // Send synchronous request
-//     Message msg = Message::buildMessage("AmqpMessageTestCase", sendTestQueue, "TEST", QUERY);
+    auto msgBus = amqp::MessageBusAmqp("MessageRecieverSendTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBus.connect());
 
-//     g_msgRecieved.reset();
-//     int nbMessageToSend = 3;
-//     for (int i = 0; i < nbMessageToSend; i++)
-//     {
-//       REQUIRE(msgBusSender.send(msg));
-//     }
+    auto msgBusSender = amqp::MessageBusAmqp("MessageSenderSendTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusSender.connect());
 
-//     isRecieved(nbMessageToSend);
-//   }
+    REQUIRE(msgBusSender.receive(sendTestQueue, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
 
-//   TEST_CASE("Amqp request sync", "[request]")
-//   {
-//     std::string syncTestQueue = "queue://test.message.sync.";
-//     // Send synchronous request
-//     Message request = Message::buildRequest("AmqpSyncRequestTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
+    // Send synchronous request
+    Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
 
-//     auto msgBusReciever = amqp::MessageBusAmqp("AmqpSyncReceiverTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBusReciever.connect());
-//     REQUIRE(msgBusReciever.receive(request.to(), replyerAddOK));
+    //g_msgRecieved.reset();
+    int nbMessageToSend = 3;
+    for (int i = 0; i < nbMessageToSend; i++)
+    {
+      REQUIRE(msgBusSender.send(msg));
+    }
+    std::this_thread::sleep_for(TIMEOUT);
+    CHECK(msgReceived.isRecieved(nbMessageToSend));
+  }
 
-//     // Test without connection before.
-//     auto msgBusRequester = amqp::MessageBusAmqp("AmqpSyncRequesterTestCase", AMQP_SERVER_URI);
-//     auto requester = msgBusRequester.request(request, MAX_TIMEOUT / 100);
-//     REQUIRE(requester.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+  TEST_CASE("Send sync request", "[amqp][request][sync]")
+  {
+    MsgReceived msgReceived{};
+    std::string syncTestQueue = "queue://test.message.sync.";
+    auto msgBusReciever = amqp::MessageBusAmqp("SyncReceiverTestCase", AMQP_SERVER_URI);
 
-//     // Test with connection after.
-//     REQUIRE(msgBusRequester.connect());
-//     auto replyMsg = msgBusRequester.request(request, MAX_TIMEOUT / 100);
-//     REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
-//   }
+    // Send synchronous request
+    Message request = Message::buildRequest("SyncRequesterTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
 
-//   TEST_CASE("Amqp request sync timeout reached", "[request]")
-//   {
-//     std::string syncTimeOutTestQueue = "queue://test.message.synctimeout.";
+    REQUIRE(msgBusReciever.connect());
+    REQUIRE(msgBusReciever.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
-//     auto msgBus = amqp::MessageBusAmqp("AmqpSyncRequesterTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBus.connect());
+    // Test without connection before.
+    auto msgBusRequester = amqp::MessageBusAmqp("SyncRequesterTestCase", AMQP_SERVER_URI);
+    auto requester = msgBusRequester.request(request, 1);
+    REQUIRE(requester.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
 
-//     // Send synchronous request
-//     Message request = Message::buildRequest("AmqpSyncRequestTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:");
+    // Test with connection after.
+    REQUIRE(msgBusRequester.connect());
+    auto replyMsg = msgBusRequester.request(request, 2);
+    REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
+  }
 
-//     auto replyMsg = msgBus.request(request, 1);
-//     REQUIRE(!replyMsg);
-//     REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
-//   }
+  TEST_CASE("Send request sync timeout reached", "[amqp][request][sync]")
+  {
+    std::string syncTimeOutTestQueue = "queue://test.message.synctimeout.";
+    auto msgBus = amqp::MessageBusAmqp("SyncRequesterTimeOutTestCase", AMQP_SERVER_URI);
 
-//   TEST_CASE("Amqp async request", "[request]")
-//   {
-//     std::string asyncTestQueue = "queue://test.message.async.";
-//     auto msgBusRequester = amqp::MessageBusAmqp("AmqpAsyncRequesterTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBusRequester.connect());
+    REQUIRE(msgBus.connect());
 
-//     auto msgBusReplyer = amqp::MessageBusAmqp("AmqpAsyncReplyerTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBusReplyer.connect());
+    // Send synchronous request
+    Message request = Message::buildRequest("SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:");
 
-//     // Build asynchronous request and set all receiver
-//     Message request = Message::buildRequest("AmqpAsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
-//     REQUIRE(msgBusReplyer.receive(request.to(), replyerAddOK));
-//     REQUIRE(msgBusRequester.receive(request.replyTo(), messageListener, request.correlationId()));
+    auto replyMsg = msgBus.request(request, 2);
+    REQUIRE(!replyMsg);
+    REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
+  }
 
-//     g_msgRecieved.reset();
-//     for (int i = 0; i < 2; i++)
-//     {
-//       REQUIRE(msgBusRequester.send(request));
-//       std::this_thread::sleep_for(std::chrono::milliseconds(MAX_TIMEOUT));
-//       REQUIRE((g_msgRecieved.assertValue(i + 1)));
-//     }
-//   }
+  TEST_CASE("Send async request", "[amqp][async]")
+  {
+    MsgReceived msgReceived{};
+    std::string asyncTestQueue = "queue://test.message.async.";
+    auto msgBusRequester = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusRequester.connect());
 
-//   TEST_CASE("Amqp publish receive", "[pubSub]")
-//   {
-//     std::string topic = "topic://test.message.pubsub";
+    auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusReplyer.connect());
 
-//     auto msgBusSender = amqp::MessageBusAmqp("AmqpPubTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBusSender.connect());
+    // Build asynchronous request and set all receiver
+    Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
+    REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+    REQUIRE(msgBusRequester.receive(request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), request.correlationId()));
 
-//     auto msgBusReceiver = amqp::MessageBusAmqp("AmqpSubTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBusReceiver.connect());
+    for (int i = 0; i < 1; i++)
+    {
+      REQUIRE(msgBusReplyer.send(request));
+      std::this_thread::sleep_for(TIMEOUT);
+      CHECK(msgReceived.assertValue(i + 1));
+    }
+  }
 
-//     REQUIRE(msgBusReceiver.receive(topic, messageListener));
+  TEST_CASE("Publish subscribe", "[.][pub]")
+  {
+    MsgReceived msgReceived{};
+    std::string topic = "topic://test.message.pubsub";
+    auto msgBusSender = amqp::MessageBusAmqp("PubTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusSender.connect());
 
-//     Message msg = Message::buildMessage("AmqpPubSubTestCase", topic, "TEST", QUERY);
-//     g_msgRecieved.reset();
-//     int nbMessageToSend = 3;
+    auto msgBusReceiver = amqp::MessageBusAmqp("PubTestCaseReceiver", AMQP_SERVER_URI);
+    REQUIRE(msgBusReceiver.connect());
 
-//     for (int i = 0; i < nbMessageToSend; i++)
-//     {
-//       REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-//     }
+    REQUIRE(msgBusReceiver.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
 
-//     isRecieved(nbMessageToSend);
-//   }
+    Message msg = Message::buildMessage("PubSubTestCase", topic, "TEST", QUERY);
+    int nbMessageToSend = 3;
 
-//   TEST_CASE("Amqp unreceive", "[pubSub]")
-//   {
-//     std::string topic = "topic://test.message.unreceive";
+    for (int i = 0; i < nbMessageToSend; i++)
+    {
+      auto delivState = msgBusSender.send(msg);
+      REQUIRE(delivState == DeliveryState::DELIVERY_STATE_ACCEPTED);
+    }
+    std::this_thread::sleep_for(TIMEOUT);
+    CHECK(msgReceived.isRecieved(nbMessageToSend));
+  }
 
-//     auto msgBusReceiver = amqp::MessageBusAmqp("AmqpUnreceiveReceiverTestCase", AMQP_SERVER_URI);
-//     // Try to unreceive before a connection => UNAVAILABLE
-//     REQUIRE(msgBusReceiver.unreceive(topic).error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
-//     REQUIRE(msgBusReceiver.connect());
-//     REQUIRE(msgBusReceiver.receive(topic, messageListener));
+  TEST_CASE("Unreceive", "[.][pub]")
+  {
+    MsgReceived msgReceived{};
+    auto msgBus = amqp::MessageBusAmqp("UnreceiveReceiverTestCase", AMQP_SERVER_URI);
+    std::string topic = "topic://test.message.unreceive." + generateUuid();
 
-//     auto msgBusSender = amqp::MessageBusAmqp("AmqpUnreceiveSenderTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBusSender.connect());
+    // Try to unreceive before a connection => UNAVAILABLE
+    REQUIRE(msgBus.unreceive(topic).error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+    // After a connection
+    REQUIRE(msgBus.connect());
+    REQUIRE(msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
 
-//     Message msg = Message::buildMessage("AmqpUnreceiveTestCase", topic, "TEST", QUERY);
-//     g_msgRecieved.reset();
-//     REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-//     isRecieved(1);
+    auto msgBusSender = amqp::MessageBusAmqp("UnreceiveSenderTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusSender.connect());
 
-//     // Try to unreceive a wrong topic => REJECTED
-//     REQUIRE(msgBusReceiver.unreceive("topic://wrong.topic").error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-//     // Try to unreceive a wrong topic => ACCEPTED
-//     REQUIRE(msgBusReceiver.unreceive(topic));
-//     REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-//     isRecieved(1);
-//   }
+    Message msg = Message::buildMessage("UnreceiveTestCase", topic, "TEST", QUERY);
+    REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+    std::this_thread::sleep_for(TIMEOUT);
+    CHECK(msgReceived.isRecieved(1));
 
-//   TEST_CASE("Amqp pub sub with same object", "[pubsub]")
-//   {
-//     std::string topic = "topic://test.message.sameobject";
+    // Try to unreceive a wrong topic => REJECTED
+    REQUIRE(msgBus.unreceive("/etn/t/wrongTopic").error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    // Try to unreceive a right topic => ACCEPTED
+    REQUIRE(msgBus.unreceive(topic));
+    REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+    std::this_thread::sleep_for(TIMEOUT);
+    CHECK(msgReceived.isRecieved(1));
+  }
 
-//     auto msgBus = amqp::MessageBusAmqp("AmqpUnreceiveSenderTestCase", AMQP_SERVER_URI);
-//     REQUIRE(msgBus.connect());
+  TEST_CASE("Pub sub with same object", "[.][pub]")
+  {
+    MsgReceived msgReceived{};
+    std::string topic = "topic://test.message.sameobject";
 
-//     REQUIRE(msgBus.receive(topic, messageListener));
+    auto msgBus = amqp::MessageBusAmqp("PubTestCaseWithSameObject", AMQP_SERVER_URI);
+    REQUIRE(msgBus.connect());
 
-//     Message msg = Message::buildMessage("AmqpUnreceiveTestCase", topic, "TEST", QUERY);
-//     g_msgRecieved.reset();
-//     REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-//     isRecieved(1);
-//   }
+    REQUIRE(msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
 
-//   TEST_CASE("Amqp wrong connection", "[messageStatus]")
-//   {
-//     auto msgBus = amqp::MessageBusAmqp("AmqpMessageBusStatusTestCase", "amqp://wrong.address.ip.com:5672");
-//     auto connectionRet = msgBus.connect();
-//     REQUIRE(connectionRet.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
-//   }
+    Message msg = Message::buildMessage("PubTestCaseWithSameObject", topic, "TEST", QUERY);
+    REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+    std::this_thread::sleep_for(TIMEOUT);
+    CHECK(msgReceived.isRecieved(1));
+  }
 
-//   TEST_CASE("Amqp wrong message", "[messageStatus]")
-//   {
-//     auto msgBus = amqp::MessageBusAmqp("AmqpNoConnectionTestCase", AMQP_SERVER_URI);
+  TEST_CASE("Wrong message", "[messageStatus]")
+  {
+    auto msgBus = amqp::MessageBusAmqp("WrongMessageTestCase", AMQP_SERVER_URI);
 
-//     // Without mandatory fields (from, subject, to)
-//     auto wrongSendMsg = Message::buildMessage("AmqpNoConnectionTestCase", "", "TEST");
-//     auto sent = msgBus.send(wrongSendMsg);
-//     REQUIRE(sent.error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    // Without mandatory fields (from, subject, to)
+    auto wrongSendMsg = Message::buildMessage("WrongMessageTestCase", "", "TEST");
+    REQUIRE(msgBus.send(wrongSendMsg).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
 
-//     // Without mandatory fields (from, subject, to)
-//     auto request = Message::buildRequest("AmqpSyncRequestTestCase", "", "SyncTest", "", QUERY);
-//     // Request reject
-//     REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-//     request.from("queue://request");
-//     request.to("queue://reply");
-//     // Without reply request reject.
-//     REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-//   }
+    // Without mandatory fields (from, subject, to)
+    auto request = Message::buildRequest("WrongRequestTestCase", "", "SyncTest", "", QUERY);
+    // Request reject
+    REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    request.from("queue://etn.q.request");
+    request.to("queue://etn.q.reply");
+    // Without reply request reject.
+    REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+  }
 
-// } // namespace
+  TEST_CASE("Wrong connection", "[.][messageStatus]")
+  {
+    auto msgBus = amqp::MessageBusAmqp("WrongConnectionTestCase", "amqp://wrong.address.ip.com:5672");
+    auto connectionRet = msgBus.connect();
+    REQUIRE(connectionRet.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
+  }
+
+} // namespace

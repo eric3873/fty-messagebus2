@@ -34,10 +34,7 @@ if(BUILD_TESTING)
   etn_test_target(${PROJECT_NAME}
     SOURCES
       tests/*.cpp
-      tests/*.h
     INCLUDE_DIRS
       src/*.h
-    USES
-      fty-common-messagebus2-mqtt
-  )
+)
 endif()

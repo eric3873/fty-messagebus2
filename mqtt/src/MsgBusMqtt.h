@@ -49,6 +49,8 @@ namespace fty::messagebus::mqtt
       return m_clientName;
     }
 
+    bool isServiceAvailable();
+
   private:
     std::string m_clientName;
     std::string m_endpoint;
@@ -60,7 +62,5 @@ namespace fty::messagebus::mqtt
 
     // Call back
     CallBack m_cb;
-
-    bool isServiceAvailable();
   };
 } // namespace fty::messagebus::mqtt
