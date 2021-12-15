@@ -58,12 +58,12 @@ namespace fty::messagebus
     /// @param func the function to receive
     /// @param filter constraint the receiver with a filter
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> receive(const std::string& address, MessageListener && func, const std::string& filter = {}) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept = 0 ;
 
     /// Unsubscribe from a address
     /// @param address the address to unsubscribe
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> unreceive(const std::string& address) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> unreceive(const Address& address) noexcept = 0 ;
 
     /// Register a listener to a address using class
     /// @example
@@ -73,7 +73,7 @@ namespace fty::messagebus
     /// @param cls class instance
     /// @return Success or error
     template <typename Func, typename Cls>
-    [[nodiscard]] fty::Expected<void> receive(const std::string& address, Func&& fnc, Cls* cls) noexcept
+    [[nodiscard]] fty::Expected<void> receive(const Address& address, Func&& fnc, Cls* cls) noexcept
     {
         return registerListener(address, [f = std::move(fnc), c = cls](const Message& msg) -> void {
             std::invoke(f, *c, Message(msg));

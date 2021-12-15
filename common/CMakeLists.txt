@@ -26,6 +26,6 @@ if(BUILD_TESTING)
     SOURCES
       tests/*.cpp
     USES
-        fty-utils
+      fty-utils
   )
 endif()

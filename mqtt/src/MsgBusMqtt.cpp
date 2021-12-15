@@ -186,7 +186,7 @@ namespace fty::messagebus::mqtt
     return {};
   }
 
-  fty::Expected<void> MsgBusMqtt::receive(const std::string& address, MessageListener messageListener)
+  fty::Expected<void> MsgBusMqtt::receive(const Address& address, MessageListener messageListener)
   {
     if (!isServiceAvailable())
     {
@@ -212,7 +212,7 @@ namespace fty::messagebus::mqtt
     return {};
   }
 
-  fty::Expected<void> MsgBusMqtt::unreceive(const std::string& address)
+  fty::Expected<void> MsgBusMqtt::unreceive(const Address& address)
   {
     if (!isServiceAvailable())
     {

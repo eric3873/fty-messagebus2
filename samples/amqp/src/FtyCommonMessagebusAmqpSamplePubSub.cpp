@@ -40,7 +40,7 @@ namespace
     g_received.set_value(false);
   }
 
-  void messageListener(Message message)
+  void messageListener(const Message& message)
   {
     logInfo("messageListener");
     auto metadata = message.metaData();

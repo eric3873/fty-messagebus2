@@ -48,7 +48,7 @@ namespace fty::messagebus::amqp
 
   fty::Expected<void> MsgBusAmqp::connect()
   {
-    logDebug("Connecting to {} ...", m_endpoint);
+    logDebug("Connecting for {} to {} ...", m_clientName, m_endpoint);
     try
     {
       m_amqpClient = std::make_shared<AmqpClient>(m_endpoint);
@@ -75,7 +75,7 @@ namespace fty::messagebus::amqp
     return (m_amqpClient && (m_amqpClient->connected() == ComState::COM_STATE_OK)) ? true : false;
   }
 
-  fty::Expected<void> MsgBusAmqp::receive(const std::string& address, MessageListener messageListener, const std::string& filter)
+  fty::Expected<void> MsgBusAmqp::receive(const Address& address, MessageListener messageListener, const std::string& filter)
   {
     if (!isServiceAvailable())
     {
@@ -102,7 +102,7 @@ namespace fty::messagebus::amqp
     return {};
   }
 
-  fty::Expected<void> MsgBusAmqp::unreceive(const std::string& address)
+  fty::Expected<void> MsgBusAmqp::unreceive(const Address& address)
   {
     if (!isServiceAvailable())
     {
@@ -162,7 +162,6 @@ namespace fty::messagebus::amqp
         return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
       }
 
-      logDebug("Sending message {}", message.toString());
       proton::message msgToSend = getAmqpMessage(message);
 
       AmqpClient requester(m_endpoint);

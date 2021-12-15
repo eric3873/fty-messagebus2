@@ -27,6 +27,7 @@ namespace fty::messagebus
 {
   using UserData = std::string;
   using MetaData = std::map<std::string, std::string>;
+  using Address = std::string;
 
   static constexpr auto STATUS_OK = "OK";
   static constexpr auto STATUS_KO = "KO";
@@ -82,8 +83,8 @@ namespace fty::messagebus
     bool needReply() const;
 
     fty::Expected<Message> buildReply(const UserData& userData, const std::string& status = STATUS_OK) const;
-    static Message buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData = {}, const MetaData& meta = {});
-    static Message buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData = {}, const MetaData& meta = {});
+    static Message buildMessage(const Address& from, const Address& to, const std::string& subject, const UserData& userData = {}, const MetaData& meta = {});
+    static Message buildRequest(const Address& from, const Address& to, const std::string& subject, const Address& replyTo, const UserData& userData = {}, const MetaData& meta = {});
 
     MetaData getUndefinedProperties() const;
 
