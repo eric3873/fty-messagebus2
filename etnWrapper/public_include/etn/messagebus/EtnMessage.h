@@ -40,7 +40,7 @@ namespace etn::messagebus
   class EtnMessage
   {
   public:
-    static fty::messagebus::Address buildAddress(const fty::messagebus::Address& address, const AddressType& addressType = AddressType::TOPIC);
+    static fty::messagebus::Address buildAddress(const fty::messagebus::Address& address, const AddressType& addressType);
     static BusType getBusType(const fty::messagebus::Address& address);
   };
 
