@@ -36,7 +36,8 @@ The interfaces is documentation is available in the [header](common/public_inclu
 ## Dependencies
 
 * [fty-cmake](https://github.com/42ity/fty-cmake/)
-* [fty_common_logging](https://github.com/42ity/fty-common-logging)
+* [fty-common-logging](https://github.com/42ity/fty-common-logging)
+* [fty-utils](https://github.com/42ity/fty-utils)
 * [PahoMqttC](https://github.com/eclipse/paho.mqtt.c)
 * [PahoMqttCpp](https://github.com/eclipse/paho.mqtt.cpp)
 * [qpid-proton](https://github.com/apache/qpid-proton.git)
