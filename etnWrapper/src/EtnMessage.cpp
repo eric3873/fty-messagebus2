@@ -18,19 +18,19 @@
 */
 #include "etn/messagebus/EtnMessage.h"
 
-#include <fty/messagebus/utils.h>
+#include <fty/messagebus/amqp/MessageBusAmqp.h>
 
 namespace etn::messagebus
 {
   using namespace fty::messagebus;
+  using namespace fty::messagebus::amqp;
 
   static constexpr auto ETN_TOPIC_PREFIX = "/etn/t/";
-  static const std::string QUEUE_PREFIX = "queue://";
   static const std::string ETN_QUEUE_PREFIX = QUEUE_PREFIX + "etn.q.";
   static const std::string ETN_QUEUE_REQUEST = ETN_QUEUE_PREFIX + "request.";
   static const std::string ETN_QUEUE_REPLY = ETN_QUEUE_PREFIX + "reply.";
 
-  Address EtnMessage::buildAddress(const Address& address, const AddressType& addressType)
+  Address buildAddress(const Address& address, const AddressType& addressType) noexcept
   {
     Address etnAddress;
     switch (addressType)
@@ -52,16 +52,6 @@ namespace etn::messagebus
         break;
     }
     return etnAddress;
-  }
-
-  BusType EtnMessage::getBusType(const Address& address)
-  {
-    BusType busType = BusType::MQTT;
-    if (address.find(QUEUE_PREFIX) != std::string::npos)
-    {
-      busType = BusType::AMQP;
-    }
-    return busType;
   }
 
 } //namespace etn::messagebus

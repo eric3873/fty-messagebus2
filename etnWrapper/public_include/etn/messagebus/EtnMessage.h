@@ -31,17 +31,6 @@ namespace etn::messagebus
     REPLY_QUEUE
   };
 
-  enum class BusType
-  {
-    AMQP,
-    MQTT
-  };
-
-  class EtnMessage
-  {
-  public:
-    static fty::messagebus::Address buildAddress(const fty::messagebus::Address& address, const AddressType& addressType);
-    static BusType getBusType(const fty::messagebus::Address& address);
-  };
+  fty::messagebus::Address buildAddress(const fty::messagebus::Address& address, const AddressType& addressType) noexcept;
 
 } // namespace etn::messagebus

@@ -127,10 +127,10 @@ namespace
   // Test case
   //----------------------------------------------------------------------
 
-  TEST_CASE("Send", "[amqp][request][send]")
+  TEST_CASE("Send", "[etn][request][send]")
   {
     MsgReceived msgReceived{};
-    std::string sendTestQueue = EtnMessage::buildAddress("test.message.send", AddressType::QUEUE);
+    std::string sendTestQueue = buildAddress("test.message.send", AddressType::QUEUE);
 
     auto msgBus = EtnMessageBus("MessageRecieverSendTestCase");
 
@@ -150,10 +150,10 @@ namespace
     CHECK(msgReceived.isRecieved(nbMessageToSend));
   }
 
-  TEST_CASE("Send sync request", "[amqp][request][sync]")
+  TEST_CASE("Send sync request", "[etn][request][sync]")
   {
     MsgReceived msgReceived{};
-    std::string syncTestQueue = EtnMessage::buildAddress("test.message.sync.", AddressType::REQUEST_QUEUE);
+    std::string syncTestQueue = buildAddress("test.message.sync.", AddressType::REQUEST_QUEUE);
     auto msgBusReciever = EtnMessageBus("SyncReceiverTestCase");
 
     // Send synchronous request
@@ -166,11 +166,11 @@ namespace
     REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
   }
 
-  TEST_CASE("Send async request", "[amqp][async]")
+  TEST_CASE("Send async request", "[etn][async]")
   {
     MsgReceived msgReceived{};
     ;
-    std::string asyncTestQueue = EtnMessage::buildAddress("test.message.async.", AddressType::REQUEST_QUEUE);
+    std::string asyncTestQueue = buildAddress("test.message.async.", AddressType::REQUEST_QUEUE);
     auto msgBusRequester = EtnMessageBus("AsyncRequesterTestCase");
 
     auto msgBusReplyer = EtnMessageBus("AsyncReplyerTestCase");
@@ -188,10 +188,10 @@ namespace
     }
   }
 
-  TEST_CASE("Publish subscribe", "[pub]")
+  TEST_CASE("Publish subscribe", "[etn][pub]")
   {
     MsgReceived msgReceived{};
-    std::string topic = EtnMessage::buildAddress("test.message.pubsub", AddressType::TOPIC);
+    std::string topic = buildAddress("test.message.pubsub", AddressType::TOPIC);
     auto msgBusSender = EtnMessageBus("PubTestCase");
 
     auto msgBusReceiver = EtnMessageBus("PubTestCaseReceiver");
@@ -210,10 +210,10 @@ namespace
     CHECK(msgReceived.isRecieved(nbMessageToSend));
   }
 
-  TEST_CASE("Pub sub with same object", "[pub]")
+  TEST_CASE("Pub sub with same object", "[etn][pub]")
   {
     MsgReceived msgReceived{};
-    std::string topic = EtnMessage::buildAddress("test.message.sameobject", AddressType::TOPIC);
+    std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);
 
     auto msgBus = EtnMessageBus("PubTestCaseWithSameObject");
     REQUIRE(msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));

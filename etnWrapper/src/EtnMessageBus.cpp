@@ -19,6 +19,8 @@
 #include "etn/messagebus/EtnMessageBus.h"
 #include "etn/messagebus/EtnMessage.h"
 
+#include <fty/messagebus/amqp/MessageBusAmqp.h>
+
 namespace etn::messagebus
 {
   using namespace fty::messagebus;
@@ -27,33 +29,10 @@ namespace etn::messagebus
 
   static const std::string INDENTITY("etnMessageBusAmqpMqtt");
 
-  fty::Expected<void> EtnMessageBus::connect(BusType busType) noexcept
-  {
-    fty::Expected<void> result;
-    switch (busType)
-    {
-      case BusType::MQTT:
-        if (!m_busMqtt)
-        {
-          m_busMqtt = std::make_shared<MessageBusMqtt>(m_clientName, fty::messagebus::mqtt::DEFAULT_ENDPOINT);
-          result = m_busMqtt->connect();
-        }
-        break;
-      default:
-        if (!m_busAmqp)
-        {
-          m_busAmqp = std::make_shared<MessageBusAmqp>(m_clientName, fty::messagebus::amqp::DEFAULT_ENDPOINT);
-          result = m_busAmqp->connect();
-        }
-        break;
-    }
-    return result;
-  }
-
   fty::Expected<void> EtnMessageBus::send(const Message& msg) noexcept
   {
     fty::Expected<void> result;
-    switch (EtnMessage::getBusType(msg.to()))
+    switch (getBusType(msg.to()))
     {
       case BusType::AMQP:
         // For request/reply pattern prefer amqp message bus implementation
@@ -78,7 +57,7 @@ namespace etn::messagebus
   fty::Expected<void> EtnMessageBus::receive(const Address& address, MessageListener&& func, const std::string& filter) noexcept
   {
     fty::Expected<void> result;
-    switch (EtnMessage::getBusType(address))
+    switch (getBusType(address))
     {
       case BusType::AMQP:
         result = connect(BusType::AMQP);
@@ -101,7 +80,7 @@ namespace etn::messagebus
   fty::Expected<void> EtnMessageBus::unreceive(const Address& address) noexcept
   {
     fty::Expected<void> result;
-    switch (EtnMessage::getBusType(address))
+    switch (getBusType(address))
     {
       case BusType::AMQP:
         result = connect(BusType::AMQP);
@@ -141,6 +120,39 @@ namespace etn::messagebus
   const std::string& EtnMessageBus::identity() const noexcept
   {
     return INDENTITY;
+  }
+
+  fty::Expected<void> EtnMessageBus::connect(BusType busType) noexcept
+  {
+    fty::Expected<void> result;
+    switch (busType)
+    {
+      case BusType::MQTT:
+        if (!m_busMqtt)
+        {
+          m_busMqtt = std::make_shared<MessageBusMqtt>(m_clientName, fty::messagebus::mqtt::DEFAULT_ENDPOINT);
+          result = m_busMqtt->connect();
+        }
+        break;
+      default:
+        if (!m_busAmqp)
+        {
+          m_busAmqp = std::make_shared<MessageBusAmqp>(m_clientName, fty::messagebus::amqp::DEFAULT_ENDPOINT);
+          result = m_busAmqp->connect();
+        }
+        break;
+    }
+    return result;
+  }
+
+  BusType EtnMessageBus::getBusType(const Address& address) noexcept
+  {
+    BusType busType = BusType::MQTT;
+    if (address.find(QUEUE_PREFIX) != std::string::npos)
+    {
+      busType = BusType::AMQP;
+    }
+    return busType;
   }
 
 } //namespace etn::messagebus

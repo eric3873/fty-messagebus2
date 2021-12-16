@@ -35,6 +35,12 @@
 
 namespace etn::messagebus
 {
+  // All bus type implementation
+  enum class BusType
+  {
+    AMQP,
+    MQTT
+  };
 
   class EtnMessageBus final : public fty::messagebus::MessageBus
   {
@@ -105,6 +111,8 @@ namespace etn::messagebus
     std::shared_ptr<fty::messagebus::mqtt::MessageBusMqtt> m_busMqtt;
 
     [[nodiscard]] fty::Expected<void> connect(BusType busType) noexcept;
+
+    static BusType getBusType(const fty::messagebus::Address& address) noexcept;
   };
 
 } // namespace etn::messagebus

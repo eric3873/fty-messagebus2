@@ -29,6 +29,8 @@ namespace fty::messagebus::amqp
   static auto constexpr DEFAULT_ENDPOINT{"amqp://127.0.0.1:5672"};
 
   static auto constexpr BUS_IDENTITY{"AMQP"};
+  static const std::string TOPIC_PREFIX = "topic://";
+  static const std::string QUEUE_PREFIX = "queue://";
 
   class MsgBusAmqp;
 
