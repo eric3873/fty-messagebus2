@@ -50,7 +50,8 @@ namespace fty::messagebus
     Message(const Message& message);
     Message(const MetaData& metaData, const UserData& userData);
 
-    virtual ~Message() noexcept = default;
+    ~Message() noexcept = default;
+    Message& operator=(const Message& other);
 
     MetaData& metaData();
     const MetaData& metaData() const;

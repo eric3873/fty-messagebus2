@@ -163,7 +163,7 @@ namespace
     // Test without connection before.
     auto msgBusRequester = EtnMessageBus("SyncRequesterTestCase");
     auto replyMsg = msgBusRequester.request(request, 5);
-    REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
+    REQUIRE(replyMsg->userData() == QUERY_AND_OK);
   }
 
   TEST_CASE("Send async request", "[etn][async]")

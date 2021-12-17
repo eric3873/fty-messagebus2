@@ -232,4 +232,12 @@ namespace fty::messagebus
     return data;
   }
 
+  Message& Message::operator=(const Message& other)
+  {
+    m_metadata = std::move(other.metaData());
+    m_data = std::move(other.userData());
+    return *this;
+  }
+
+
 } //namespace fty::messagebus

@@ -21,6 +21,8 @@
 
 #include <fty/messagebus/amqp/MessageBusAmqp.h>
 
+#include <iostream>
+
 namespace etn::messagebus
 {
   using namespace fty::messagebus;
@@ -102,14 +104,15 @@ namespace etn::messagebus
 
   fty::Expected<Message> EtnMessageBus::request(const Message& msg, int timeOut) noexcept
   {
-    //fty::Expected<Message> result;
+    auto result = connect(BusType::AMQP);
     if (connect(BusType::AMQP))
     {
       return m_busAmqp->request(msg, timeOut);
-      // result = m_busAmqp->request(msg, timeOut);
-      // return result;
     }
-    return {};//result;
+    else
+    {
+      return fty::unexpected(result.error());
+    }
   }
 
   const std::string& EtnMessageBus::clientName() const noexcept
