@@ -226,8 +226,8 @@ namespace
   TEST_CASE("Wrong broker address", "[etn][request][pub]")
   {
     MsgReceived msgReceived{};
-    BrokerAddress brokerAddress{"amqp://wrong.address.ip.com:5672", "tcp://wrong.address.ip.com"};
-    auto msgBus = EtnMessageBus("WrongConnectionTestCase", brokerAddress);
+    EndpointBroker endpointBroker{"amqp://wrong.address.ip.com:5672", "tcp://wrong.address.ip.com"};
+    auto msgBus = EtnMessageBus("WrongConnectionTestCase", endpointBroker);
 
     // Topic
     std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);

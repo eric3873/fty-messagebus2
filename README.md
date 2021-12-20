@@ -88,7 +88,15 @@ etn_target(${PROJECT_NAME}
 
 ## Howto
 
-See all samples in samples folder.
+See all samples in samples folder
+
+* [Samples](samples/)
+
+For Eaton wrapper
+
+* [Etn message bus wrapper api](etnWrapper/public_include/etn/messagebus/EtnMessageBus.h)
+* [Etn message wrapper api](etnWrapper/public_include/etn/messagebus/EtnMessage.h)
+* [Tests](etnWrapper/tests/EtnMessageBusTest.cpp)
 
 ### Mqtt samples
 
