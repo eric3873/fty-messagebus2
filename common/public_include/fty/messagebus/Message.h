@@ -34,13 +34,13 @@ namespace fty::messagebus
 
   // Metadata user property
   static constexpr auto CORRELATION_ID = "CORRELATION_ID";
-  static constexpr auto MESSAGE_ID = "MESSAGE_ID";
-  static constexpr auto FROM = "FROM";         //ClientId of the message
-  static constexpr auto TO = "TO";             //Queue of destination
-  static constexpr auto REPLY_TO = "REPLY_TO"; //Queue for the reply
-  static constexpr auto SUBJECT = "SUBJECT";
-  static constexpr auto STATUS = "STATUS";
-  static constexpr auto TIMEOUT = "TIMEOUT";
+  static constexpr auto MESSAGE_ID     = "MESSAGE_ID";
+  static constexpr auto FROM           = "FROM";         //ClientId of the message
+  static constexpr auto TO             = "TO";             //Queue of destination
+  static constexpr auto REPLY_TO       = "REPLY_TO"; //Queue for the reply
+  static constexpr auto SUBJECT        = "SUBJECT";
+  static constexpr auto STATUS         = "STATUS";
+  static constexpr auto TIMEOUT        = "TIMEOUT";
 
   class Message;
   class Message

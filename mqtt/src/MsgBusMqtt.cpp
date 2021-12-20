@@ -133,8 +133,6 @@ namespace fty::messagebus::mqtt
     logDebug("Connecting for {} to {} ...", m_clientName, m_endpoint);
     ::mqtt::create_options opts(MQTTVERSION_5);
 
-    ::mqtt::async_client a(m_endpoint, utils::getClientId("async-" + m_clientName), opts);
-
     m_asynClient = std::make_shared<::mqtt::async_client>(m_endpoint, utils::getClientId("async-" + m_clientName), opts);
 
     // Connection options

@@ -132,8 +132,7 @@ namespace
     MsgReceived msgReceived{};
     std::string sendTestQueue = buildAddress("test.message.send", AddressType::QUEUE);
 
-    auto msgBus = EtnMessageBus("MessageRecieverSendTestCase");
-
+    auto msgBus = EtnMessageBus("MessageRecieverSendTestCase", {AMQP_SERVER_URI, MQTT_SERVER_URI});
     auto msgBusSender = EtnMessageBus("MessageSenderSendTestCase");
 
     REQUIRE(msgBusSender.receive(sendTestQueue, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
@@ -166,7 +165,7 @@ namespace
     REQUIRE(replyMsg->userData() == QUERY_AND_OK);
   }
 
-  TEST_CASE("Send async request", "[etn][async]")
+  TEST_CASE("Send async request", "[etn][request][async]")
   {
     MsgReceived msgReceived{};
     ;
@@ -210,7 +209,7 @@ namespace
     CHECK(msgReceived.isRecieved(nbMessageToSend));
   }
 
-  TEST_CASE("Pub sub with same object", "[etn][pub]")
+  TEST_CASE("Publish and subscibe with same object", "[etn][pub]")
   {
     MsgReceived msgReceived{};
     std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);
@@ -222,5 +221,23 @@ namespace
     REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
     std::this_thread::sleep_for(TIMEOUT);
     CHECK(msgReceived.isRecieved(1));
+  }
+
+  TEST_CASE("Wrong broker address", "[etn][request][pub]")
+  {
+    MsgReceived msgReceived{};
+    BrokerAddress brokerAddress{"amqp://wrong.address.ip.com:5672", "tcp://wrong.address.ip.com"};
+    auto msgBus = EtnMessageBus("WrongConnectionTestCase", brokerAddress);
+
+    // Topic
+    std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);
+    auto ret = msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1));
+    REQUIRE(ret.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
+
+    // Request
+    std::string syncTestQueue = buildAddress("test.message.sync.", AddressType::REQUEST_QUEUE);
+    Message request = Message::buildRequest("SyncRequesterTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
+    ret = msgBus.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1));
+    REQUIRE(ret.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
   }
 } // namespace

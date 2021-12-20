@@ -38,7 +38,7 @@ namespace fty::messagebus::amqp
   public:
     MsgBusAmqp() = delete;
 
-    MsgBusAmqp(const std::string& clientName, const std::string& endpoint)
+    MsgBusAmqp(const std::string& clientName, const Endpoint& endpoint)
       : m_clientName(clientName)
       , m_endpoint(endpoint){};
 
@@ -62,7 +62,7 @@ namespace fty::messagebus::amqp
 
   private:
     std::string m_clientName{};
-    std::string m_endpoint{};
+    Endpoint m_endpoint{};
 
     std::map<std::string, AmqpClientPointer> m_subScriptions;
     AmqpClientPointer m_amqpClient;

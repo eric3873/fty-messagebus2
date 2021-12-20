@@ -46,7 +46,7 @@ namespace fty::messagebus::amqp
   {
   public:
 
-    AmqpClient(const std::string& url);
+    AmqpClient(const Endpoint& url);
     ~AmqpClient();
 
     void on_container_start(proton::container& container) override;
@@ -65,7 +65,7 @@ namespace fty::messagebus::amqp
     void close();
 
   private:
-    std::string m_url;
+    Endpoint m_url;
     SubScriptionListener m_subscriptions;
     // Default communication state
     fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::COM_STATE_UNKNOWN;

@@ -42,11 +42,47 @@ namespace etn::messagebus
     MQTT
   };
 
+  struct BrokerAddress
+  {
+
+  public:
+    BrokerAddress(const fty::messagebus::Endpoint& amqpAddress = fty::messagebus::amqp::DEFAULT_ENDPOINT, const fty::messagebus::Endpoint& mqttAddress = fty::messagebus::mqtt::DEFAULT_ENDPOINT)
+      : m_amqpAddress(amqpAddress)
+      , m_mqttAddress(mqttAddress)
+    {
+    }
+
+    void amqpAddress(const fty::messagebus::Endpoint& endpoint)
+    {
+      m_amqpAddress = endpoint;
+    }
+
+    fty::messagebus::Endpoint amqpAddress()
+    {
+      return m_amqpAddress;
+    }
+
+    fty::messagebus::Endpoint mqttAddress()
+    {
+      return m_mqttAddress;
+    }
+
+    void mqttAddress(const fty::messagebus::Endpoint& endpoint)
+    {
+      m_mqttAddress = endpoint;
+    }
+
+  private:
+    fty::messagebus::Endpoint m_amqpAddress;
+    fty::messagebus::Endpoint m_mqttAddress;
+  };
+
   class EtnMessageBus final : public fty::messagebus::MessageBus
   {
   public:
-    EtnMessageBus(const fty::messagebus::ClientName& clientName = fty::messagebus::utils::getClientId("EtnMessageBus"))
-      : m_clientName(clientName){};
+    EtnMessageBus(const fty::messagebus::ClientName& clientName = fty::messagebus::utils::getClientId("EtnMessageBus"), const BrokerAddress& brokerAddress = {})
+      : m_clientName(clientName)
+      , m_brokerAddress(brokerAddress){};
 
     ~EtnMessageBus() = default;
 
@@ -109,6 +145,8 @@ namespace etn::messagebus
     fty::messagebus::ClientName m_clientName{};
     std::shared_ptr<fty::messagebus::amqp::MessageBusAmqp> m_busAmqp;
     std::shared_ptr<fty::messagebus::mqtt::MessageBusMqtt> m_busMqtt;
+
+    BrokerAddress m_brokerAddress;
 
     [[nodiscard]] fty::Expected<void> connect(BusType busType) noexcept;
 

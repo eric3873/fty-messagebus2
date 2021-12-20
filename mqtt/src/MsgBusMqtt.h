@@ -28,7 +28,7 @@ namespace fty::messagebus::mqtt
   public:
     MsgBusMqtt() = delete;
 
-    MsgBusMqtt(const std::string& clientName, const std::string& endpoint, const Message& will = Message())
+    MsgBusMqtt(const std::string& clientName, const Endpoint& endpoint, const Message& will = Message())
       : m_clientName(clientName)
       , m_endpoint(endpoint)
       , m_will(will) {};
@@ -53,7 +53,7 @@ namespace fty::messagebus::mqtt
 
   private:
     std::string m_clientName;
-    std::string m_endpoint;
+    Endpoint m_endpoint;
     Message m_will;
 
     // Asynchronous and synchronous mqtt client

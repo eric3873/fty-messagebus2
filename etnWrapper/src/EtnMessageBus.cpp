@@ -133,14 +133,14 @@ namespace etn::messagebus
       case BusType::MQTT:
         if (!m_busMqtt)
         {
-          m_busMqtt = std::make_shared<MessageBusMqtt>(m_clientName, fty::messagebus::mqtt::DEFAULT_ENDPOINT);
+          m_busMqtt = std::make_shared<MessageBusMqtt>(m_clientName, m_brokerAddress.mqttAddress());
           result = m_busMqtt->connect();
         }
         break;
       default:
         if (!m_busAmqp)
         {
-          m_busAmqp = std::make_shared<MessageBusAmqp>(m_clientName, fty::messagebus::amqp::DEFAULT_ENDPOINT);
+          m_busAmqp = std::make_shared<MessageBusAmqp>(m_clientName, m_brokerAddress.amqpAddress());
           result = m_busAmqp->connect();
         }
         break;

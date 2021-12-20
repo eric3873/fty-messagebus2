@@ -32,7 +32,7 @@ namespace fty::messagebus::amqp
   static auto constexpr TIMEOUT = std::chrono::seconds(1);
   static auto constexpr AMQP_CORREL_ID = "JMSCorrelationID";
 
-  AmqpClient::AmqpClient(const std::string& url)
+  AmqpClient::AmqpClient(const Endpoint& url)
     : m_url(url)
   {
     m_connectFuture = m_connectPromise.get_future();
