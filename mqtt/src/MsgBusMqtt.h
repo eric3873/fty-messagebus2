@@ -33,6 +33,11 @@ namespace fty::messagebus::mqtt
       , m_endpoint(endpoint)
       , m_will(will) {};
 
+    MsgBusMqtt(MsgBusMqtt&& other) = delete;
+    MsgBusMqtt& operator=(MsgBusMqtt&& other) = delete;
+    MsgBusMqtt(const MsgBusMqtt& other) = delete;
+    MsgBusMqtt& operator=(const MsgBusMqtt& other) = delete;
+
     ~MsgBusMqtt();
 
     [[nodiscard]] fty::Expected<void> connect();

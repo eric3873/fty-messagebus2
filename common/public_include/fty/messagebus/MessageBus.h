@@ -41,7 +41,7 @@ namespace fty::messagebus
     MessageBus() noexcept = default;
     virtual ~MessageBus() = default;
     MessageBus(const MessageBus&) = delete;
-    MessageBus(MessageBus&&) noexcept = default;
+    MessageBus(MessageBus&&) noexcept = delete;
 
     /// Connect to the MessageBus
     /// @return Success or Com Error

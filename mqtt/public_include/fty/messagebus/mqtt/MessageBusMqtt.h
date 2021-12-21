@@ -46,9 +46,9 @@ namespace fty::messagebus::mqtt
 
     ~MessageBusMqtt();
 
-    MessageBusMqtt(MessageBusMqtt && other) = default;
+    MessageBusMqtt(MessageBusMqtt && other) = delete;
     MessageBusMqtt& operator=(MessageBusMqtt&& other) = delete;
-    MessageBusMqtt(const MessageBusMqtt& other) = default;
+    MessageBusMqtt(const MessageBusMqtt& other) = delete;
     MessageBusMqtt& operator=(const MessageBusMqtt& other) = delete;
 
     [[nodiscard]] fty::Expected<void> connect() noexcept override;

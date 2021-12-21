@@ -42,6 +42,11 @@ namespace fty::messagebus::amqp
       : m_clientName(clientName)
       , m_endpoint(endpoint){};
 
+    MsgBusAmqp(MsgBusAmqp&& other) = delete;
+    MsgBusAmqp& operator=(MsgBusAmqp&& other) = delete;
+    MsgBusAmqp(const MsgBusAmqp& other) = delete;
+    MsgBusAmqp& operator=(const MsgBusAmqp& other) = delete;
+
     ~MsgBusAmqp();
 
     [[nodiscard]] fty::Expected<void> connect();

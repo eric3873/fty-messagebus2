@@ -42,7 +42,7 @@ namespace fty::messagebus::amqp
 
     ~MessageBusAmqp() = default;
 
-    MessageBusAmqp(MessageBusAmqp&& other) = default;
+    MessageBusAmqp(MessageBusAmqp&& other) = delete;
     MessageBusAmqp& operator=(MessageBusAmqp&& other) = delete;
     MessageBusAmqp(const MessageBusAmqp& other) = default;
     MessageBusAmqp& operator=(const MessageBusAmqp& other) = delete;
