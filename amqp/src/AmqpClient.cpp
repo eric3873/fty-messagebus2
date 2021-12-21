@@ -19,10 +19,32 @@
 
 #include "AmqpClient.h"
 
+#include <proton/connection_options.hpp>
+#include <proton/reconnect_options.hpp>
 #include <proton/tracker.hpp>
 #include <proton/work_queue.hpp>
 
 #include <fty_log.h>
+
+namespace
+{
+  proton::reconnect_options reconnectOpts()
+  {
+    proton::reconnect_options reconnectOption;
+    reconnectOption.delay(proton::duration::SECOND);
+    reconnectOption.max_delay(proton::duration::MINUTE);
+    reconnectOption.max_attempts(5);
+    reconnectOption.delay_multiplier(5);
+
+    return reconnectOption;
+  }
+
+  proton::connection_options connectOpts()
+  {
+    return proton::connection_options();
+  }
+
+} // namespace
 
 namespace fty::messagebus::amqp
 {
@@ -47,7 +69,7 @@ namespace fty::messagebus::amqp
   {
     try
     {
-      container.connect(m_url);
+      container.connect(m_url, connectOpts().reconnect(reconnectOpts()));
     }
     catch (std::exception& e)
     {
