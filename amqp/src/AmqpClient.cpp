@@ -194,7 +194,7 @@ namespace fty::messagebus::amqp
   void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
   {
     std::lock_guard<std::mutex> lock(m_lock);
-    logDebug("Message arrived {}", proton::to_string(msg));
+    logDebug("Message arrived: {}", proton::to_string(msg));
     delivery.accept();
     Message amqpMsg(getMetaData(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
 

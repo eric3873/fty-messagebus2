@@ -128,15 +128,13 @@ namespace fty::messagebus::mqtt
   {
     if (auto it{m_subscriptions.find(topic)}; it == m_subscriptions.end())
     {
-      auto ret = m_subscriptions.emplace(topic, messageListener);
-      logTrace("Subscriptions emplaced: {} {}", topic, ret.second ? "true" : "false");
+      m_subscriptions.emplace(topic, messageListener);
     }
   }
 
   void CallBack::eraseSubscriptions(const std::string& topic)
   {
-    auto eraseNbr = m_subscriptions.erase(topic);
-    logTrace("Subscriptions deleted: {} {}", topic, eraseNbr ? "true" : "false");
+    m_subscriptions.erase(topic);
   }
 
   // Callback called when a mqtt message arrives.

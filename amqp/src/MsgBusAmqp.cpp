@@ -89,7 +89,6 @@ namespace fty::messagebus::amqp
     });
     auto received = receiver->receive(address, filter, messageListener);
     m_subScriptions.emplace(address, receiver);
-    logDebug("m_subScriptions nb: {}, {}", m_subScriptions.size(), address);
     thrd.detach();
 
     if (received != DeliveryState::DELIVERY_STATE_ACCEPTED)
@@ -97,8 +96,6 @@ namespace fty::messagebus::amqp
       logError("Message receive (Rejected)");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
-
-    logDebug("Waiting to receive msg from: {} Accepted", address);
     return {};
   }
 
