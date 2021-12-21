@@ -46,7 +46,7 @@ namespace fty::messagebus::mqtt
     if (props.contains(::mqtt::property::USER_PROPERTY))
     {
       std::string key, value;
-      for (size_t i = 0; i < props.count(::mqtt::property::USER_PROPERTY); i++)
+      for (size_t i = 0; i < props.count(::mqtt::property::USER_PROPERTY); ++i)
       {
         std::tie(key, value) = ::mqtt::get<::mqtt::string_pair>(props, ::mqtt::property::USER_PROPERTY, i);
         message.setMetaDataValue(key, value);
