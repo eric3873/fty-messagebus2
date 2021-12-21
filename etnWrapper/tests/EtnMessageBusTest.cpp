@@ -127,116 +127,123 @@ namespace
   // Test case
   //----------------------------------------------------------------------
 
-  TEST_CASE("Send", "[etn][request][send]")
+  TEST_CASE("Request Reply", "[etn][request][send]")
   {
-    MsgReceived msgReceived{};
-    std::string sendTestQueue = buildAddress("test.message.send", AddressType::QUEUE);
-
-    auto msgBus = EtnMessageBus("MessageRecieverSendTestCase", {AMQP_SERVER_URI, MQTT_SERVER_URI});
-    auto msgBusSender = EtnMessageBus("MessageSenderSendTestCase");
-
-    REQUIRE(msgBusSender.receive(sendTestQueue, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
-
-    // Send message on queue
-    Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
-
-    int nbMessageToSend = 3;
-    for (int i = 0; i < nbMessageToSend; i++)
+    SECTION("Send")
     {
-      REQUIRE(msgBusSender.send(msg));
-    }
-    std::this_thread::sleep_for(TIMEOUT);
-    CHECK(msgReceived.isRecieved(nbMessageToSend));
-  }
+      MsgReceived msgReceived{};
+      std::string sendTestQueue = buildAddress("test.message.send", AddressType::QUEUE);
 
-  TEST_CASE("Send sync request", "[etn][request][sync]")
-  {
-    MsgReceived msgReceived{};
-    std::string syncTestQueue = buildAddress("test.message.sync.", AddressType::REQUEST_QUEUE);
-    auto msgBusReciever = EtnMessageBus("SyncReceiverTestCase");
+      auto msgBus = EtnMessageBus("MessageRecieverSendTestCase", {AMQP_SERVER_URI, MQTT_SERVER_URI});
+      auto msgBusSender = EtnMessageBus("MessageSenderSendTestCase");
 
-    // Send synchronous request
-    Message request = Message::buildRequest("SyncRequesterTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
-    REQUIRE(msgBusReciever.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+      REQUIRE(msgBusSender.receive(sendTestQueue, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
 
-    // Test without connection before.
-    auto msgBusRequester = EtnMessageBus("SyncRequesterTestCase");
-    auto replyMsg = msgBusRequester.request(request, 5);
-    REQUIRE(replyMsg->userData() == QUERY_AND_OK);
-  }
+      // Send message on queue
+      Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
 
-  TEST_CASE("Send async request", "[etn][request][async]")
-  {
-    MsgReceived msgReceived{};
-    std::string asyncTestQueue = buildAddress("test.message.async.", AddressType::REQUEST_QUEUE);
-    auto msgBusRequester = EtnMessageBus("AsyncRequesterTestCase");
-
-    auto msgBusReplyer = EtnMessageBus("AsyncReplyerTestCase");
-
-    // Build asynchronous request and set all receiver
-    Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
-    REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
-    REQUIRE(msgBusRequester.receive(request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), request.correlationId()));
-
-    for (int i = 0; i < 3; i++)
-    {
-      REQUIRE(msgBusReplyer.send(request));
+      int nbMessageToSend = 3;
+      for (int i = 0; i < nbMessageToSend; i++)
+      {
+        REQUIRE(msgBusSender.send(msg));
+      }
       std::this_thread::sleep_for(TIMEOUT);
-      CHECK(msgReceived.assertValue(i + 1));
+      CHECK(msgReceived.isRecieved(nbMessageToSend));
     }
-  }
 
-  TEST_CASE("Publish subscribe", "[.][etn][pub]")
-  {
-    MsgReceived msgReceived{};
-    std::string topic = buildAddress("test.message.pubsub", AddressType::TOPIC);
-    auto msgBusSender = EtnMessageBus("PubTestCase");
-
-    auto msgBusReceiver = EtnMessageBus("PubTestCaseReceiver");
-
-    REQUIRE(msgBusReceiver.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
-
-    Message msg = Message::buildMessage("PubSubTestCase", topic, "TEST", QUERY);
-    int nbMessageToSend = 3;
-
-    for (int i = 0; i < nbMessageToSend; i++)
+    SECTION("Send sync request")
     {
-      auto delivState = msgBusSender.send(msg);
-      REQUIRE(delivState == DeliveryState::DELIVERY_STATE_ACCEPTED);
+      MsgReceived msgReceived{};
+      std::string syncTestQueue = buildAddress("test.message.sync.", AddressType::REQUEST_QUEUE);
+      auto msgBusReciever = EtnMessageBus("SyncReceiverTestCase");
+
+      // Send synchronous request
+      Message request = Message::buildRequest("SyncRequesterTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
+      REQUIRE(msgBusReciever.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+
+      // Test without connection before.
+      auto msgBusRequester = EtnMessageBus("SyncRequesterTestCase");
+      auto replyMsg = msgBusRequester.request(request, 5);
+      REQUIRE(replyMsg->userData() == QUERY_AND_OK);
     }
-    std::this_thread::sleep_for(TIMEOUT);
-    CHECK(msgReceived.isRecieved(nbMessageToSend));
+
+    SECTION("Send async request")
+    {
+      MsgReceived msgReceived{};
+      std::string asyncTestQueue = buildAddress("test.message.async.", AddressType::REQUEST_QUEUE);
+      auto msgBusRequester = EtnMessageBus("AsyncRequesterTestCase");
+
+      auto msgBusReplyer = EtnMessageBus("AsyncReplyerTestCase");
+
+      // Build asynchronous request and set all receiver
+      Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
+      REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+      REQUIRE(msgBusRequester.receive(request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), request.correlationId()));
+
+      for (int i = 0; i < 3; i++)
+      {
+        REQUIRE(msgBusReplyer.send(request));
+        std::this_thread::sleep_for(TIMEOUT);
+        CHECK(msgReceived.assertValue(i + 1));
+      }
+    }
   }
 
-  TEST_CASE("Publish and subscibe with same object", "[.][etn][pub]")
+  TEST_CASE("Publish subscribe", "[.][etn][pub][sub]")
   {
-    MsgReceived msgReceived{};
-    std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);
+    SECTION("PubSub")
+    {
+      MsgReceived msgReceived{};
+      std::string topic = buildAddress("test.message.pubsub", AddressType::TOPIC);
+      auto msgBusSender = EtnMessageBus("PubTestCase");
 
-    auto msgBus = EtnMessageBus("PubTestCaseWithSameObject");
-    REQUIRE(msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
+      auto msgBusReceiver = EtnMessageBus("PubTestCaseReceiver");
 
-    Message msg = Message::buildMessage("PubTestCaseWithSameObject", topic, "TEST", QUERY);
-    REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-    std::this_thread::sleep_for(TIMEOUT);
-    CHECK(msgReceived.isRecieved(1));
+      REQUIRE(msgBusReceiver.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
+
+      Message msg = Message::buildMessage("PubSubTestCase", topic, "TEST", QUERY);
+      int nbMessageToSend = 3;
+
+      for (int i = 0; i < nbMessageToSend; i++)
+      {
+        auto delivState = msgBusSender.send(msg);
+        REQUIRE(delivState == DeliveryState::DELIVERY_STATE_ACCEPTED);
+      }
+      std::this_thread::sleep_for(TIMEOUT);
+      CHECK(msgReceived.isRecieved(nbMessageToSend));
+    }
+
+    SECTION("PubSub with same object")
+    {
+      MsgReceived msgReceived{};
+      std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);
+
+      auto msgBus = EtnMessageBus("PubTestCaseWithSameObject");
+      REQUIRE(msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
+
+      Message msg = Message::buildMessage("PubTestCaseWithSameObject", topic, "TEST", QUERY);
+      REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+      std::this_thread::sleep_for(TIMEOUT);
+      CHECK(msgReceived.isRecieved(1));
+    }
+
+    SECTION("Wrong broker endpoint")
+    {
+      MsgReceived msgReceived{};
+      EndpointBroker endpointBroker{"amqp://wrong.address.ip.com:5672", "tcp://wrong.address.ip.com"};
+      auto msgBus = EtnMessageBus("WrongConnectionTestCase", endpointBroker);
+
+      // Topic
+      std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);
+      auto ret = msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1));
+      REQUIRE(ret.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
+
+      // Request
+      std::string syncTestQueue = buildAddress("test.message.sync.", AddressType::REQUEST_QUEUE);
+      Message request = Message::buildRequest("SyncRequesterTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
+      ret = msgBus.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1));
+      REQUIRE(ret.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
+    }
   }
 
-  TEST_CASE("Wrong broker address", "[.][etn][request][pub]")
-  {
-    MsgReceived msgReceived{};
-    EndpointBroker endpointBroker{"amqp://wrong.address.ip.com:5672", "tcp://wrong.address.ip.com"};
-    auto msgBus = EtnMessageBus("WrongConnectionTestCase", endpointBroker);
-
-    // Topic
-    std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);
-    auto ret = msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1));
-    REQUIRE(ret.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
-
-    // Request
-    std::string syncTestQueue = buildAddress("test.message.sync.", AddressType::REQUEST_QUEUE);
-    Message request = Message::buildRequest("SyncRequesterTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
-    ret = msgBus.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1));
-    REQUIRE(ret.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
-  }
 } // namespace
