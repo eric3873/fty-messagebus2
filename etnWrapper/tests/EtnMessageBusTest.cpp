@@ -168,7 +168,6 @@ namespace
   TEST_CASE("Send async request", "[etn][request][async]")
   {
     MsgReceived msgReceived{};
-    ;
     std::string asyncTestQueue = buildAddress("test.message.async.", AddressType::REQUEST_QUEUE);
     auto msgBusRequester = EtnMessageBus("AsyncRequesterTestCase");
 
@@ -187,7 +186,7 @@ namespace
     }
   }
 
-  TEST_CASE("Publish subscribe", "[etn][pub]")
+  TEST_CASE("Publish subscribe", "[.][etn][pub]")
   {
     MsgReceived msgReceived{};
     std::string topic = buildAddress("test.message.pubsub", AddressType::TOPIC);
@@ -209,7 +208,7 @@ namespace
     CHECK(msgReceived.isRecieved(nbMessageToSend));
   }
 
-  TEST_CASE("Publish and subscibe with same object", "[etn][pub]")
+  TEST_CASE("Publish and subscibe with same object", "[.][etn][pub]")
   {
     MsgReceived msgReceived{};
     std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);
@@ -223,7 +222,7 @@ namespace
     CHECK(msgReceived.isRecieved(1));
   }
 
-  TEST_CASE("Wrong broker address", "[etn][request][pub]")
+  TEST_CASE("Wrong broker address", "[.][etn][request][pub]")
   {
     MsgReceived msgReceived{};
     EndpointBroker endpointBroker{"amqp://wrong.address.ip.com:5672", "tcp://wrong.address.ip.com"};
