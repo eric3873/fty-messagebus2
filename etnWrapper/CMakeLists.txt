@@ -7,7 +7,7 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
   PUBLIC_INCLUDE_DIR
     public_include
   PUBLIC_HEADERS
-    *.hpp
+    *.h
   SOURCES
     src/*.cpp
   USES_PUBLIC
