@@ -62,19 +62,19 @@ namespace etn::messagebus
       m_amqpEndpoint = endpoint;
     }
 
-    fty::messagebus::Endpoint amqpEndpoint()
+    fty::messagebus::Endpoint amqpEndpoint() const
     {
       return m_amqpEndpoint;
-    }
-
-    fty::messagebus::Endpoint mqttEndpoint()
-    {
-      return m_mqttEndpoint;
     }
 
     void mqttEndpoint(const fty::messagebus::Endpoint& endpoint)
     {
       m_mqttEndpoint = endpoint;
+    }
+
+    fty::messagebus::Endpoint mqttEndpoint() const
+    {
+      return m_mqttEndpoint;
     }
 
   private:
