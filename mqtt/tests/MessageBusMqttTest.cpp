@@ -130,181 +130,190 @@ namespace
     REQUIRE(msgBus.identity() == mqtt::BUS_IDENTITY);
   }
 
-  TEST_CASE("Send", "[mqtt][request][send]")
+  TEST_CASE("queue", "[mqtt][request]")
   {
-    std::string sendTestQueue = "/test/message/send";
-    auto msgBus = mqtt::MessageBusMqtt("MessageRecieverSendTestCase", MQTT_SERVER_URI);
-    REQUIRE(msgBus.connect());
-
-    auto msgBusSender = mqtt::MessageBusMqtt("MessageSenderSendTestCase", MQTT_SERVER_URI);
-    REQUIRE(msgBusSender.connect());
-
-    REQUIRE(msgBusSender.receive(sendTestQueue, messageListener));
-
-    // Send synchronous request
-    Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
-
-    g_msgRecieved.reset();
-    int nbMessageToSend = 3;
-    for (int i = 0; i < nbMessageToSend; i++)
+    SECTION("Send")
     {
-      REQUIRE(msgBusSender.send(msg));
-    }
-    std::this_thread::sleep_for(TIMEOUT);
-    CHECK(g_msgRecieved.isRecieved(nbMessageToSend));
-  }
+      std::string sendTestQueue = "/test/message/send";
+      auto msgBus = mqtt::MessageBusMqtt("MessageRecieverSendTestCase", MQTT_SERVER_URI);
+      REQUIRE(msgBus.connect());
 
-  TEST_CASE("Send sync request", "[mqtt][request][sync]")
-  {
-    std::string syncTestQueue = "/etn/test/message/sync/";
+      auto msgBusSender = mqtt::MessageBusMqtt("MessageSenderSendTestCase", MQTT_SERVER_URI);
+      REQUIRE(msgBusSender.connect());
 
-    auto msgBusReciever = mqtt::MessageBusMqtt("SyncReceiverTestCase", MQTT_SERVER_URI);
+      REQUIRE(msgBusSender.receive(sendTestQueue, messageListener));
 
-    // Send synchronous request
-    Message request = Message::buildRequest("SyncRequesterTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
+      // Send synchronous request
+      Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
 
-    REQUIRE(msgBusReciever.connect());
-    REQUIRE(msgBusReciever.receive(request.to(), replyerAddOK));
-
-    // Test without connection before.
-    auto msgBusRequester = mqtt::MessageBusMqtt("SyncRequesterTestCase", MQTT_SERVER_URI);
-    auto requester = msgBusRequester.request(request, 5);
-    REQUIRE(requester.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
-
-    // Test with connection after.
-    REQUIRE(msgBusRequester.connect());
-    auto replyMsg = msgBusRequester.request(request, 5);
-    REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
-  }
-
-  TEST_CASE("Send request sync timeout reached", "[mqtt][request][sync]")
-  {
-    std::string syncTimeOutTestQueue = "/etn/test/message/synctimeout/";
-    auto msgBus = mqtt::MessageBusMqtt("SyncRequesterTimeOutTestCase", MQTT_SERVER_URI);
-
-    REQUIRE(msgBus.connect());
-
-    // Send synchronous request
-    Message request = Message::buildRequest("SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:");
-
-    auto replyMsg = msgBus.request(request, 1);
-    REQUIRE(!replyMsg);
-    REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
-  }
-
-  TEST_CASE("Send async request", "[mqtt][request][async]")
-  {
-    std::string asyncTestQueue = "/etn/test/message/async/";
-    auto msgBusRequester = mqtt::MessageBusMqtt("AsyncRequesterTestCase", MQTT_SERVER_URI);
-    REQUIRE(msgBusRequester.connect());
-
-    auto msgBusReplyer = mqtt::MessageBusMqtt("AsyncReplyerTestCase", MQTT_SERVER_URI);
-    REQUIRE(msgBusReplyer.connect());
-
-    // Build asynchronous request and set all receiver
-    Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
-    REQUIRE(msgBusReplyer.receive(request.to(), replyerAddOK));
-    REQUIRE(msgBusRequester.receive(request.replyTo(), messageListener, request.correlationId()));
-
-    g_msgRecieved.reset();
-    for (int i = 0; i < 2; i++)
-    {
-      REQUIRE(msgBusReplyer.send(request));
+      g_msgRecieved.reset();
+      int nbMessageToSend = 3;
+      for (int i = 0; i < nbMessageToSend; i++)
+      {
+        REQUIRE(msgBusSender.send(msg));
+      }
       std::this_thread::sleep_for(TIMEOUT);
-      REQUIRE((g_msgRecieved.assertValue(i + 1)));
+      CHECK(g_msgRecieved.isRecieved(nbMessageToSend));
     }
-  }
 
-  TEST_CASE("Publish subscribe", "[mqtt][pub]")
-  {
-    auto topic = "/etn/test/message/pubsub";
-    auto msgBusSender = mqtt::MessageBusMqtt("PubTestCase", MQTT_SERVER_URI);
-    REQUIRE(msgBusSender.connect());
-
-    auto msgBusReceiver = mqtt::MessageBusMqtt("PubTestCaseReceiver", MQTT_SERVER_URI);
-    REQUIRE(msgBusReceiver.connect());
-
-    REQUIRE(msgBusReceiver.receive(topic, messageListener));
-
-    Message msg = Message::buildMessage("PubSubTestCase", topic, "TEST", QUERY);
-    g_msgRecieved.reset();
-    int nbMessageToSend = 3;
-
-    for (int i = 0; i < nbMessageToSend; i++)
+    SECTION("Send sync request")
     {
-      REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+      std::string syncTestQueue = "/etn/test/message/sync/";
+
+      auto msgBusReciever = mqtt::MessageBusMqtt("SyncReceiverTestCase", MQTT_SERVER_URI);
+
+      // Send synchronous request
+      Message request = Message::buildRequest("SyncRequesterTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
+
+      REQUIRE(msgBusReciever.connect());
+      REQUIRE(msgBusReciever.receive(request.to(), replyerAddOK));
+
+      // Test without connection before.
+      auto msgBusRequester = mqtt::MessageBusMqtt("SyncRequesterTestCase", MQTT_SERVER_URI);
+      auto requester = msgBusRequester.request(request, 5);
+      REQUIRE(requester.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+
+      // Test with connection after.
+      REQUIRE(msgBusRequester.connect());
+      auto replyMsg = msgBusRequester.request(request, 5);
+      REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
     }
-    std::this_thread::sleep_for(TIMEOUT);
-    CHECK(g_msgRecieved.isRecieved(nbMessageToSend));
+
+    SECTION("Send request sync timeout reached")
+    {
+      std::string syncTimeOutTestQueue = "/etn/test/message/synctimeout/";
+      auto msgBus = mqtt::MessageBusMqtt("SyncRequesterTimeOutTestCase", MQTT_SERVER_URI);
+
+      REQUIRE(msgBus.connect());
+
+      // Send synchronous request
+      Message request = Message::buildRequest("SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:");
+
+      auto replyMsg = msgBus.request(request, 1);
+      REQUIRE(!replyMsg);
+      REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
+    }
+
+    SECTION("Send async request")
+    {
+      std::string asyncTestQueue = "/etn/test/message/async/";
+      auto msgBusRequester = mqtt::MessageBusMqtt("AsyncRequesterTestCase", MQTT_SERVER_URI);
+      REQUIRE(msgBusRequester.connect());
+
+      auto msgBusReplyer = mqtt::MessageBusMqtt("AsyncReplyerTestCase", MQTT_SERVER_URI);
+      REQUIRE(msgBusReplyer.connect());
+
+      // Build asynchronous request and set all receiver
+      Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
+      REQUIRE(msgBusReplyer.receive(request.to(), replyerAddOK));
+      REQUIRE(msgBusRequester.receive(request.replyTo(), messageListener, request.correlationId()));
+
+      g_msgRecieved.reset();
+      for (int i = 0; i < 2; i++)
+      {
+        REQUIRE(msgBusReplyer.send(request));
+        std::this_thread::sleep_for(TIMEOUT);
+        REQUIRE((g_msgRecieved.assertValue(i + 1)));
+      }
+    }
   }
 
-  TEST_CASE("Unreceive", "[mqtt][pub]")
+  TEST_CASE("topic", "[mqtt][pub]")
   {
-    auto msgBus = mqtt::MessageBusMqtt("UnreceiveReceiverTestCase", MQTT_SERVER_URI);
-    std::string topic = "/etn/test/message/unreceive";
+    SECTION("Send async request")
+    {
+      auto topic = "/etn/test/message/pubsub";
+      auto msgBusSender = mqtt::MessageBusMqtt("PubTestCase", MQTT_SERVER_URI);
+      REQUIRE(msgBusSender.connect());
 
-    // Try to unreceive before a connection => UNAVAILABLE
-    REQUIRE(msgBus.unreceive(topic).error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
-    REQUIRE(msgBus.connect());
-    REQUIRE(msgBus.receive(topic, messageListener));
+      auto msgBusReceiver = mqtt::MessageBusMqtt("PubTestCaseReceiver", MQTT_SERVER_URI);
+      REQUIRE(msgBusReceiver.connect());
 
-    auto msgBusSender = mqtt::MessageBusMqtt("UnreceiveSenderTestCase", MQTT_SERVER_URI);
-    REQUIRE(msgBusSender.connect());
+      REQUIRE(msgBusReceiver.receive(topic, messageListener));
 
-    Message msg = Message::buildMessage("UnreceiveTestCase", topic, "TEST", QUERY);
-    g_msgRecieved.reset();
-    REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-    std::this_thread::sleep_for(TIMEOUT);
-    CHECK(g_msgRecieved.isRecieved(1));
+      Message msg = Message::buildMessage("PubSubTestCase", topic, "TEST", QUERY);
+      g_msgRecieved.reset();
+      int nbMessageToSend = 3;
 
-    // Try to unreceive a wrong topic => REJECTED
-    REQUIRE(msgBus.unreceive("/etn/t/wrongTopic").error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-    // Try to unreceive a right topic => ACCEPTED
-    REQUIRE(msgBus.unreceive(topic));
-    REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-    std::this_thread::sleep_for(TIMEOUT);
-    CHECK(g_msgRecieved.isRecieved(1));
+      for (int i = 0; i < nbMessageToSend; i++)
+      {
+        REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+      }
+      std::this_thread::sleep_for(TIMEOUT);
+      CHECK(g_msgRecieved.isRecieved(nbMessageToSend));
+    }
+
+    SECTION("Unreceive")
+    {
+      auto msgBus = mqtt::MessageBusMqtt("UnreceiveReceiverTestCase", MQTT_SERVER_URI);
+      std::string topic = "/etn/test/message/unreceive";
+
+      // Try to unreceive before a connection => UNAVAILABLE
+      REQUIRE(msgBus.unreceive(topic).error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+      REQUIRE(msgBus.connect());
+      REQUIRE(msgBus.receive(topic, messageListener));
+
+      auto msgBusSender = mqtt::MessageBusMqtt("UnreceiveSenderTestCase", MQTT_SERVER_URI);
+      REQUIRE(msgBusSender.connect());
+
+      Message msg = Message::buildMessage("UnreceiveTestCase", topic, "TEST", QUERY);
+      g_msgRecieved.reset();
+      REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+      std::this_thread::sleep_for(TIMEOUT);
+      CHECK(g_msgRecieved.isRecieved(1));
+
+      // Try to unreceive a wrong topic => REJECTED
+      REQUIRE(msgBus.unreceive("/etn/t/wrongTopic").error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      // Try to unreceive a right topic => ACCEPTED
+      REQUIRE(msgBus.unreceive(topic));
+      REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+      std::this_thread::sleep_for(TIMEOUT);
+      CHECK(g_msgRecieved.isRecieved(1));
+    }
+
+    SECTION("Pub sub with same object")
+    {
+      auto topic = "/etn/test/message/pubsub";
+
+      auto msgBus = mqtt::MessageBusMqtt("PubTestCaseWithSameObject", MQTT_SERVER_URI);
+      REQUIRE(msgBus.connect());
+
+      REQUIRE(msgBus.receive(topic, messageListener));
+
+      Message msg = Message::buildMessage("UnreceiveTestCase", topic, "TEST", QUERY);
+      g_msgRecieved.reset();
+      REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+      std::this_thread::sleep_for(TIMEOUT);
+      CHECK(g_msgRecieved.isRecieved(1));
+    }
   }
 
-  TEST_CASE("Pub sub with same object", "[mqtt][pub]")
+  TEST_CASE("Wrong", "[mqtt][messageStatus]")
   {
-    auto topic = "/etn/test/message/pubsub";
+    SECTION("Wrong message")
+    {
+      auto msgBus = mqtt::MessageBusMqtt("WrongMessageTestCase", MQTT_SERVER_URI);
 
-    auto msgBus = mqtt::MessageBusMqtt("PubTestCaseWithSameObject", MQTT_SERVER_URI);
-    REQUIRE(msgBus.connect());
+      // Without mandatory fields (from, subject, to)
+      auto wrongSendMsg = Message::buildMessage("WrongMessageTestCase", "", "TEST");
+      REQUIRE(msgBus.send(wrongSendMsg).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
 
-    REQUIRE(msgBus.receive(topic, messageListener));
+      // Without mandatory fields (from, subject, to)
+      auto request = Message::buildRequest("WrongRequestTestCase", "", "SyncTest", "", QUERY);
+      // Request reject
+      REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      request.from("/etn/q/request");
+      request.to("/etn/q/reply");
+      // Without reply request reject.
+      REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    }
 
-    Message msg = Message::buildMessage("UnreceiveTestCase", topic, "TEST", QUERY);
-    g_msgRecieved.reset();
-    REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-    std::this_thread::sleep_for(TIMEOUT);
-    CHECK(g_msgRecieved.isRecieved(1));
-  }
-
-  TEST_CASE("Wrong message", "[mqtt][messageStatus]")
-  {
-    auto msgBus = mqtt::MessageBusMqtt("WrongMessageTestCase", MQTT_SERVER_URI);
-
-    // Without mandatory fields (from, subject, to)
-    auto wrongSendMsg = Message::buildMessage("WrongMessageTestCase", "", "TEST");
-    REQUIRE(msgBus.send(wrongSendMsg).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-
-    // Without mandatory fields (from, subject, to)
-    auto request = Message::buildRequest("WrongRequestTestCase", "", "SyncTest", "", QUERY);
-    // Request reject
-    REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-    request.from("/etn/q/request");
-    request.to("/etn/q/reply");
-    // Without reply request reject.
-    REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
-  }
-
-  TEST_CASE("Wrong connection", "[mqtt][commStateStatus]")
-  {
-    auto msgBus = mqtt::MessageBusMqtt("WrongConnectionTestCase", "tcp://wrong.address.ip.com");
-    auto connectionRet = msgBus.connect();
-    REQUIRE(connectionRet.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
+    SECTION("Wrong connection")
+    {
+      auto msgBus = mqtt::MessageBusMqtt("WrongConnectionTestCase", "tcp://wrong.address.ip.com");
+      auto connectionRet = msgBus.connect();
+      REQUIRE(connectionRet.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
+    }
   }
 
 } // namespace
