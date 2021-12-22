@@ -47,13 +47,11 @@ namespace fty::messagebus::mqtt
     CallBack();
     ~CallBack() = default;
     void connection_lost(const std::string& cause) override;
-    void onConnected(const std::string& cause);
-    bool onConnectionUpdated(const ::mqtt::connect_data& connData);
     void onMessageArrived(::mqtt::const_message_ptr msg, AsynClientPointer clientPointer = nullptr);
 
-    SubScriptionListener getSubscriptions();
+    SubScriptionListener subscriptions();
+    void subscriptions(const std::string& topic, MessageListener messageListener);
     bool subscribed(const std::string& topic);
-    void setSubscriptions(const std::string& topic, MessageListener messageListener);
     void eraseSubscriptions(const std::string& topic);
 
   private:

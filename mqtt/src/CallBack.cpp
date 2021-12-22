@@ -85,33 +85,20 @@ namespace fty::messagebus::mqtt
   // Callback called when connection lost.
   void CallBack::connection_lost(const std::string& cause)
   {
-    logError("Connection lost");
-    if (!cause.empty())
-    {
-      logError("raison: {}", cause);
-    }
+    (cause.empty()) ? logError("Connection lost!") : logError("Connection lost: {}", cause);
   }
 
-  // Callback called for connection done.
-  void CallBack::onConnected(const std::string& cause)
-  {
-    logDebug("Connected");
-    if (!cause.empty())
-    {
-      logDebug("raison: {}", cause);
-    }
-  }
-
-  // Callback called for connection updated.
-  bool CallBack::onConnectionUpdated(const ::mqtt::connect_data& /*connData*/)
-  {
-    logInfo("Connection updated");
-    return true;
-  }
-
-  auto CallBack::getSubscriptions() -> SubScriptionListener
+  auto CallBack::subscriptions() -> SubScriptionListener
   {
     return m_subscriptions;
+  }
+
+  void CallBack::subscriptions(const std::string& topic, MessageListener messageListener)
+  {
+    if (auto it{m_subscriptions.find(topic)}; it == m_subscriptions.end())
+    {
+      m_subscriptions.emplace(topic, messageListener);
+    }
   }
 
   auto CallBack::subscribed(const std::string& topic) -> bool
@@ -122,14 +109,6 @@ namespace fty::messagebus::mqtt
       isSubscript = true;
     }
     return isSubscript;
-  }
-
-  void CallBack::setSubscriptions(const std::string& topic, MessageListener messageListener)
-  {
-    if (auto it{m_subscriptions.find(topic)}; it == m_subscriptions.end())
-    {
-      m_subscriptions.emplace(topic, messageListener);
-    }
   }
 
   void CallBack::eraseSubscriptions(const std::string& topic)

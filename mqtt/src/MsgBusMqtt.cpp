@@ -37,6 +37,7 @@ namespace fty::messagebus::mqtt
   duration KEEP_ALIVE = 20;
   static auto constexpr _QOS = ::mqtt::ReasonCode::GRANTED_QOS_2;
   auto constexpr TIMEOUT = std::chrono::seconds(5);
+  auto constexpr DOUBLE_TIMEOUT = std::chrono::seconds(10);
 
   static const MetaData getMetaDataFromMqttProperties(const ::mqtt::properties& props)
   {
@@ -141,7 +142,7 @@ namespace fty::messagebus::mqtt
                                          .mqtt_version(MQTTVERSION_5)
                                          .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
                                          .connect_timeout(TIMEOUT)
-                                         .automatic_reconnect(true)
+                                         .automatic_reconnect(TIMEOUT, DOUBLE_TIMEOUT)
                                          .clean_start(true)
                                          .finalize();
 
@@ -159,11 +160,24 @@ namespace fty::messagebus::mqtt
       m_asynClient->start_consuming();
       m_asynClient->connect(connOpts)->wait();
 
+      // Called after a reconnection
       m_asynClient->set_connected_handler([this](const std::string& cause) {
-        m_cb.onConnected(cause);
+        (cause.empty()) ? logDebug("Connected") : logDebug("{}", cause);
+        // Refresh all recieved
+        for (auto [address, listener] : m_cb.subscriptions())
+        {
+          receive(address, listener);
+        }
       });
-      m_asynClient->set_update_connection_handler([this](const ::mqtt::connect_data& connData) {
-        return m_cb.onConnectionUpdated(connData);
+
+      // After a connection lost, depending of reconnection setting, this handler is called by paho library
+      m_asynClient->set_update_connection_handler([this](const ::mqtt::connect_data& /*connData*/) {
+        if (!m_asynClient->is_connected())
+        {
+          logInfo("Try a reconnection with {} ...", m_endpoint);
+          m_asynClient->reconnect()->wait_for(TIMEOUT);
+        }
+        return true;
       });
 
       // Callback(s)
@@ -192,21 +206,27 @@ namespace fty::messagebus::mqtt
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
-    logDebug("Waiting to receive msg from: {}", address);
-    m_cb.setSubscriptions(address, messageListener);
-    m_asynClient->set_message_callback([this](::mqtt::const_message_ptr msg) {
-      // Wrapper from mqtt msg to Message
-      m_cb.onMessageArrived(msg);
-    });
-
-    if (!m_asynClient->subscribe(address, _QOS)->wait_for(TIMEOUT))
+    if (!m_cb.subscribed(address))
     {
-      logError("Receive (Rejected)");
-      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      m_cb.subscriptions(address, messageListener);
+      m_asynClient->set_message_callback([this](::mqtt::const_message_ptr msg) {
+        // Wrapper from mqtt msg to Message
+        m_cb.onMessageArrived(msg);
+      });
+
+      if (!m_asynClient->subscribe(address, _QOS)->wait_for(TIMEOUT))
+      {
+        logError("Receive for {} (Rejected)", address);
+        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      }
+    }
+    else
+    {
+      // Here after a reconnection
+      m_asynClient->subscribe(address, _QOS)->wait_for(TIMEOUT);
     }
 
     logDebug("Waiting to receive msg from: {} Accepted", address);
-
     return {};
   }
 
@@ -218,16 +238,15 @@ namespace fty::messagebus::mqtt
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
-    if (m_cb.subscribed(address))
-    {
-      m_cb.eraseSubscriptions(address);
-      logTrace("Unsubscribed for: '{}'", address);
-    }
-    else
+    if (!m_cb.subscribed(address))
     {
       logError("Address not found {}, unsubscribed (Rejected)", address);
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
+
+    m_asynClient->unsubscribe(address)->wait_for(TIMEOUT);
+    m_cb.eraseSubscriptions(address);
+    logDebug("Unreceive for {} Accepted", address);
     return {};
   }
 
