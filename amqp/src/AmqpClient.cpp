@@ -79,7 +79,6 @@ namespace fty::messagebus::amqp
 
   void AmqpClient::on_connection_open(proton::connection& connection)
   {
-
     m_connection = connection;
 
     if (connection.reconnected())
@@ -119,6 +118,7 @@ namespace fty::messagebus::amqp
   void AmqpClient::on_transport_error(proton::transport& transport)
   {
     logError("Transport error: {}", transport.error().what());
+    m_communicationState = ComState::COM_STATE_LOST;
   }
 
   void AmqpClient::resetPromise()
@@ -132,7 +132,7 @@ namespace fty::messagebus::amqp
 
   ComState AmqpClient::connected()
   {
-    if ((m_communicationState == ComState::COM_STATE_UNKNOWN))
+    if ((m_communicationState == ComState::COM_STATE_UNKNOWN) || (m_communicationState == ComState::COM_STATE_LOST))
     {
       if (m_connectFuture.wait_for(TIMEOUT) != std::future_status::timeout)
       {
