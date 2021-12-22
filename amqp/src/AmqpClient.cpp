@@ -33,9 +33,8 @@ namespace
     proton::reconnect_options reconnectOption;
     reconnectOption.delay(proton::duration::SECOND);
     reconnectOption.max_delay(proton::duration::MINUTE);
-    reconnectOption.max_attempts(5);
+    reconnectOption.max_attempts(10);
     reconnectOption.delay_multiplier(5);
-
     return reconnectOption;
   }
 
@@ -51,7 +50,7 @@ namespace fty::messagebus::amqp
   using namespace fty::messagebus;
   using MessageListener = fty::messagebus::MessageListener;
 
-  static auto constexpr TIMEOUT = std::chrono::seconds(1);
+  static auto constexpr TIMEOUT = std::chrono::seconds(5);
   static auto constexpr AMQP_CORREL_ID = "JMSCorrelationID";
 
   AmqpClient::AmqpClient(const Endpoint& url)
@@ -80,8 +79,18 @@ namespace fty::messagebus::amqp
 
   void AmqpClient::on_connection_open(proton::connection& connection)
   {
-    logDebug("Connected on url: {}", m_url);
+
     m_connection = connection;
+
+    if (connection.reconnected())
+    {
+      logDebug("Reconnected on url: {}", m_url);
+      resetPromise();
+    }
+    else
+    {
+      logDebug("Connected on url: {}", m_url);
+    }
     m_connectPromise.set_value(ComState::COM_STATE_OK);
   }
 
@@ -107,9 +116,18 @@ namespace fty::messagebus::amqp
     logError("Protocol error: {}", error.what());
   }
 
-  void AmqpClient::on_transport_error(proton::transport& t)
+  void AmqpClient::on_transport_error(proton::transport& transport)
   {
-    logError("Transport error: {}", t.error().what());
+    logError("Transport error: {}", transport.error().what());
+  }
+
+  void AmqpClient::resetPromise()
+  {
+    logDebug("Reset all promise");
+    m_connectPromise = std::promise<fty::messagebus::ComState>();
+    m_connectFuture = m_connectPromise.get_future();
+    m_promiseSender = std::promise<void>();
+    m_promiseReceiver = std::promise<void>();
   }
 
   ComState AmqpClient::connected()
@@ -158,7 +176,7 @@ namespace fty::messagebus::amqp
     return deliveryState;
   }
 
-  DeliveryState AmqpClient::receive(const std::string& address, const std::string& filter, MessageListener messageListener)
+  DeliveryState AmqpClient::receive(const Address& address, const std::string& filter, MessageListener messageListener)
   {
     auto deliveryState = DeliveryState::DELIVERY_STATE_REJECTED;
     if (connected() == ComState::COM_STATE_OK)
@@ -167,18 +185,10 @@ namespace fty::messagebus::amqp
       m_promiseReceiver = std::promise<void>();
 
       auto futureReceiver = m_promiseReceiver.get_future();
-      proton::receiver_options receiverOptions;
-      if (!filter.empty())
-      {
-        setSubscriptions(filter, messageListener);
-      }
-      else
-      {
-        setSubscriptions(address, messageListener);
-      }
+      (!filter.empty())? setSubscriptions(filter, messageListener) : setSubscriptions(address, messageListener);
 
       m_connection.work_queue().add([=]() {
-        m_connection.open_receiver(address, receiverOptions);
+        m_connection.open_receiver(address, {});
       });
 
       if (futureReceiver.wait_for(TIMEOUT) != std::future_status::timeout)
@@ -257,7 +267,7 @@ namespace fty::messagebus::amqp
     }
   }
 
-  void AmqpClient::setSubscriptions(const std::string& address, MessageListener messageListener)
+  void AmqpClient::setSubscriptions(const Address& address, MessageListener messageListener)
   {
     if (auto it{m_subscriptions.find(address)}; it == m_subscriptions.end() && messageListener)
     {

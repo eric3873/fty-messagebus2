@@ -127,7 +127,7 @@ namespace
   // Test case
   //----------------------------------------------------------------------
 
-  TEST_CASE("Request Reply", "[etn][request][send]")
+  TEST_CASE("queue", "[etn][request][send]")
   {
     SECTION("Send")
     {
@@ -189,7 +189,7 @@ namespace
     }
   }
 
-  TEST_CASE("Publish subscribe", "[.][etn][pub][sub]")
+  TEST_CASE("topic", "[.][etn][pub][sub]")
   {
     SECTION("PubSub")
     {

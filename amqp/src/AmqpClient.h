@@ -40,7 +40,7 @@
 namespace fty::messagebus::amqp
 {
   using MessageListener = fty::messagebus::MessageListener;
-  using SubScriptionListener = std::map<std::string, MessageListener>;
+  using SubScriptionListener = std::map<Address, MessageListener>;
 
   class AmqpClient : public proton::messaging_handler
   {
@@ -58,7 +58,7 @@ namespace fty::messagebus::amqp
     void on_transport_error(proton::transport &t) override;
 
     fty::messagebus::ComState connected();
-    fty::messagebus::DeliveryState receive(const std::string& address, const std::string& filter = {}, MessageListener messageListener = {});
+    fty::messagebus::DeliveryState receive(const Address& address, const std::string& filter = {}, MessageListener messageListener = {});
     fty::messagebus::DeliveryState unreceive();
     fty::messagebus::DeliveryState send(const proton::message& msg);
     bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
@@ -83,7 +83,8 @@ namespace fty::messagebus::amqp
     std::promise<void> m_promiseReceiver;
     std::promise<proton::message> m_promiseSyncRequest;
 
-    void setSubscriptions(const std::string& topic, MessageListener messageListener);
+    void setSubscriptions(const Address& address, MessageListener messageListener);
+    void resetPromise();
   };
 
 } // namespace fty::messagebus::amqp
