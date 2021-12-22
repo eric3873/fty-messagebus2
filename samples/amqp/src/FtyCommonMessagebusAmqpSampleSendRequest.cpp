@@ -105,7 +105,7 @@ int main(int argc, char** argv)
     if (strcmp(argv[2], "async") == 0)
     {
 
-      fty::Expected<void> subscribRet = bus.receive(replyQueue, responseMessageListener);
+      fty::Expected<void> subscribRet = bus.receive(replyQueue, responseMessageListener, request.correlationId());
       if (!subscribRet)
       {
         logError("Error while subscribing {}", subscribRet.error());
