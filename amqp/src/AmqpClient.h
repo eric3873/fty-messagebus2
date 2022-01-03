@@ -61,7 +61,7 @@ namespace fty::messagebus::amqp
     fty::messagebus::DeliveryState receive(const Address& address, const std::string& filter = {}, MessageListener messageListener = {});
     fty::messagebus::DeliveryState unreceive();
     fty::messagebus::DeliveryState send(const proton::message& msg);
-    bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout);
+    bool tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeoutInSeconds);
     void close();
 
   private:

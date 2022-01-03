@@ -24,7 +24,6 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
     Proton::cpp
   FLAGS
     "-fmax-errors=1"
-    # "-w"
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})

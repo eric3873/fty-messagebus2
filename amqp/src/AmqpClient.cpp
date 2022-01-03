@@ -51,7 +51,6 @@ namespace fty::messagebus::amqp
   using MessageListener = fty::messagebus::MessageListener;
 
   static auto constexpr TIMEOUT = std::chrono::seconds(5);
-  static auto constexpr AMQP_CORREL_ID = "JMSCorrelationID";
 
   AmqpClient::AmqpClient(const Endpoint& url)
     : m_url(url)
@@ -70,7 +69,7 @@ namespace fty::messagebus::amqp
     {
       container.connect(m_url, connectOpts().reconnect(reconnectOpts()));
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
       logError("Exception {}", e.what());
       m_connectPromise.set_value(ComState::COM_STATE_CONNECT_FAILED);
@@ -200,15 +199,15 @@ namespace fty::messagebus::amqp
     return deliveryState;
   }
 
-  bool AmqpClient::tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout)
+  bool AmqpClient::tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeoutInSeconds)
   {
-    logDebug("Checking answer for {} second(s)...", timeout);
+    logDebug("Checking answer for {} second(s)...", timeoutInSeconds);
 
     m_promiseSyncRequest = std::promise<proton::message>();
 
     bool messageArrived = false;
     auto futureSynRequest = m_promiseSyncRequest.get_future();
-    if (futureSynRequest.wait_for(std::chrono::seconds(timeout)) != std::future_status::timeout)
+    if (futureSynRequest.wait_for(std::chrono::seconds(timeoutInSeconds)) != std::future_status::timeout)
     {
       try
       {

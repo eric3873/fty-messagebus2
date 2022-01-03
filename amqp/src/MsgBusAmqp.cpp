@@ -72,7 +72,7 @@ namespace fty::messagebus::amqp
 
   bool MsgBusAmqp::isServiceAvailable()
   {
-    return (m_amqpClient && (m_amqpClient->connected() == ComState::COM_STATE_OK)) ? true : false;
+    return (m_amqpClient && (m_amqpClient->connected() == ComState::COM_STATE_OK));
   }
 
   fty::Expected<void> MsgBusAmqp::receive(const Address& address, MessageListener messageListener, const std::string& filter)

@@ -82,7 +82,7 @@ namespace fty::messagebus
 
     /// Sends message to the queue and wait to receive response
     /// @param msg the message to send
-    /// @param timeOut the timeout for the request
+    /// @param timeOut the timeout in seconds for the request
     /// @return Response message or Delivery error
     virtual [[nodiscard]] fty::Expected<Message> request(const Message& msg, int timeOut) noexcept = 0 ;
 

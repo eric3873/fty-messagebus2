@@ -211,12 +211,9 @@ namespace
       REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
       REQUIRE(msgBusRequester.receive(request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), request.correlationId()));
 
-      for (int i = 0; i < 1; i++)
-      {
-        REQUIRE(msgBusReplyer.send(request));
-        std::this_thread::sleep_for(TIMEOUT);
-        CHECK(msgReceived.assertValue(i + 1));
-      }
+      REQUIRE(msgBusReplyer.send(request));
+      std::this_thread::sleep_for(TIMEOUT);
+      CHECK(msgReceived.assertValue(1));
     }
   }
 
@@ -312,7 +309,7 @@ namespace
       REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
-    SECTION("Wrong message")
+    SECTION("Wrong ip address")
     {
       auto msgBus = amqp::MessageBusAmqp("WrongConnectionTestCase", "amqp://wrong.address.ip.com:5672");
       auto connectionRet = msgBus.connect();
