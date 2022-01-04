@@ -46,7 +46,6 @@ namespace fty::messagebus
     MessageBus(MessageBus&&) noexcept = delete;
     MessageBus& operator=(MessageBus&&) = delete;
 
-
     /// Connect to the MessageBus
     /// @return Success or Com Error
     virtual [[nodiscard]] fty::Expected<void> connect() noexcept = 0;
@@ -55,7 +54,6 @@ namespace fty::messagebus
     /// @param msg the message object to send
     /// @return Success or Delivery error
     virtual [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept = 0;
-
 
     /// Register a listener to a address using function
     /// @param address the address to receive
