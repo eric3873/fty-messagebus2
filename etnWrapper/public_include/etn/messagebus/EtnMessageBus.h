@@ -90,19 +90,20 @@ namespace etn::messagebus
     /// @param clientName Client name if not set a default one is built
     /// @param brokerAddress Endpoint brokers for amqp and mqtt.
     EtnMessageBus(const fty::messagebus::ClientName& clientName = fty::messagebus::utils::getClientId("EtnMessageBus"), const EndpointBroker& brokerAddress = {})
-      : m_clientName(clientName)
+      : MessageBus()
+      , m_clientName(clientName)
       , m_endpointBroker(brokerAddress){};
 
     ~EtnMessageBus() = default;
 
-    EtnMessageBus(EtnMessageBus&& other) = default;
-    EtnMessageBus& operator=(EtnMessageBus&& other) = delete;
-    EtnMessageBus(const EtnMessageBus& other) = default;
-    EtnMessageBus& operator=(const EtnMessageBus& other) = delete;
+    EtnMessageBus(EtnMessageBus&&) = default;
+    EtnMessageBus& operator=(EtnMessageBus&&) = delete;
+    EtnMessageBus(const EtnMessageBus&) = default;
+    EtnMessageBus& operator=(const EtnMessageBus&) = delete;
 
-    // /// Connect to the MessageBus
-    // /// @return Success or Com Error
-    virtual [[nodiscard]] fty::Expected<void> connect() noexcept override;
+    /// Connect to the MessageBus
+    /// @return Success or Com Error
+    [[nodiscard]] fty::Expected<void> connect() noexcept override;
 
     /// Send a message
     /// @param msg the message object to send
@@ -115,21 +116,6 @@ namespace etn::messagebus
     /// @param filter constraint the receiver with a filter
     /// @return Success or error
     [[nodiscard]] fty::Expected<void> receive(const fty::messagebus::Address& address, fty::messagebus::MessageListener&& func, const std::string& filter = {}) noexcept override;
-
-    // /// Register a listener to a address using class
-    // /// @example
-    // ///     bus.subsribe("address", &MyCls::onMessage, this);
-    // /// @param address the address to receive
-    // /// @param fnc the member function to receive
-    // /// @param cls class instance
-    // /// @return Success or error
-    // template <typename Func, typename Cls>
-    // [[nodiscard]] fty::Expected<void> receive(const std::string& address, Func&& fnc, Cls* cls) noexcept
-    // {
-    //   return registerListener(address, [f = std::move(fnc), c = cls](const Message& msg) -> void {
-    //     std::invoke(f, *c, Message(msg));
-    //   });
-    // }
 
     /// Unsubscribe from a address
     /// @param address the address to unsubscribe

@@ -19,6 +19,7 @@
 #include "etn/messagebus/EtnMessageBus.h"
 #include "etn/messagebus/EtnMessage.h"
 
+#include <fty/messagebus/MessageBusStatus.h>
 #include <fty/messagebus/amqp/MessageBusAmqp.h>
 
 #include <iostream>
@@ -30,6 +31,11 @@ namespace etn::messagebus
   using namespace fty::messagebus::mqtt;
 
   static const std::string INDENTITY("etnMessageBusAmqpMqtt");
+
+  fty::Expected<void> EtnMessageBus::connect() noexcept
+  {
+    return fty::unexpected(to_string(fty::messagebus::ComState::COM_STATE_UNKNOWN));
+  }
 
   fty::Expected<void> EtnMessageBus::send(const Message& msg) noexcept
   {
