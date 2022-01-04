@@ -17,7 +17,7 @@
     =========================================================================
 */
 
-#include <fty/sample/dto/FtyCommonMathDto.hpp>
+#include <fty/sample/dto/FtyCommonMathDto.h>
 #include <fty/messagebus/amqp/MessageBusAmqp.h>
 
 #include <csignal>

@@ -18,7 +18,7 @@
 */
 
 #include <fty/messagebus/amqp/MessageBusAmqp.h>
-#include <fty/sample/dto/FtyCommonFooBarDto.hpp>
+#include <fty/sample/dto/FtyCommonFooBarDto.h>
 
 #include <csignal>
 #include <fty_log.h>

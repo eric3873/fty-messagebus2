@@ -19,7 +19,7 @@
     =========================================================================
 */
 
-#include "fty/sample/dto/FtyCommonMathDto.hpp"
+#include "fty/sample/dto/FtyCommonMathDto.h"
 #include <fty/messagebus/MessageBus.h>
 #include <fty/messagebus/MessageBusStatus.h>
 #include <fty/messagebus/mqtt/MessageBusMqtt.h>
