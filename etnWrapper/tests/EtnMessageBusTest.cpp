@@ -131,7 +131,7 @@ namespace
   {
     SECTION("Send")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string sendTestQueue = buildAddress("test.message.send", AddressType::QUEUE);
 
       auto msgBus = EtnMessageBus("MessageRecieverSendTestCase", {AMQP_SERVER_URI, MQTT_SERVER_URI});
@@ -153,7 +153,7 @@ namespace
 
     SECTION("Send sync request")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string syncTestQueue = buildAddress("test.message.sync.", AddressType::REQUEST_QUEUE);
       auto msgBusReciever = EtnMessageBus("SyncReceiverTestCase");
 
@@ -169,7 +169,7 @@ namespace
 
     SECTION("Send async request")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string asyncTestQueue = buildAddress("test.message.async.", AddressType::REQUEST_QUEUE);
       auto msgBusRequester = EtnMessageBus("AsyncRequesterTestCase");
 
@@ -193,7 +193,7 @@ namespace
   {
     SECTION("PubSub")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string topic = buildAddress("test.message.pubsub", AddressType::TOPIC);
       auto msgBusSender = EtnMessageBus("PubTestCase");
 
@@ -215,7 +215,7 @@ namespace
 
     SECTION("PubSub with same object")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string topic = buildAddress("test.message.sameobject", AddressType::TOPIC);
 
       auto msgBus = EtnMessageBus("PubTestCaseWithSameObject");
@@ -229,7 +229,7 @@ namespace
 
     SECTION("Wrong broker endpoint")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       EndpointBroker endpointBroker{"amqp://wrong.address.ip.com:5672", "tcp://wrong.address.ip.com"};
       auto msgBus = EtnMessageBus("WrongConnectionTestCase", endpointBroker);
 

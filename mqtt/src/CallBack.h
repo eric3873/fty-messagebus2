@@ -50,7 +50,7 @@ namespace fty::messagebus::mqtt
     void onMessageArrived(::mqtt::const_message_ptr msg, AsynClientPointer clientPointer = nullptr);
 
     SubScriptionListener subscriptions();
-    void subscriptions(const std::string& topic, MessageListener messageListener);
+    void subscriptions(const std::string& topic, const MessageListener& messageListener);
     bool subscribed(const std::string& topic);
     void eraseSubscriptions(const std::string& topic);
 

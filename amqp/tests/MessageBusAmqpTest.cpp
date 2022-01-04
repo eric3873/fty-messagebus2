@@ -135,7 +135,7 @@ namespace
   {
     SECTION("Send")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string sendTestQueue = "queue://test.message.send";
 
       auto msgBus = amqp::MessageBusAmqp("MessageRecieverSendTestCase", AMQP_SERVER_URI);
@@ -160,7 +160,7 @@ namespace
 
     SECTION("Send sync request")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string syncTestQueue = "queue://test.message.sync.";
       auto msgBusReciever = amqp::MessageBusAmqp("SyncReceiverTestCase", AMQP_SERVER_URI);
 
@@ -198,7 +198,7 @@ namespace
 
     SECTION("Send async request")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string asyncTestQueue = "queue://test.message.async.";
       auto msgBusRequester = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
       REQUIRE(msgBusRequester.connect());
@@ -221,7 +221,7 @@ namespace
   {
     SECTION("Publish subscribe")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string topic = "topic://test.message.pubsub";
       auto msgBusSender = amqp::MessageBusAmqp("PubTestCase", AMQP_SERVER_URI);
       REQUIRE(msgBusSender.connect());
@@ -245,7 +245,7 @@ namespace
 
     SECTION("Unreceive")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       auto msgBus = amqp::MessageBusAmqp("UnreceiveReceiverTestCase", AMQP_SERVER_URI);
       std::string topic = "topic://test.message.unreceive." + generateUuid();
 
@@ -274,7 +274,7 @@ namespace
 
     SECTION("Pub sub with same object")
     {
-      MsgReceived msgReceived{};
+      MsgReceived msgReceived;
       std::string topic = "topic://test.message.sameobject";
 
       auto msgBus = amqp::MessageBusAmqp("PubTestCaseWithSameObject", AMQP_SERVER_URI);

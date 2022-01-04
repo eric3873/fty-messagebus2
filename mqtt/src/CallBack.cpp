@@ -85,15 +85,20 @@ namespace fty::messagebus::mqtt
   // Callback called when connection lost.
   void CallBack::connection_lost(const std::string& cause)
   {
-    (cause.empty()) ? logError("Connection lost!") : logError("Connection lost: {}", cause);
+    std::string what = "?";
+    if (!cause.empty())
+    {
+      what = cause;
+    }
+    logError("Connection lost: {}", what);
   }
 
-  auto CallBack::subscriptions() -> SubScriptionListener
+  SubScriptionListener CallBack::subscriptions()
   {
     return m_subscriptions;
   }
 
-  void CallBack::subscriptions(const std::string& topic, MessageListener messageListener)
+  void CallBack::subscriptions(const std::string& topic, const MessageListener& messageListener)
   {
     if (auto it{m_subscriptions.find(topic)}; it == m_subscriptions.end())
     {

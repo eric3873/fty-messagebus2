@@ -35,7 +35,5 @@ if(BUILD_TESTING)
   etn_test_target(${PROJECT_NAME}
     SOURCES
       tests/*.cpp
-    INCLUDE_DIRS
-      src/*.h
 )
 endif()
