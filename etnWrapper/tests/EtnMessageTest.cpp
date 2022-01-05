@@ -15,7 +15,7 @@ namespace
   {
     REQUIRE(buildAddress("myAddress", AddressType::TOPIC).find("/etn/t/myAddress") != std::string::npos);
     REQUIRE(buildAddress("myAddress", AddressType::QUEUE).find("queue://") != std::string::npos);
-    REQUIRE(buildAddress("myAddress", AddressType::REQUEST_QUEUE).find("queue://etn.q.request.myAddress") != std::string::npos);
-    REQUIRE(buildAddress("myAddress", AddressType::REPLY_QUEUE).find("queue://etn.q.reply.myAddress") != std::string::npos);
+    REQUIRE(buildAddress("myAddress", AddressType::REQUEST_QUEUE).find("queue://etn.q.myAddress.request") != std::string::npos);
+    REQUIRE(buildAddress("myAddress", AddressType::REPLY_QUEUE).find("queue://etn.q.myAddress.reply") != std::string::npos);
   }
 }

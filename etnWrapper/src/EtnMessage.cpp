@@ -27,8 +27,8 @@ namespace etn::messagebus
 
   static constexpr auto ETN_TOPIC_PREFIX = "/etn/t/";
   static const std::string ETN_QUEUE_PREFIX = QUEUE_PREFIX + "etn.q.";
-  static const std::string ETN_QUEUE_REQUEST = ETN_QUEUE_PREFIX + "request.";
-  static const std::string ETN_QUEUE_REPLY = ETN_QUEUE_PREFIX + "reply.";
+  static const std::string ETN_QUEUE_REQUEST = ".request";
+  static const std::string ETN_QUEUE_REPLY = ".reply";
 
   Address buildAddress(const Address& address, const AddressType& addressType) noexcept
   {
@@ -42,10 +42,10 @@ namespace etn::messagebus
         etnAddress = ETN_QUEUE_PREFIX + address;
         break;
       case AddressType::REQUEST_QUEUE:
-        etnAddress = ETN_QUEUE_REQUEST + address;
+        etnAddress = ETN_QUEUE_PREFIX + address + ETN_QUEUE_REQUEST;
         break;
       case AddressType::REPLY_QUEUE:
-        etnAddress = ETN_QUEUE_REPLY + address;
+        etnAddress = ETN_QUEUE_PREFIX + address + ETN_QUEUE_REPLY;
         break;
       default:
         etnAddress = address;

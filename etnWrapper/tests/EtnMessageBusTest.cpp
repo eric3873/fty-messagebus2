@@ -154,11 +154,12 @@ namespace
     SECTION("Send sync request")
     {
       MsgReceived msgReceived;
-      std::string syncTestQueue = buildAddress("test.message.sync.", AddressType::REQUEST_QUEUE);
+      std::string syncRequestQueue = buildAddress("test.message.sync", AddressType::REQUEST_QUEUE);
+      std::string syncReplyQueue = buildAddress("test.message.sync", AddressType::REPLY_QUEUE);
       auto msgBusReciever = EtnMessageBus("SyncReceiverTestCase");
 
       // Send synchronous request
-      Message request = Message::buildRequest("SyncRequesterTestCase", syncTestQueue + "request", "SyncTest", syncTestQueue + "reply", QUERY);
+      Message request = Message::buildRequest("SyncRequesterTestCase", syncRequestQueue, "SyncTest", syncReplyQueue, QUERY);
       REQUIRE(msgBusReciever.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
       // Test without connection before.
@@ -170,13 +171,14 @@ namespace
     SECTION("Send async request")
     {
       MsgReceived msgReceived;
-      std::string asyncTestQueue = buildAddress("test.message.async.", AddressType::REQUEST_QUEUE);
+      std::string asyncRequestQueue = buildAddress("test.message.async", AddressType::REQUEST_QUEUE);
+      std::string asyncReplyQueue = buildAddress("test.message.async", AddressType::REPLY_QUEUE);
       auto msgBusRequester = EtnMessageBus("AsyncRequesterTestCase");
 
       auto msgBusReplyer = EtnMessageBus("AsyncReplyerTestCase");
 
       // Build asynchronous request and set all receiver
-      Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
+      Message request = Message::buildRequest("AsyncRequestTestCase", asyncRequestQueue, "TEST", asyncReplyQueue, QUERY);
       REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
       REQUIRE(msgBusRequester.receive(request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), request.correlationId()));
 
