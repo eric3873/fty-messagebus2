@@ -142,7 +142,7 @@ namespace fty::messagebus::amqp
     if (msgSent != DeliveryState::DELIVERY_STATE_ACCEPTED)
     {
       logError("Message sent (Rejected)");
-      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      return fty::unexpected(to_string(msgSent));
     }
 
     logDebug("Message sent (Accepted)");
@@ -167,7 +167,11 @@ namespace fty::messagebus::amqp
       });
       requester.receive(msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
       thrd.detach();
-      send(message);
+      auto msgSent = send(message);
+      if (!msgSent)
+      {
+        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      }
 
       MessagePointer response = std::make_shared<proton::message>();
       bool messageArrived = requester.tryConsumeMessageFor(response, receiveTimeOut);

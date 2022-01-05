@@ -162,11 +162,16 @@ namespace fty::messagebus::mqtt
 
       // Called after a reconnection
       m_asynClient->set_connected_handler([this](const std::string& cause) {
+
         (cause.empty()) ? logDebug("Connected") : logDebug("{}", cause);
         // Refresh all recieved
         for (auto [address, listener] : m_cb.subscriptions())
         {
-          receive(address, listener);
+          auto received = receive(address, listener);
+          if (!received)
+          {
+            logWarn("Address '{}' rejected after reconnection", address);
+          }
         }
       });
 
@@ -282,7 +287,11 @@ namespace fty::messagebus::mqtt
 
     ::mqtt::const_message_ptr msg;
     m_asynClient->subscribe(message.replyTo(), _QOS);
-    send(message);
+    auto msgSent = send(message);
+    if (!msgSent)
+    {
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    }
 
     auto messageArrived = m_asynClient->try_consume_message_for(&msg, std::chrono::seconds(receiveTimeOut));
     m_asynClient->unsubscribe(message.replyTo());
