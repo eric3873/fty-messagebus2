@@ -36,27 +36,27 @@ namespace fty::messagebus::amqp
   class MsgBusAmqp
   {
   public:
-    MsgBusAmqp() = delete;
 
     MsgBusAmqp(const std::string& clientName, const Endpoint& endpoint)
       : m_clientName(clientName)
       , m_endpoint(endpoint){};
 
-    MsgBusAmqp(MsgBusAmqp&& other) = delete;
-    MsgBusAmqp& operator=(MsgBusAmqp&& other) = delete;
-    MsgBusAmqp(const MsgBusAmqp& other) = delete;
-    MsgBusAmqp& operator=(const MsgBusAmqp& other) = delete;
-
+    MsgBusAmqp() = delete;
     ~MsgBusAmqp();
+
+    MsgBusAmqp(MsgBusAmqp&&) = delete;
+    MsgBusAmqp& operator=(MsgBusAmqp&&) = delete;
+    MsgBusAmqp(const MsgBusAmqp&) = delete;
+    MsgBusAmqp& operator=(const MsgBusAmqp&) = delete;
 
     [[nodiscard]] fty::Expected<void> connect();
 
-    fty::Expected<void> receive(const Address& address, MessageListener messageListener, const std::string& filter = {});
-    fty::Expected<void> unreceive(const Address& address);
-    fty::Expected<void> send(const Message& message);
+    [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener messageListener, const std::string& filter = {});
+    [[nodiscard]] fty::Expected<void> unreceive(const Address& address);
+    [[nodiscard]] fty::Expected<void> send(const Message& message);
 
     // Sync request with timeout
-    fty::Expected<Message> request(const Message& message, int receiveTimeOut);
+    [[nodiscard]] fty::Expected<Message> request(const Message& message, int receiveTimeOut);
 
     const std::string& clientName() const
     {

@@ -43,10 +43,6 @@ namespace fty::messagebus::mqtt
     m_busMqtt = std::make_shared<MsgBusMqtt>(clientName, endpoint, will);
   }
 
-  MessageBusMqtt::~MessageBusMqtt()
-  {
-  }
-
   fty::Expected<void> MessageBusMqtt::connect() noexcept
   {
     return m_busMqtt->connect();

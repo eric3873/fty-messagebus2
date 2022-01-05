@@ -42,11 +42,6 @@ namespace fty::messagebus::amqp
 
     ~MessageBusAmqp() = default;
 
-    MessageBusAmqp(MessageBusAmqp&& other) = delete;
-    MessageBusAmqp& operator=(MessageBusAmqp&& other) = delete;
-    MessageBusAmqp(const MessageBusAmqp& other) = default;
-    MessageBusAmqp& operator=(const MessageBusAmqp& other) = delete;
-
     [[nodiscard]] fty::Expected<void> connect() noexcept override;
     [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept override;
     [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept override;

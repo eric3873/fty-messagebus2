@@ -26,28 +26,28 @@ namespace fty::messagebus::mqtt
   class MsgBusMqtt
   {
   public:
-    MsgBusMqtt() = delete;
 
     MsgBusMqtt(const std::string& clientName, const Endpoint& endpoint, const Message& will = Message())
       : m_clientName(clientName)
       , m_endpoint(endpoint)
       , m_will(will) {};
 
-    MsgBusMqtt(MsgBusMqtt&& other) = delete;
-    MsgBusMqtt& operator=(MsgBusMqtt&& other) = delete;
-    MsgBusMqtt(const MsgBusMqtt& other) = delete;
-    MsgBusMqtt& operator=(const MsgBusMqtt& other) = delete;
-
+    MsgBusMqtt() = delete;
     ~MsgBusMqtt();
+
+    MsgBusMqtt(MsgBusMqtt&&) = delete;
+    MsgBusMqtt& operator=(MsgBusMqtt&&) = delete;
+    MsgBusMqtt(const MsgBusMqtt&) = delete;
+    MsgBusMqtt& operator=(const MsgBusMqtt&) = delete;
 
     [[nodiscard]] fty::Expected<void> connect();
 
-    fty::Expected<void> receive(const Address& address, MessageListener messageListener);
-    fty::Expected<void> unreceive(const Address& address);
-    fty::Expected<void> send(const Message& message);
+    [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener messageListener);
+    [[nodiscard]] fty::Expected<void> unreceive(const Address& address);
+    [[nodiscard]] fty::Expected<void> send(const Message& message);
 
     // Sync request with timeout
-    fty::Expected<Message> request(const Message& message, int receiveTimeOut);
+    [[nodiscard]] fty::Expected<Message> request(const Message& message, int receiveTimeOut);
 
     const std::string& clientName() const
     {
