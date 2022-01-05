@@ -34,7 +34,7 @@ namespace etn::messagebus
 
   fty::Expected<void> EtnMessageBus::connect() noexcept
   {
-    return fty::unexpected(to_string(fty::messagebus::ComState::COM_STATE_UNKNOWN));
+    return fty::unexpected(to_string(fty::messagebus::ComState::COM_STATE_NONE));
   }
 
   fty::Expected<void> EtnMessageBus::send(const Message& msg) noexcept
