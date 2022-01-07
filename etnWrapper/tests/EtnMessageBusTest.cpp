@@ -42,7 +42,9 @@ namespace
   using namespace fty::messagebus;
   using namespace fty::messagebus::utils;
 
-  auto constexpr TIMEOUT = std::chrono::seconds(2);
+  auto constexpr ONE_SECOND = std::chrono::seconds(1);
+  auto constexpr TWO_SECONDS = std::chrono::seconds(2);
+
   static const std::string QUERY = "query";
   static const std::string QUERY_2 = "query2";
   static const std::string OK = ":OK";
@@ -141,14 +143,12 @@ namespace
 
       // Send message on queue
       Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
-
-      int nbMessageToSend = 3;
-      for (int i = 0; i < nbMessageToSend; i++)
+      for (int i = 0; i < 3; i++)
       {
         REQUIRE(msgBusSender.send(msg));
+        std::this_thread::sleep_for(ONE_SECOND);
+        CHECK(msgReceived.isRecieved(i+1));
       }
-      std::this_thread::sleep_for(TIMEOUT);
-      CHECK(msgReceived.isRecieved(nbMessageToSend));
     }
 
     SECTION("Send sync request")
@@ -162,7 +162,7 @@ namespace
       Message request = Message::buildRequest("SyncRequesterTestCase", syncRequestQueue, "SyncTest", syncReplyQueue, QUERY);
       REQUIRE(msgBusReciever.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
-      // Test without connection before.
+      // Get answer
       auto msgBusRequester = EtnMessageBus("SyncRequesterTestCase");
       auto replyMsg = msgBusRequester.request(request, 5);
       REQUIRE(replyMsg->userData() == QUERY_AND_OK);
@@ -185,13 +185,14 @@ namespace
       for (int i = 0; i < 3; i++)
       {
         REQUIRE(msgBusReplyer.send(request));
-        std::this_thread::sleep_for(TIMEOUT);
+        std::this_thread::sleep_for(TWO_SECONDS);
         CHECK(msgReceived.assertValue(i + 1));
       }
     }
+
   }
 
-  TEST_CASE("topic", "[.][etn][pub][sub]")
+  TEST_CASE("topic", "[etn][pub][sub]")
   {
     SECTION("PubSub")
     {
@@ -204,15 +205,15 @@ namespace
       REQUIRE(msgBusReceiver.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
 
       Message msg = Message::buildMessage("PubSubTestCase", topic, "TEST", QUERY);
-      int nbMessageToSend = 3;
+      std::this_thread::sleep_for(TWO_SECONDS);
 
-      for (int i = 0; i < nbMessageToSend; i++)
+      for (int i = 0; i < 3; i++)
       {
         auto delivState = msgBusSender.send(msg);
         REQUIRE(delivState == DeliveryState::DELIVERY_STATE_ACCEPTED);
+        std::this_thread::sleep_for(ONE_SECOND);
+        CHECK(msgReceived.isRecieved(i+1));
       }
-      std::this_thread::sleep_for(TIMEOUT);
-      CHECK(msgReceived.isRecieved(nbMessageToSend));
     }
 
     SECTION("PubSub with same object")
@@ -224,8 +225,10 @@ namespace
       REQUIRE(msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
 
       Message msg = Message::buildMessage("PubTestCaseWithSameObject", topic, "TEST", QUERY);
+      std::this_thread::sleep_for(TWO_SECONDS);
+
       REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
-      std::this_thread::sleep_for(TIMEOUT);
+      std::this_thread::sleep_for(ONE_SECOND);
       CHECK(msgReceived.isRecieved(1));
     }
 

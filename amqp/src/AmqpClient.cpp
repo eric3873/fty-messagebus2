@@ -184,7 +184,7 @@ namespace fty::messagebus::amqp
       m_promiseReceiver = std::promise<void>();
 
       auto futureReceiver = m_promiseReceiver.get_future();
-      (!filter.empty())? setSubscriptions(filter, messageListener) : setSubscriptions(address, messageListener);
+      (!filter.empty()) ? setSubscriptions(filter, messageListener) : setSubscriptions(address, messageListener);
 
       m_connection.work_queue().add([=]() {
         m_connection.open_receiver(address, {});
@@ -268,25 +268,29 @@ namespace fty::messagebus::amqp
 
   void AmqpClient::setSubscriptions(const Address& address, MessageListener messageListener)
   {
-    if (auto it{m_subscriptions.find(address)}; it == m_subscriptions.end() && messageListener)
+    if (messageListener)
     {
-      auto ret = m_subscriptions.emplace(address, messageListener);
-      logTrace("Subscriptions emplaced: {} {}", address, ret.second ? "true" : "false");
-    }
-    else
-    {
-      logWarn("Set subscriptions skipped");
+      if (auto it{m_subscriptions.find(address)}; it == m_subscriptions.end())
+      {
+        auto ret = m_subscriptions.emplace(address, messageListener);
+        logTrace("Subscriptions emplaced: {} {}", address, ret.second ? "true" : "false");
+      }
+      else
+      {
+        logWarn("Set subscriptions skipped");
+      }
     }
   }
 
   DeliveryState AmqpClient::unreceive()
   {
+    std::lock_guard<std::mutex> lock(m_lock);
     auto deliveryState = DeliveryState::DELIVERY_STATE_UNAVAILABLE;
-    if (m_receiver)
+    if (m_receiver && m_receiver.active())
     {
-      logDebug("Closing receiver");
-      m_receiver.close();
       deliveryState = DeliveryState::DELIVERY_STATE_ACCEPTED;
+      m_receiver.close();
+      logDebug("Receiver Closed");
     }
     return deliveryState;
   }
@@ -294,13 +298,11 @@ namespace fty::messagebus::amqp
   void AmqpClient::close()
   {
     std::lock_guard<std::mutex> lock(m_lock);
-    logDebug("Closing...");
-    if (m_connection)
+    if (m_connection && m_connection.active())
     {
-      logDebug("Closing connection");
       m_connection.close();
+      logDebug("Connection Closed");
     }
-    logDebug("Closed");
   }
 
 } // namespace fty::messagebus::amqp
