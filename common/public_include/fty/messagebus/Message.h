@@ -46,8 +46,9 @@ namespace fty::messagebus
   {
   public:
     Message() = default;
-    Message(const Message& message);
     Message(const MetaData& metaData, const UserData& userData);
+    Message(const Message& message);
+    Message(const UserData& userData);
 
     ~Message() noexcept = default;
     Message& operator=(const Message& other);

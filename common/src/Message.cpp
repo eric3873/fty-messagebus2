@@ -22,14 +22,20 @@
 
 namespace fty::messagebus
 {
+
+  Message::Message(const MetaData& metaData, const UserData& userData)
+    : m_metadata(metaData)
+    , m_data(userData)
+  {
+  }
+
   Message::Message(const Message& message)
     : Message(message.metaData(), message.userData())
   {
   }
 
-  Message::Message(const MetaData& metaData, const UserData& userData)
-    : m_metadata(metaData)
-    , m_data(userData)
+  Message::Message(const UserData& userData)
+    : Message({}, userData)
   {
   }
 
