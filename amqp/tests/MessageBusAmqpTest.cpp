@@ -135,28 +135,19 @@ namespace
 
   TEST_CASE("queue", "[amqp][request]")
   {
-    SECTION("Send")
+    SECTION("Send request sync timeout reached")
     {
-      MsgReceived msgReceived;
-      std::string sendTestQueue = "queue://test.message.send";
+      std::string syncTimeOutTestQueue = "queue://test.message.synctimeout.";
+      auto msgBus = amqp::MessageBusAmqp("SyncRequesterTimeOutTestCase", AMQP_SERVER_URI);
 
-      auto msgBus = amqp::MessageBusAmqp("MessageRecieverSendTestCase", AMQP_SERVER_URI);
       REQUIRE(msgBus.connect());
 
-      auto msgBusSender = amqp::MessageBusAmqp("MessageSenderSendTestCase", AMQP_SERVER_URI);
-      REQUIRE(msgBusSender.connect());
+      // Send synchronous request
+      Message request = Message::buildRequest("SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:");
 
-      REQUIRE(msgBusSender.receive(sendTestQueue, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
-
-      // Send message on queue
-      Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
-
-      for (int i = 0; i < 3; i++)
-      {
-        REQUIRE(msgBusSender.send(msg));
-        std::this_thread::sleep_for(ONE_SECOND);
-        CHECK(msgReceived.isRecieved(i+1));
-      }
+      auto replyMsg = msgBus.request(request, 2);
+      REQUIRE(!replyMsg);
+      REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
     }
 
     SECTION("Send sync request")
@@ -173,7 +164,7 @@ namespace
 
       // Test without connection before.
       auto msgBusRequester = amqp::MessageBusAmqp("SyncRequesterTestCase", AMQP_SERVER_URI);
-      auto requester = msgBusRequester.request(request, 1);
+      auto requester = msgBusRequester.request(request, 2);
       REQUIRE(requester.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
 
       // Test with connection after.
@@ -181,21 +172,6 @@ namespace
       auto replyMsg = msgBusRequester.request(request, 2);
       REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
     }
-
-    // SECTION("Send request sync timeout reached")
-    // {
-    //   std::string syncTimeOutTestQueue = "queue://test.message.synctimeout.";
-    //   auto msgBus = amqp::MessageBusAmqp("SyncRequesterTimeOutTestCase", AMQP_SERVER_URI);
-
-    //   REQUIRE(msgBus.connect());
-
-    //   // Send synchronous request
-    //   Message request = Message::buildRequest("SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:");
-
-    //   auto replyMsg = msgBus.request(request, 3);
-    //   REQUIRE(!replyMsg);
-    //   // REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
-    // }
 
     SECTION("Send async request")
     {
@@ -217,6 +193,30 @@ namespace
         REQUIRE(msgBusReplyer.send(request));
         std::this_thread::sleep_for(TWO_SECONDS);
         CHECK(msgReceived.assertValue(i + 1));
+      }
+    }
+
+    SECTION("Send")
+    {
+      MsgReceived msgReceived;
+      std::string sendTestQueue = "queue://test.message.send";
+
+      auto msgBus = amqp::MessageBusAmqp("MessageRecieverSendTestCase", AMQP_SERVER_URI);
+      REQUIRE(msgBus.connect());
+
+      auto msgBusSender = amqp::MessageBusAmqp("MessageSenderSendTestCase", AMQP_SERVER_URI);
+      REQUIRE(msgBusSender.connect());
+
+      REQUIRE(msgBusSender.receive(sendTestQueue, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
+
+      // Send message on queue
+      Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
+
+      for (int i = 0; i < 3; i++)
+      {
+        REQUIRE(msgBusSender.send(msg));
+        std::this_thread::sleep_for(ONE_SECOND);
+        CHECK(msgReceived.isRecieved(i+1));
       }
     }
   }

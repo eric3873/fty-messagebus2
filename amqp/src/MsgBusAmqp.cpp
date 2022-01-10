@@ -163,15 +163,11 @@ namespace fty::messagebus::amqp
       proton::message msgToSend = getAmqpMessage(message);
 
       AmqpClient requester(m_endpoint);
-      //auto requester = std::make_shared<AmqpClient>(m_endpoint);
       std::thread thrd([&]() {
-        proton::container(requester).auto_stop(true);
         proton::container(requester).run();
       });
       requester.receive(msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
-      //thrd.detach();
       auto msgSent = send(message);
-      //std::this_thread::sleep_for(std::chrono::seconds(4));
       if (!msgSent)
       {
         return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
@@ -179,25 +175,18 @@ namespace fty::messagebus::amqp
 
       MessagePointer response = std::make_shared<proton::message>();
       bool messageArrived = requester.tryConsumeMessageFor(response, receiveTimeOut);
-      //requester.close();
-      //thrd.join();
+
+      requester.close();
+      thrd.join();
 
       if (!messageArrived)
       {
-        logError("No message arrive in time!");
-        requester.unreceive();
-       // stop()
-        requester.close();
-        thrd.join();
         logError("No message arrive in time!");
         return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_TIMEOUT));
       }
 
       logDebug("Message arrived ({})", proton::to_string(*response));
-      requester.close();
-      thrd.join();
       return Message{getMetaData(*response), response->body().empty() ? std::string{} : proton::to_string(response->body())};
-      //return{};
     }
     catch (std::exception& e)
     {

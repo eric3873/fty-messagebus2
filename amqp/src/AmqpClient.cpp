@@ -298,6 +298,11 @@ namespace fty::messagebus::amqp
   void AmqpClient::close()
   {
     std::lock_guard<std::mutex> lock(m_lock);
+    if (m_receiver && m_receiver.active())
+    {
+      m_receiver.close();
+      logDebug("Receiver Closed");
+    }
     if (m_connection && m_connection.active())
     {
       m_connection.close();
