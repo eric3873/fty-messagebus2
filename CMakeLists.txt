@@ -41,10 +41,6 @@ if(BUILD_MQTT)
   add_subdirectory(mqtt)
 endif()
 
-if(BUILD_AMQP AND BUILD_MQTT)
-  add_subdirectory(etnHelper)
-endif()
-
 # Samples
 if(BUILD_SAMPLES)
   set(SAMPLE_DTO_LIB_NAME fty-common-messagebus2-sample-dto)
