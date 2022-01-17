@@ -94,9 +94,9 @@ See all samples in samples folder
 
 For Eaton wrapper
 
-* [Etn message bus wrapper api](etnWrapper/public_include/etn/messagebus/EtnMessageBus.h)
-* [Etn message wrapper api](etnWrapper/public_include/etn/messagebus/EtnMessage.h)
-* [Tests](etnWrapper/tests/EtnMessageBusTest.cpp)
+* [Etn message bus helper api](etnHelper/public_include/etn/messagebus/EtnMessageBus.h)
+* [Etn message helper api](etnHelper/public_include/etn/messagebus/EtnMessage.h)
+* [Tests](etnHelper/tests/EtnMessageBusTest.cpp)
 
 ### Mqtt samples
 

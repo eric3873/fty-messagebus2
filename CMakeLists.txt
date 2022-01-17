@@ -42,7 +42,7 @@ if(BUILD_MQTT)
 endif()
 
 if(BUILD_AMQP AND BUILD_MQTT)
-  add_subdirectory(etnWrapper)
+  add_subdirectory(etnHelper)
 endif()
 
 # Samples
