@@ -1,4 +1,3 @@
 usr/lib/*/libfty-common-messagebus2-amqp.so*
 usr/lib/*/libfty-common-messagebus2-mqtt.so*
 usr/lib/*/libfty-common-messagebus2.so*
-usr/lib/*/libetn-common-messagebus2.so*
