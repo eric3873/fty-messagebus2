@@ -17,7 +17,7 @@
     =========================================================================
 */
 
-#include <fty/sample/dto/FtyCommonMathDto.hpp>
+#include <fty/sample/dto/FtyCommonMathDto.h>
 #include <fty/messagebus/amqp/MessageBusAmqp.h>
 
 #include <csignal>
@@ -105,7 +105,7 @@ int main(int argc, char** argv)
     if (strcmp(argv[2], "async") == 0)
     {
 
-      fty::Expected<void> subscribRet = bus.receive(replyQueue, responseMessageListener);
+      fty::Expected<void> subscribRet = bus.receive(replyQueue, responseMessageListener, request.correlationId());
       if (!subscribRet)
       {
         logError("Error while subscribing {}", subscribRet.error());
@@ -122,12 +122,6 @@ int main(int argc, char** argv)
     if (!sendRet)
     {
       logError("Error while sending: {}", sendRet.error());
-      return EXIT_FAILURE;
-    }
-    auto ret = bus.send(request);
-    if (!ret)
-    {
-      logError("Error while sending: {}", ret.error());
       return EXIT_FAILURE;
     }
   }

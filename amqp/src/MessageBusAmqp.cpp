@@ -49,12 +49,12 @@ namespace fty::messagebus::amqp
     return m_busAmqp->send(msg);
   }
 
-  fty::Expected<void> MessageBusAmqp::receive(const std::string& address, std::function<void(const Message&)>&& func, const std::string& filter) noexcept
+  fty::Expected<void> MessageBusAmqp::receive(const Address& address, MessageListener&& func, const std::string& filter) noexcept
   {
     return m_busAmqp->receive(address, func, filter);
   }
 
-  fty::Expected<void> MessageBusAmqp::unreceive(const std::string& address) noexcept
+  fty::Expected<void> MessageBusAmqp::unreceive(const Address& address) noexcept
   {
     return m_busAmqp->unreceive(address);
   }
@@ -63,9 +63,13 @@ namespace fty::messagebus::amqp
   {
     //Sanity check
     if (!msg.isValidMessage())
+    {
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    }
     if (!msg.needReply())
+    {
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+    }
 
     // Send request
     return m_busAmqp->request(msg, timeOut);
@@ -76,7 +80,7 @@ namespace fty::messagebus::amqp
     return m_busAmqp->clientName();
   }
 
-  static const std::string g_identity(BUS_IDENTITY_AMQP);
+  static const std::string g_identity(BUS_IDENTITY);
 
   const std::string& MessageBusAmqp::identity() const noexcept
   {

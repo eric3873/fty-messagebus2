@@ -26,9 +26,11 @@
 namespace fty::messagebus::amqp
 {
   // Default amqp end point
-  static auto constexpr DEFAULT_AMQP_END_POINT{"amqp://127.0.0.1:5672"};
+  static auto constexpr DEFAULT_ENDPOINT{"amqp://127.0.0.1:5672"};
 
-  static auto constexpr BUS_IDENTITY_AMQP{"AMQP"};
+  static auto constexpr BUS_IDENTITY{"AMQP"};
+  static const std::string TOPIC_PREFIX = "topic://";
+  static const std::string QUEUE_PREFIX = "queue://";
 
   class MsgBusAmqp;
 
@@ -36,19 +38,14 @@ namespace fty::messagebus::amqp
   {
   public:
     MessageBusAmqp(const ClientName& clientName = utils::getClientId("MessageBusAmqp"),
-                   const Endpoint& endpoint = DEFAULT_AMQP_END_POINT);
+                   const Endpoint& endpoint = DEFAULT_ENDPOINT);
 
     ~MessageBusAmqp() = default;
 
-    MessageBusAmqp(MessageBusAmqp&& other) = default;
-    MessageBusAmqp& operator=(MessageBusAmqp&& other) = delete;
-    MessageBusAmqp(const MessageBusAmqp& other) = default;
-    MessageBusAmqp& operator=(const MessageBusAmqp& other) = delete;
-
     [[nodiscard]] fty::Expected<void> connect() noexcept override;
     [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept override;
-    [[nodiscard]] fty::Expected<void> receive(const std::string& address, std::function<void(const Message&)>&& func, const std::string& filter = {}) noexcept override;
-    [[nodiscard]] fty::Expected<void> unreceive(const std::string& address) noexcept override;
+    [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept override;
+    [[nodiscard]] fty::Expected<void> unreceive(const Address& address) noexcept override;
     [[nodiscard]] fty::Expected<Message> request(const Message& msg, int timeOut) noexcept override;
 
     [[nodiscard]] const ClientName& clientName() const noexcept override;

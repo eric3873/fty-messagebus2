@@ -40,30 +40,32 @@ namespace fty::messagebus
   public:
     MessageBus() noexcept = default;
     virtual ~MessageBus() = default;
+
     MessageBus(const MessageBus&) = delete;
-    MessageBus(MessageBus&&) noexcept = default;
+    MessageBus& operator=(const MessageBus&) = delete;
+    MessageBus(MessageBus&&) noexcept = delete;
+    MessageBus& operator=(MessageBus&&) = delete;
 
     /// Connect to the MessageBus
     /// @return Success or Com Error
-    virtual [[nodiscard]] fty::Expected<void> connect() noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> connect() noexcept = 0;
 
     /// Send a message
     /// @param msg the message object to send
     /// @return Success or Delivery error
-    virtual [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept = 0 ;
-
+    virtual [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept = 0;
 
     /// Register a listener to a address using function
     /// @param address the address to receive
     /// @param func the function to receive
     /// @param filter constraint the receiver with a filter
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> receive(const std::string& address, MessageListener && func, const std::string& filter = {}) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept = 0;
 
     /// Unsubscribe from a address
     /// @param address the address to unsubscribe
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> unreceive(const std::string& address) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<void> unreceive(const Address& address) noexcept = 0;
 
     /// Register a listener to a address using class
     /// @example
@@ -73,7 +75,7 @@ namespace fty::messagebus
     /// @param cls class instance
     /// @return Success or error
     template <typename Func, typename Cls>
-    [[nodiscard]] fty::Expected<void> receive(const std::string& address, Func&& fnc, Cls* cls) noexcept
+    [[nodiscard]] fty::Expected<void> receive(const Address& address, Func&& fnc, Cls* cls) noexcept
     {
         return registerListener(address, [f = std::move(fnc), c = cls](const Message& msg) -> void {
             std::invoke(f, *c, Message(msg));
@@ -82,17 +84,17 @@ namespace fty::messagebus
 
     /// Sends message to the queue and wait to receive response
     /// @param msg the message to send
-    /// @param timeOut the timeout for the request
+    /// @param timeOut the timeout in seconds for the request
     /// @return Response message or Delivery error
-    virtual [[nodiscard]] fty::Expected<Message> request(const Message& msg, int timeOut) noexcept = 0 ;
+    virtual [[nodiscard]] fty::Expected<Message> request(const Message& msg, int timeOut) noexcept = 0;
 
     /// Get the client name
     /// @return Client name
-    virtual [[nodiscard]] const ClientName & clientName() const noexcept = 0 ;
+    virtual [[nodiscard]] const ClientName & clientName() const noexcept = 0;
 
     /// Get MessageBus Identity
     /// @return MessageBus Identity
-    virtual [[nodiscard]] const Identity & identity() const noexcept = 0 ;
+    virtual [[nodiscard]] const Identity & identity() const noexcept = 0;
 
   };
 

@@ -55,7 +55,7 @@ int main(int /*argc*/, char** argv)
   }
 
   //Build the message to send
-  Message msg = Message::buildMessage(argv[0],"/etn/samples/publish", "MESSAGE", "This is my test message");
+  Message msg = Message::buildMessage(argv[0], "/etn/samples/publish", "MESSAGE", "This is my test message");
 
   //Send the message
   fty::Expected<void> sendRet = bus.send(msg);

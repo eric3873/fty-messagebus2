@@ -22,14 +22,20 @@
 
 namespace fty::messagebus
 {
+
+  Message::Message(const MetaData& metaData, const UserData& userData)
+    : m_metadata(metaData)
+    , m_data(userData)
+  {
+  }
+
   Message::Message(const Message& message)
     : Message(message.metaData(), message.userData())
   {
   }
 
-  Message::Message(const MetaData& metaData, const UserData& userData)
-    : m_metadata(metaData)
-    , m_data(userData)
+  Message::Message(const UserData& userData)
+    : Message({}, userData)
   {
   }
 
@@ -66,10 +72,9 @@ namespace fty::messagebus
   std::string Message::getMetaDataValue(const std::string& key) const
   {
     std::string value{};
-    auto iterator = m_metadata.find(key);
-    if (iterator != m_metadata.end())
+    if (auto iter{m_metadata.find(key)}; iter != m_metadata.end())
     {
-      value = iterator->second;
+      value = iter->second;
     }
     return value;
   }
@@ -139,6 +144,16 @@ namespace fty::messagebus
     setMetaDataValue(STATUS, status);
   }
 
+  std::string Message::id() const
+  {
+    return getMetaDataValue(MESSAGE_ID);
+  }
+
+  void Message::id(const std::string& msgId)
+  {
+    setMetaDataValue(MESSAGE_ID, msgId);
+  }
+
   bool Message::isValidMessage() const
   {
     return ((!subject().empty()) && (!from().empty()) && (!to().empty()));
@@ -153,6 +168,28 @@ namespace fty::messagebus
   {
     //Check that request have all the proper field set
     return (!replyTo().empty() && isRequest());
+  }
+
+  Message Message::buildMessage(const Address& from, const Address& to, const std::string& subject, const UserData& userData, const MetaData& meta)
+  {
+    Message msg;
+    msg.metaData(meta);
+
+    msg.from(from);
+    msg.to(to);
+    msg.subject(subject);
+    msg.userData(userData);
+
+    return msg;
+  }
+
+  Message Message::buildRequest(const Address& from, const Address& to, const std::string& subject, const Address& replyTo, const UserData& userData, const MetaData& meta)
+  {
+    Message msg = buildMessage(from, to, subject, userData, meta);
+    msg.replyTo(replyTo);
+    msg.correlationId(utils::generateUuid());
+
+    return msg;
   }
 
   fty::Expected<Message> Message::buildReply(const UserData& userData, const std::string& status) const
@@ -171,28 +208,6 @@ namespace fty::messagebus
     reply.userData(userData);
 
     return reply;
-  }
-
-  Message Message::buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData, const MetaData& meta)
-  {
-    Message msg;
-    msg.m_metadata = meta;
-
-    msg.from(from);
-    msg.to(to);
-    msg.subject(subject);
-    msg.userData(userData);;
-
-    return msg;
-  }
-
-  Message Message::buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData, const MetaData& meta)
-  {
-    Message msg = buildMessage(from, to, subject, userData, meta);
-    msg.replyTo(replyTo);
-    msg.correlationId(utils::generateUuid());
-
-    return msg;
   }
 
   MetaData Message::getUndefinedProperties() const
@@ -222,5 +237,13 @@ namespace fty::messagebus
 
     return data;
   }
+
+  Message& Message::operator=(const Message& other)
+  {
+    m_metadata = std::move(other.metaData());
+    m_data = std::move(other.userData());
+    return *this;
+  }
+
 
 } //namespace fty::messagebus

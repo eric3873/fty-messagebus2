@@ -26,7 +26,7 @@
 @end
 */
 
-#include "fty/sample/dto/FtyCommonMathDto.hpp"
+#include "fty/sample/dto/FtyCommonMathDto.h"
 
 #include <nlohmann/json.hpp>
 #include <ostream>

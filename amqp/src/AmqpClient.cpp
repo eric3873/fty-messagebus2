@@ -19,162 +19,295 @@
 
 #include "AmqpClient.h"
 
+#include <proton/connection_options.hpp>
+#include <proton/reconnect_options.hpp>
 #include <proton/tracker.hpp>
 #include <proton/work_queue.hpp>
 
 #include <fty_log.h>
 
+namespace
+{
+  proton::reconnect_options reconnectOpts()
+  {
+    proton::reconnect_options reconnectOption;
+    reconnectOption.delay(proton::duration::SECOND);
+    reconnectOption.max_delay(proton::duration::MINUTE);
+    reconnectOption.max_attempts(10);
+    reconnectOption.delay_multiplier(5);
+    return reconnectOption;
+  }
+
+  proton::connection_options connectOpts()
+  {
+    return proton::connection_options();
+  }
+
+} // namespace
+
 namespace fty::messagebus::amqp
 {
-  static auto constexpr AMQP_CORREL_ID = "JMSCorrelationID";
+  using namespace fty::messagebus;
   using MessageListener = fty::messagebus::MessageListener;
-  using fty::messagebus::Message;
 
-  AmqpClient::AmqpClient(const std::string& url, const std::string& address, const std::string& filter, MessageListener messageListener)
+  static auto constexpr TIMEOUT = std::chrono::seconds(5);
+
+  AmqpClient::AmqpClient(const Endpoint& url)
     : m_url(url)
-    , m_address(address)
-    , m_filter(filter)
-    , m_messageListener(std::move(messageListener))
   {
-    m_future = m_promise.get_future();
+    m_connectFuture = m_connectPromise.get_future();
+  }
+
+  AmqpClient::~AmqpClient()
+  {
+    close();
   }
 
   void AmqpClient::on_container_start(proton::container& container)
   {
-    logDebug("AmqpClient on_container_start");
     try
     {
-      container.connect(m_url);
+      container.connect(m_url, connectOpts().reconnect(reconnectOpts()));
     }
-    catch (std::exception& e)
+    catch (const std::exception& e)
     {
-      log_error("Exception {}", e.what());
+      logError("Exception {}", e.what());
+      m_connectPromise.set_value(ComState::COM_STATE_CONNECT_FAILED);
     }
   }
 
   void AmqpClient::on_connection_open(proton::connection& connection)
   {
-    logDebug("on_connection_open for target address: {}", m_address);
+    m_connection = connection;
 
-    if (!m_filter.empty())
+    if (connection.reconnected())
     {
-      // Receiver with filtering, so reply, the filtering for this implementation is only on correlationId
-      proton::source_options opts;
-      std::ostringstream correlIdFilter;
-      correlIdFilter << AMQP_CORREL_ID;
-      correlIdFilter << "='";
-      correlIdFilter << m_filter;
-      correlIdFilter << "'";
-      logDebug("CorrelId filter: {}", correlIdFilter.str());
-      opts = setFilter(correlIdFilter.str());
-
-      m_receiver = connection.open_receiver(m_address, proton::receiver_options().source(opts));
-    }
-    else if (m_messageListener)
-    {
-      // Receiver without filtering, so request or subscription
-      m_receiver = connection.open_receiver(m_address);
+      logDebug("Reconnected on url: {}", m_url);
+      resetPromise();
     }
     else
     {
-      // Sender only
-      connection.open_sender(m_address);
+      logDebug("Connected on url: {}", m_url);
     }
+    m_connectPromise.set_value(ComState::COM_STATE_OK);
   }
 
   void AmqpClient::on_sender_open(proton::sender& sender)
   {
-    logDebug("On sender open for target address: {}", sender.source().address());
-    std::unique_lock<std::mutex> l(m_lock);
-    m_sender = sender;
-    m_senderReady.notify_all();
+    logDebug("Sending message ...");
+    sender.send(m_message);
+    sender.connection().close();
+    m_promiseSender.set_value();
+    logDebug("Message sent");
   }
 
   void AmqpClient::on_receiver_open(proton::receiver& receiver)
   {
-    logDebug("On receiver open for target address: {}", receiver.source().address());
+    logDebug("Waiting any message on target address: {}", receiver.source().address());
+    // Record receiver to have the possibility to unreceive it (i.e. close it)
+    m_receiver = receiver;
+    m_promiseReceiver.set_value();
   }
 
-  void AmqpClient::send(const proton::message& msg)
+  void AmqpClient::on_error(const proton::error_condition& error)
   {
-    logDebug("Init sender waiting...");
-    std::unique_lock<std::mutex> l(m_lock);
-    m_senderReady.wait(l);
-    logDebug("sender ready on {}", msg.to());
-
-    m_sender.work_queue().add([=]() {
-      auto tracker = m_sender.send(msg);
-      logDebug("Msg sent {}", proton::to_string(tracker.state()));
-      m_sender.connection().close();
-    });
+    logError("Protocol error: {}", error.what());
   }
 
-  bool AmqpClient::tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeout)
+  void AmqpClient::on_transport_error(proton::transport& transport)
   {
-    logDebug("Checking answer for {} second(s)...", timeout);
+    logError("Transport error: {}", transport.error().what());
+    m_communicationState = ComState::COM_STATE_LOST;
+  }
+
+  void AmqpClient::resetPromise()
+  {
+    logDebug("Reset all promise");
+    m_connectPromise = std::promise<fty::messagebus::ComState>();
+    m_connectFuture = m_connectPromise.get_future();
+    m_promiseSender = std::promise<void>();
+    m_promiseReceiver = std::promise<void>();
+  }
+
+  ComState AmqpClient::connected()
+  {
+    if ((m_communicationState == ComState::COM_STATE_UNKNOWN) || (m_communicationState == ComState::COM_STATE_LOST))
+    {
+      if (m_connectFuture.wait_for(TIMEOUT) != std::future_status::timeout)
+      {
+        try
+        {
+          m_communicationState = m_connectFuture.get();
+        }
+        catch (const std::future_error& e)
+        {
+          logError("Caught future error {}", e.what());
+        }
+      }
+      else
+      {
+        m_communicationState = ComState::COM_STATE_CONNECT_FAILED;
+      }
+    }
+    return m_communicationState;
+  }
+
+  DeliveryState AmqpClient::send(const proton::message& msg)
+  {
+    auto deliveryState = DeliveryState::DELIVERY_STATE_REJECTED;
+    if (connected() == ComState::COM_STATE_OK)
+    {
+      m_promiseSender = std::promise<void>();
+      logDebug("Sending message to {} ...", msg.to());
+      m_message.clear();
+      m_message = msg;
+
+      m_connection.work_queue().add([=]() {
+        m_connection.open_sender(msg.to());
+      });
+
+      // Wait the to know if the message has been sent or not
+      if (m_promiseSender.get_future().wait_for(TIMEOUT) != std::future_status::timeout)
+      {
+        deliveryState = DeliveryState::DELIVERY_STATE_ACCEPTED;
+      }
+    }
+    return deliveryState;
+  }
+
+  DeliveryState AmqpClient::receive(const Address& address, const std::string& filter, MessageListener messageListener)
+  {
+    auto deliveryState = DeliveryState::DELIVERY_STATE_REJECTED;
+    if (connected() == ComState::COM_STATE_OK)
+    {
+      logDebug("Set receiver to wait message(s) from {} ...", address);
+      m_promiseReceiver = std::promise<void>();
+
+      auto futureReceiver = m_promiseReceiver.get_future();
+      (!filter.empty()) ? setSubscriptions(filter, messageListener) : setSubscriptions(address, messageListener);
+
+      m_connection.work_queue().add([=]() {
+        m_connection.open_receiver(address, {});
+      });
+
+      if (futureReceiver.wait_for(TIMEOUT) != std::future_status::timeout)
+      {
+        deliveryState = DeliveryState::DELIVERY_STATE_ACCEPTED;
+      }
+    }
+
+    return deliveryState;
+  }
+
+  bool AmqpClient::tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeoutInSeconds)
+  {
+    logDebug("Checking answer for {} second(s)...", timeoutInSeconds);
+
+    m_promiseSyncRequest = std::promise<proton::message>();
 
     bool messageArrived = false;
-    if (m_future.wait_for(std::chrono::seconds(timeout)) != std::future_status::timeout)
+    auto futureSynRequest = m_promiseSyncRequest.get_future();
+    if (futureSynRequest.wait_for(std::chrono::seconds(timeoutInSeconds)) != std::future_status::timeout)
     {
-      *resp = std::move(m_future.get());
-      messageArrived = true;
+      try
+      {
+        *resp = std::move(futureSynRequest.get());
+        messageArrived = true;
+      }
+      catch (const std::future_error& e)
+      {
+        logError("Caught a future_error {}", e.what());
+      }
     }
-    close();
     return messageArrived;
   }
 
   void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
   {
-    std::lock_guard<std::mutex> l(m_lock);
-    logDebug("Message arrived {}", proton::to_string(msg));
+    std::lock_guard<std::mutex> lock(m_lock);
+    logDebug("Message arrived: {}", proton::to_string(msg));
     delivery.accept();
     Message amqpMsg(getMetaData(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
-    if (m_receiver && m_messageListener)
+
+    if (m_connection)
     {
-      // Asynchronous reply or any subscription
-      m_receiver.work_queue().add(proton::make_work(m_messageListener, amqpMsg));
+      if (!msg.correlation_id().empty() && msg.reply_to().empty())
+      {
+        if (auto it{m_subscriptions.find(proton::to_string(msg.correlation_id()))}; it != m_subscriptions.end())
+        {
+          // Asynchronous reply
+          logDebug("Asynchronous mode");
+          m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
+        }
+        else
+        {
+          // Synchronous reply
+          logDebug("Synchronous mode");
+          m_promiseSyncRequest.set_value(msg);
+        }
+      }
+      else
+      {
+        if (auto it{m_subscriptions.find(msg.address())}; it != m_subscriptions.end())
+        {
+          // Any subscription
+          m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
+        }
+        else
+        {
+          logWarn("Message skipped for {}", msg.address());
+        }
+      }
     }
     else
     {
-      // Synchronous reply
-      m_promise.set_value(msg);
+      // Connection object not set
+      logError("Nothing to do, connection object not set");
     }
   }
 
-  proton::source_options AmqpClient::setFilter(const std::string& selector)
+  void AmqpClient::setSubscriptions(const Address& address, MessageListener messageListener)
   {
-    proton::source_options opts;
-    proton::source::filter_map map;
-    proton::symbol filterKey("selector");
-    proton::value filterValue;
-    // The value is a specific AMQP "described type": binary string with symbolic descriptor
-    proton::codec::encoder enc(filterValue);
-    enc << proton::codec::start::described()
-        << proton::symbol("apache.org:selector-filter:string")
-        << selector
-        << proton::codec::finish();
-    // In our case, the map has this one element
-    map.put(filterKey, filterValue);
-    opts.filters(map);
+    if (messageListener)
+    {
+      if (auto it{m_subscriptions.find(address)}; it == m_subscriptions.end())
+      {
+        auto ret = m_subscriptions.emplace(address, messageListener);
+        logTrace("Subscriptions emplaced: {} {}", address, ret.second ? "true" : "false");
+      }
+      else
+      {
+        logWarn("Set subscriptions skipped");
+      }
+    }
+  }
 
-    return opts;
+  DeliveryState AmqpClient::unreceive()
+  {
+    std::lock_guard<std::mutex> lock(m_lock);
+    auto deliveryState = DeliveryState::DELIVERY_STATE_UNAVAILABLE;
+    if (m_receiver && m_receiver.active())
+    {
+      deliveryState = DeliveryState::DELIVERY_STATE_ACCEPTED;
+      m_receiver.close();
+      logDebug("Receiver Closed");
+    }
+    return deliveryState;
   }
 
   void AmqpClient::close()
   {
-    std::lock_guard<std::mutex> l(m_lock);
-    logDebug("Closing...");
-    if (m_sender)
+    std::lock_guard<std::mutex> lock(m_lock);
+    if (m_receiver && m_receiver.active())
     {
-      logDebug("Closing sender for {}", m_address);
-      m_sender.connection().close();
+      m_receiver.close();
+      logDebug("Receiver Closed");
     }
-    if (m_receiver)
+    if (m_connection && m_connection.active())
     {
-      logDebug("Closing receiver for {}", m_address);
-      m_receiver.connection().close();
+      m_connection.close();
+      logDebug("Connection Closed");
     }
-    logDebug("Closed");
   }
 
 } // namespace fty::messagebus::amqp

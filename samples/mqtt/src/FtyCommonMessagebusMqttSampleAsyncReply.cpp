@@ -19,29 +19,25 @@
     =========================================================================
 */
 
-/*
-@header
-    FtyCommonMessagebusMqttSampleAsyncReply.cpp -
-@discuss
-@end
-*/
-
-#include <fty/messagebus/MessageBusMqtt.hpp>
-#include <fty/messagebus/test/FtyCommonMathDto.hpp>
-#include <fty/messagebus/test/FtyCommonTestDef.hpp>
-#include <fty/messagebus/Message.h>
+#include "fty/sample/dto/FtyCommonMathDto.h"
+#include <fty/messagebus/MessageBus.h>
+#include <fty/messagebus/MessageBusStatus.h>
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 
 #include <csignal>
 #include <fty_log.h>
 #include <iostream>
+#include <thread>
 
 namespace
 {
+  using namespace fty::messagebus;
   using namespace fty::sample::dto;
+  static auto constexpr MATHS_OPERATOR_QUEUE = "/etn/q/request/maths/operator";
 
-
-  auto reqRep = fty::messagebus::MessageBusMqtt();
   static bool _continue = true;
+
+  auto msgBus = mqtt::MessageBusMqtt();
 
   static void signalHandler(int signal)
   {
@@ -75,7 +71,18 @@ namespace
       mathResultResult.error = "Unsuported operation";
     }
 
-    reqRep.sendRequestReply(message, mathResultResult.serialize());
+    //Build the response
+    auto response = message.buildReply(mathResultResult.serialize());
+    if (!response)
+    {
+      logError("Error on buildReply {}", response.error());
+    }
+    //send the response
+    auto returnSend = msgBus.send(response.value());
+    if (!returnSend)
+    {
+      logError("Error on send {}", returnSend.error());
+    }
     //_continue = false;
   }
 
@@ -88,7 +95,21 @@ int main(int /*argc*/, char** argv)
   // Install a signal handler
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
-  reqRep.registerRequestListener(SAMPLE_QUEUE, replyerMessageListener);
+
+  //Connect to the bus
+  fty::Expected<void> connectionRet = msgBus.connect();
+  if (!connectionRet)
+  {
+    logError("Error while connecting {}", connectionRet.error());
+    return EXIT_FAILURE;
+  }
+
+  fty::Expected<void> subscribRet = msgBus.receive(MATHS_OPERATOR_QUEUE, replyerMessageListener);
+  if (!subscribRet)
+  {
+    logError("Error while subscribing {}", subscribRet.error());
+    return EXIT_FAILURE;
+  }
 
   while (_continue)
   {

@@ -29,16 +29,6 @@
 #include <mqtt/message.h>
 #include <mqtt/properties.h>
 
-namespace
-{
-  template <typename ClientType>
-  bool isServiceAvailable(std::shared_ptr<ClientType> client)
-  {
-    bool serviceAvailable = client && client->is_connected();
-    return serviceAvailable;
-  }
-} // namespace
-
 namespace fty::messagebus::mqtt
 {
   using namespace fty::messagebus;
@@ -47,6 +37,7 @@ namespace fty::messagebus::mqtt
   duration KEEP_ALIVE = 20;
   static auto constexpr _QOS = ::mqtt::ReasonCode::GRANTED_QOS_2;
   auto constexpr TIMEOUT = std::chrono::seconds(5);
+  auto constexpr DOUBLE_TIMEOUT = std::chrono::seconds(10);
 
   static const MetaData getMetaDataFromMqttProperties(const ::mqtt::properties& props)
   {
@@ -56,7 +47,7 @@ namespace fty::messagebus::mqtt
     if (props.contains(::mqtt::property::USER_PROPERTY))
     {
       std::string key, value;
-      for (size_t i = 0; i < props.count(::mqtt::property::USER_PROPERTY); i++)
+      for (size_t i = 0; i < props.count(::mqtt::property::USER_PROPERTY); ++i)
       {
         std::tie(key, value) = ::mqtt::get<::mqtt::string_pair>(props, ::mqtt::property::USER_PROPERTY, i);
         message.setMetaDataValue(key, value);
@@ -125,35 +116,33 @@ namespace fty::messagebus::mqtt
   MsgBusMqtt::~MsgBusMqtt()
   {
     // Cleaning all async/sync mqtt clients
-    if (isServiceAvailable(m_asynClient))
+    if (m_asynClient)
     {
-      logDebug("Asynchronous client cleaning");
+      logDebug("Asynchronous client cleaning ...");
       m_asynClient->disable_callbacks();
       m_asynClient->stop_consuming();
-      m_asynClient->disconnect()->wait();
-    }
-    if (isServiceAvailable(m_synClient))
-    {
-      logDebug("Synchronous client cleaning");
-      m_synClient->stop_consuming();
-      m_synClient->disconnect();
+      if (m_asynClient->is_connected())
+      {
+        m_asynClient->disconnect()->wait();
+      }
+      logDebug("Asynchronous client cleaned");
     }
   }
 
   fty::Expected<void> MsgBusMqtt::connect()
   {
-    logDebug("Connecting to {} ...", m_endpoint);
+    logDebug("Connecting for {} to {} ...", m_clientName, m_endpoint);
     ::mqtt::create_options opts(MQTTVERSION_5);
 
     m_asynClient = std::make_shared<::mqtt::async_client>(m_endpoint, utils::getClientId("async-" + m_clientName), opts);
-    m_synClient = std::make_shared<::mqtt::client>(m_endpoint, utils::getClientId("sync-" + m_clientName), opts);
 
     // Connection options
     ::mqtt::connect_options connOpts = ::mqtt::connect_options_builder()
                                          .clean_session(false)
                                          .mqtt_version(MQTTVERSION_5)
                                          .keep_alive_interval(std::chrono::seconds(KEEP_ALIVE))
-                                         .automatic_reconnect(true)
+                                         .connect_timeout(TIMEOUT)
+                                         .automatic_reconnect(TIMEOUT, DOUBLE_TIMEOUT)
                                          .clean_start(true)
                                          .finalize();
 
@@ -171,24 +160,34 @@ namespace fty::messagebus::mqtt
       m_asynClient->start_consuming();
       m_asynClient->connect(connOpts)->wait();
 
-      m_synClient->start_consuming();
-      m_synClient->connect(connOpts);
+      // Called after a reconnection
+      m_asynClient->set_connected_handler([this](const std::string& cause) {
+
+        (cause.empty()) ? logDebug("Connected") : logDebug("{}", cause);
+        // Refresh all recieved
+        for (auto [address, listener] : m_cb.subscriptions())
+        {
+          auto received = receive(address, listener);
+          if (!received)
+          {
+            logWarn("Address '{}' rejected after reconnection", address);
+          }
+        }
+      });
+
+      // After a connection lost, depending of reconnection setting, this handler is called by paho library
+      m_asynClient->set_update_connection_handler([this](const ::mqtt::connect_data& /*connData*/) {
+        if (!m_asynClient->is_connected())
+        {
+          logInfo("Try a reconnection with {} ...", m_endpoint);
+          m_asynClient->reconnect()->wait_for(TIMEOUT);
+        }
+        return true;
+      });
 
       // Callback(s)
       m_asynClient->set_callback(m_cb);
-      m_synClient->set_callback(m_cb);
-      m_asynClient->set_connected_handler([this](const std::string& cause) {
-        m_cb.onConnected(cause);
-      });
-
-      m_asynClient->set_update_connection_handler([this](const ::mqtt::connect_data& connData) {
-        return m_cb.onConnectionUpdated(connData);
-      });
-      m_synClient->set_update_connection_handler([this](const ::mqtt::connect_data& connData) {
-        return m_cb.onConnectionUpdated(connData);
-      });
-
-      logInfo("{} => connect status: sync client: {}, async client: {}", m_clientName.c_str(), m_asynClient->is_connected() ? "true" : "false", m_synClient->is_connected() ? "true" : "false");
+      logInfo("{} => connect status: async client: {}", m_clientName.c_str(), m_asynClient->is_connected() ? "true" : "false");
     }
     catch (const ::mqtt::exception& e)
     {
@@ -204,55 +203,61 @@ namespace fty::messagebus::mqtt
     return {};
   }
 
-  fty::Expected<void> MsgBusMqtt::receive(const std::string& address, MessageListener messageListener)
+  fty::Expected<void> MsgBusMqtt::receive(const Address& address, MessageListener messageListener)
   {
-    if (!isServiceAvailable(m_asynClient))
+    if (!isServiceAvailable())
     {
       logError("Service not available");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
-    logDebug("Waiting to receive msg from: {}", address);
-    m_cb.setSubscriptions(address, messageListener);
-    m_asynClient->set_message_callback([this](::mqtt::const_message_ptr msg) {
-      // Wrapper from mqtt msg to Message
-      m_cb.onMessageArrived(msg);
-    });
-
-    if (!m_asynClient->subscribe(address, _QOS)->wait_for(TIMEOUT))
+    if (!m_cb.subscribed(address))
     {
-      logError("Receive (Rejected)");
-      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      m_cb.subscriptions(address, messageListener);
+      m_asynClient->set_message_callback([this](::mqtt::const_message_ptr msg) {
+        // Wrapper from mqtt msg to Message
+        m_cb.onMessageArrived(msg);
+      });
+
+      if (!m_asynClient->subscribe(address, _QOS)->wait_for(TIMEOUT))
+      {
+        logError("Receive for {} (Rejected)", address);
+        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+      }
+    }
+    else
+    {
+      // Here after a reconnection
+      m_asynClient->subscribe(address, _QOS)->wait_for(TIMEOUT);
     }
 
     logDebug("Waiting to receive msg from: {} Accepted", address);
-
     return {};
   }
 
-  fty::Expected<void> MsgBusMqtt::unreceive(const std::string& address)
+  fty::Expected<void> MsgBusMqtt::unreceive(const Address& address)
   {
-    if (!isServiceAvailable(m_asynClient))
+    if (!isServiceAvailable())
     {
       logError("Service not available");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
 
-    logTrace("{} - unsubscribed on '{}'", m_clientName, address);
-    if (!m_asynClient->unsubscribe(address)->wait_for(TIMEOUT))
+    if (!m_cb.subscribed(address))
     {
-      logError("Unsubscribed (Rejected)");
+      logError("Address not found {}, unsubscribed (Rejected)", address);
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
 
+    m_asynClient->unsubscribe(address)->wait_for(TIMEOUT);
     m_cb.eraseSubscriptions(address);
-
+    logDebug("Unreceive for {} Accepted", address);
     return {};
   }
 
   fty::Expected<void> MsgBusMqtt::send(const Message& message)
   {
-    if (!isServiceAvailable(m_asynClient))
+    if (!isServiceAvailable())
     {
       logError("Service not available");
       return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
@@ -274,33 +279,35 @@ namespace fty::messagebus::mqtt
 
   fty::Expected<Message> MsgBusMqtt::request(const Message& message, int receiveTimeOut)
   {
-    try
+    if (!isServiceAvailable())
     {
-      if (!(isServiceAvailable(m_asynClient) && isServiceAvailable(m_synClient)))
-      {
-        logError("Service not available");
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
-      }
-
-      ::mqtt::const_message_ptr msg;
-      m_synClient->subscribe(message.replyTo(), _QOS);
-      send(message);
-
-      auto messageArrived = m_synClient->try_consume_message_for(&msg, std::chrono::seconds(receiveTimeOut));
-      m_synClient->unsubscribe(message.replyTo());
-      if (!messageArrived)
-      {
-        logError("No message arrive in time!");
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_TIMEOUT));
-      }
-
-      logDebug("Message arrived ({})", msg->get_payload_str().c_str());
-      return Message(getMetaDataFromMqttProperties(msg->get_properties()), msg->get_payload_str());
+      logError("Service not available");
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
     }
-    catch (std::exception& e)
+
+    ::mqtt::const_message_ptr msg;
+    m_asynClient->subscribe(message.replyTo(), _QOS);
+    auto msgSent = send(message);
+    if (!msgSent)
     {
-      return fty::unexpected(e.what());
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
     }
+
+    auto messageArrived = m_asynClient->try_consume_message_for(&msg, std::chrono::seconds(receiveTimeOut));
+    m_asynClient->unsubscribe(message.replyTo());
+    if (!messageArrived)
+    {
+      logError("No message arrive in time!");
+      return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_TIMEOUT));
+    }
+
+    logDebug("Message arrived ({})", msg->get_payload_str().c_str());
+    return Message(getMetaDataFromMqttProperties(msg->get_properties()), msg->get_payload_str());
+  }
+
+  bool MsgBusMqtt::isServiceAvailable()
+  {
+    return m_asynClient && m_asynClient->is_connected();
   }
 
 } // namespace fty::messagebus::mqtt

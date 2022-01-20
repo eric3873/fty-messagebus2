@@ -27,28 +27,31 @@ namespace fty::messagebus
 {
   using UserData = std::string;
   using MetaData = std::map<std::string, std::string>;
+  using Address = std::string;
 
   static constexpr auto STATUS_OK = "OK";
   static constexpr auto STATUS_KO = "KO";
 
   // Metadata user property
-  static constexpr auto CORRELATION_ID = "CORRELATION_ID";
-  static constexpr auto FROM = "FROM";         //ClientId of the message
-  static constexpr auto TO = "TO";             //Queue of destination
-  static constexpr auto REPLY_TO = "REPLY_TO"; //Queue for the reply
-  static constexpr auto SUBJECT = "SUBJECT";
-  static constexpr auto STATUS = "STATUS";
-  static constexpr auto TIMEOUT = "TIMEOUT";
+  static constexpr auto CORRELATION_ID = "CORRELATION_ID"; // Correlation Id used for request reply pattern
+  static constexpr auto MESSAGE_ID     = "MESSAGE_ID";     // Message Id
+  static constexpr auto FROM           = "FROM";           // ClientId of the message
+  static constexpr auto TO             = "TO";             // Destination queue
+  static constexpr auto REPLY_TO       = "REPLY_TO";       // Reply queue
+  static constexpr auto SUBJECT        = "SUBJECT";        // Message subject
+  static constexpr auto STATUS         = "STATUS";         // Message status
 
   class Message;
   class Message
   {
   public:
     Message() = default;
-    Message(const Message& message);
     Message(const MetaData& metaData, const UserData& userData);
+    Message(const Message& message);
+    Message(const UserData& userData);
 
-    virtual ~Message() noexcept = default;
+    ~Message() noexcept = default;
+    Message& operator=(const Message& other);
 
     MetaData& metaData();
     const MetaData& metaData() const;
@@ -70,6 +73,8 @@ namespace fty::messagebus
     void subject(const std::string& subject);
     std::string status() const;
     void status(const std::string& status);
+    std::string id() const;
+    void id(const std::string& id);
 
     std::string getMetaDataValue(const std::string& key) const;
     void setMetaDataValue(const std::string& key, const std::string& data);
@@ -79,8 +84,8 @@ namespace fty::messagebus
     bool needReply() const;
 
     fty::Expected<Message> buildReply(const UserData& userData, const std::string& status = STATUS_OK) const;
-    static Message buildMessage(const std::string& from, const std::string& to, const std::string& subject, const UserData& userData = {}, const MetaData& meta = {});
-    static Message buildRequest(const std::string& from, const std::string& to, const std::string& subject, const std::string& replyTo, const UserData& userData = {}, const MetaData& meta = {});
+    static Message buildMessage(const Address& from, const Address& to, const std::string& subject, const UserData& userData = {}, const MetaData& meta = {});
+    static Message buildRequest(const Address& from, const Address& to, const std::string& subject, const Address& replyTo, const UserData& userData = {}, const MetaData& meta = {});
 
     MetaData getUndefinedProperties() const;
 

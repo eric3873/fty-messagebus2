@@ -18,7 +18,7 @@
 */
 
 #include <fty/messagebus/amqp/MessageBusAmqp.h>
-#include <fty/sample/dto/FtyCommonFooBarDto.hpp>
+#include <fty/sample/dto/FtyCommonFooBarDto.h>
 
 #include <csignal>
 #include <fty_log.h>
@@ -40,7 +40,7 @@ namespace
     g_received.set_value(false);
   }
 
-  void messageListener(Message message)
+  void messageListener(const Message& message)
   {
     logInfo("messageListener");
     auto metadata = message.metaData();

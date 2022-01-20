@@ -51,6 +51,7 @@ namespace fty::messagebus::amqp
     }
     if (!protonMsg.id().empty())
     {
+      message.id(proton::to_string(protonMsg.id()));
       message.from(proton::to_string(protonMsg.id()));
     }
     if (!protonMsg.subject().empty())
