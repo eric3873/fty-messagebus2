@@ -12,11 +12,11 @@ find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR}/fty-cmake REQUIRED)
 
 ## TO BE MOVED IN FTY-CMAKE
 macro(relative_option parent_option new_option_name text)
-  if (${parent_option})
-    option(${new_option_name} ${text} ON)
-  else()
-    option(${new_option_name} ${text} OFF)
-  endif()
+    if (${parent_option})
+        option(${new_option_name} ${text} ON)
+    else()
+        option(${new_option_name} ${text} OFF)
+    endif()
 endmacro()
 
 option(                            BUILD_ALL                   "Build all addons"                  ON)
@@ -33,15 +33,15 @@ add_subdirectory(common)
 # Addons
 
 if(BUILD_AMQP)
-  add_subdirectory(amqp)
+    add_subdirectory(amqp)
 endif()
 
 if(BUILD_MQTT)
-  add_subdirectory(mqtt)
+    add_subdirectory(mqtt)
 endif()
 
 # Samples
 if(BUILD_SAMPLES)
-  set(SAMPLE_DTO_LIB_NAME fty-common-messagebus2-sample-dto)
-  add_subdirectory(samples)
+    set(SAMPLE_DTO_LIB_NAME fty-common-messagebus2-sample-dto)
+    add_subdirectory(samples)
 endif()

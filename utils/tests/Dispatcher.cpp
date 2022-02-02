@@ -17,9 +17,8 @@
     =========================================================================
 */
 
-#include <fty/messagebus/utils/MsgBusDispatcher.hpp>
 #include <catch2/catch.hpp>
-
+#include <fty/messagebus/utils/MsgBusDispatcher.hpp>
 #include <iostream>
 #include <set>
 
@@ -32,22 +31,25 @@ TEST_CASE("Dispatcher")
         // Four-function calculator test.
         std::cerr << "  - calculator: ";
 
-        using CalculatorDispatcher = Dispatcher<std::string, std::function<int(int, int)>, std::function<int(const std::string&, int, int)>>;
+        using CalculatorDispatcher =
+            Dispatcher<std::string, std::function<int(int, int)>, std::function<int(const std::string&, int, int)>>;
+        // clang-format off
         CalculatorDispatcher::Map calculatorMap {
             { "+", [](int a, int b) -> int { return a + b; }},
             { "-", [](int a, int b) -> int { return a - b; }},
             { "*", [](int a, int b) -> int { return a * b; }},
             { "/", [](int a, int b) -> int { return a / b; }},
-        } ;
+        };
+        // clang-format on
 
         CalculatorDispatcher calculator(calculatorMap);
 
         for (int b = 1; b < 10; b++) {
             for (int a = 1; a < 10; a++) {
-                REQUIRE(calculator("+", a, b) == (a+b));
-                REQUIRE(calculator("-", a, b) == (a-b));
-                REQUIRE(calculator("*", a, b) == (a*b));
-                REQUIRE(calculator("/", a, b) == (a/b));
+                REQUIRE(calculator("+", a, b) == (a + b));
+                REQUIRE(calculator("-", a, b) == (a - b));
+                REQUIRE(calculator("*", a, b) == (a * b));
+                REQUIRE(calculator("/", a, b) == (a / b));
             }
         }
 
@@ -62,14 +64,17 @@ TEST_CASE("Dispatcher")
         std::cerr << "  - translator: ";
 
         using TranslatorDispatcher = Dispatcher<std::string, std::function<std::string()>, std::function<std::string(const std::string&)>>;
+        // clang-format off
         TranslatorDispatcher::Map translatorMap {
             { "hello", []() -> std::string { return "bonjour"; }},
             { "goodbye", []() -> std::string { return "au revoir"; }},
-        } ;
+        };
+        // clang-format on
 
-        TranslatorDispatcher translator(translatorMap,
-            [](const std::string& word) { return "unknown word " + word; }
-        );
+
+        TranslatorDispatcher translator(translatorMap, [](const std::string& word) {
+            return "unknown word " + word;
+        });
 
         REQUIRE(translator("hello") == "bonjour");
         REQUIRE(translator("goodbye") == "au revoir");

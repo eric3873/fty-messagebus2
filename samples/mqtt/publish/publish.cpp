@@ -17,13 +17,11 @@
     =========================================================================
 */
 
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
-
 #include <csignal>
-#include <iostream>
-#include <future>
-
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 #include <fty_log.h>
+#include <future>
+#include <iostream>
 
 using namespace fty::messagebus;
 
@@ -35,43 +33,43 @@ void messageListener(Message message);
 
 int main(int /*argc*/, char** argv)
 {
-  logInfo("{} - starting...", argv[0]);
+    logInfo("{} - starting...", argv[0]);
 
-  //Create the bus object
-  auto bus = mqtt::MessageBusMqtt(argv[0]);
+    // Create the bus object
+    auto bus = mqtt::MessageBusMqtt(argv[0]);
 
-  //Connect to the bus
-  fty::Expected<void> connectionRet = bus.connect();
-  if(! connectionRet) {
-    logError("Error while connecting {}", connectionRet.error());
-    return EXIT_FAILURE;
-  }
+    // Connect to the bus
+    auto connectionRet = bus.connect();
+    if (!connectionRet) {
+        logError("Error while connecting {}", to_string(connectionRet.error()));
+        return EXIT_FAILURE;
+    }
 
-  //Subscrib to the bus
-  fty::Expected<void> subscribRet = bus.receive("/etn/samples/publish", messageListener);
-  if(! subscribRet) {
-    logError("Error while subscribing {}", subscribRet.error());
-    return EXIT_FAILURE;
-  }
+    // Subscrib to the bus
+    auto subscribRet = bus.receive("/etn/samples/publish", messageListener);
+    if (!subscribRet) {
+        logError("Error while subscribing {}", to_string(subscribRet.error()));
+        return EXIT_FAILURE;
+    }
 
-  //Build the message to send
-  Message msg = Message::buildMessage(argv[0], "/etn/samples/publish", "MESSAGE", "This is my test message");
+    // Build the message to send
+    Message msg = Message::buildMessage(argv[0], "/etn/samples/publish", "MESSAGE", "This is my test message");
 
-  //Send the message
-  fty::Expected<void> sendRet = bus.send(msg);
-  if(!sendRet ) {
-    logError("Error while sending {}", sendRet.error());
-    return EXIT_FAILURE;
-  }
+    // Send the message
+    auto sendRet = bus.send(msg);
+    if (!sendRet) {
+        logError("Error while sending {}", to_string(sendRet.error()));
+        return EXIT_FAILURE;
+    }
 
-  //Wait until the second thread receive the message
-  g_received.get_future().get();
-  logInfo("{} - end", argv[0]);
-  return EXIT_SUCCESS;
+    // Wait until the second thread receive the message
+    g_received.get_future().get();
+    logInfo("{} - end", argv[0]);
+    return EXIT_SUCCESS;
 }
 
 void messageListener(Message message)
 {
-  logInfo("messageListener recieved: \n{}", message.toString().c_str());
-  g_received.set_value(true);
+    logInfo("messageListener recieved: \n{}", message.toString().c_str());
+    g_received.set_value(true);
 }

@@ -9,29 +9,25 @@ find_package(ProtonCpp REQUIRED)
 ##############################################################################################################
 
 etn_target(shared ${PROJECT_NAME} PUBLIC
-  SOURCES
-    src/*.cpp
-    src/*.h
-  PUBLIC_INCLUDE_DIR
-    public_include
-  PUBLIC_HEADERS
-    fty/messagebus/amqp/MessageBusAmqp.h
-  USES_PUBLIC
-    fty-common-messagebus2
-  USES_PRIVATE
-    fty-common-messagebus-utils
-    fty_common_logging
-    Proton::cpp
-  FLAGS
-    "-fmax-errors=1"
+    SOURCES
+        src/*.cpp
+        src/*.h
+    PUBLIC_INCLUDE_DIR
+        public_include
+    PUBLIC_HEADERS
+        fty/messagebus/amqp/MessageBusAmqp.h
+    USES_PUBLIC
+        fty-common-messagebus2
+    USES_PRIVATE
+        fty-common-messagebus-utils
+        fty_common_logging
+        Proton::cpp
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 
 ## Tests
-if(BUILD_TESTING)
-  etn_test_target(${PROJECT_NAME}
+etn_test_target(${PROJECT_NAME}
     SOURCES
-      tests/*.cpp
+        tests/*.cpp
 )
-endif()

@@ -1,7 +1,8 @@
 project(${PROJECT_NAME}-sample
-        VERSION ${PROJECT_VERSION}
-        DESCRIPTION "fty messagebus sample"
-        LANGUAGES CXX)
+    VERSION ${PROJECT_VERSION}
+    DESCRIPTION "fty messagebus sample"
+    LANGUAGES CXX
+)
 
 # Dto(s)
 add_subdirectory(dto)
@@ -12,10 +13,10 @@ add_subdirectory(dto)
 
 # AMQP samples
 if(BUILD_AMQP)
-  add_subdirectory(amqp)
+    add_subdirectory(amqp)
 endif()
 
 # Mqtt samples
 if(BUILD_MQTT)
-  add_subdirectory(mqtt)
+    add_subdirectory(mqtt)
 endif()

@@ -17,13 +17,12 @@
     =========================================================================
 */
 
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
-#include <fty/messagebus/Message.h>
-
 #include <csignal>
+#include <fty/messagebus/Message.h>
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 #include <fty_log.h>
-#include <iostream>
 #include <future>
+#include <iostream>
 
 
 using namespace fty::messagebus;
@@ -39,65 +38,65 @@ void processMessage(const Message& message);
 
 int main(int /*argc*/, char** argv)
 {
-  logInfo("{} - starting...", argv[0]);
+    logInfo("{} - starting...", argv[0]);
 
-  // Install a signal handler
-  std::signal(SIGINT, signalHandler);
-  std::signal(SIGTERM, signalHandler);
+    // Install a signal handler
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
 
-  //Connect to the bus
-  fty::Expected<void> connectionRet = bus.connect();
-  if(! connectionRet) {
-    logError("Error while connecting {}", connectionRet.error());
-    return EXIT_FAILURE;
-  }
+    // Connect to the bus
+    auto connectionRet = bus.connect();
+    if (!connectionRet) {
+        logError("Error while connecting {}", to_string(connectionRet.error()));
+        return EXIT_FAILURE;
+    }
 
-  //Subscrib to the bus
-  fty::Expected<void> subscribRet = bus.receive("/etn/samples/daemon-basic/mailbox", processMessage);
-  if(! subscribRet) {
-    logError("Error while subscribing {}", subscribRet.error());
-    return EXIT_FAILURE;
-  }
+    // Subscrib to the bus
+    auto subscribRet = bus.receive("/etn/samples/daemon-basic/mailbox", processMessage);
+    if (!subscribRet) {
+        logError("Error while subscribing {}", to_string(subscribRet.error()));
+        return EXIT_FAILURE;
+    }
 
-  //Wait until we exit
-  g_exit.get_future().get();
-  logInfo("{} - end", argv[0]);
-  return EXIT_SUCCESS;
+    // Wait until we exit
+    g_exit.get_future().get();
+    logInfo("{} - end", argv[0]);
+    return EXIT_SUCCESS;
 }
 
 void signalHandler(int signal)
 {
-  std::cout << "Signal " << signal << " received\n";
-  g_exit.set_value();
+    std::cout << "Signal " << signal << " received\n";
+    g_exit.set_value();
 }
 
 void processMessage(const Message& message)
 {
-  logInfo("Process message:\n {}", message.toString());
+    logInfo("Process message:\n {}", message.toString());
 
-  //check the message has the good subject
-  if( message.subject() != "TO_UPPER") {
-    logError("Subject not supported");
-    return;
-  }
+    // check the message has the good subject
+    if (message.subject() != "TO_UPPER") {
+        logError("Subject not supported");
+        return;
+    }
 
-  //we process the message - Here nothing to do because
-  std::string data = message.userData();
+    // we process the message - Here nothing to do because
+    std::string data = message.userData();
 
-  std::transform(data.begin(), data.end(), data.begin(),
-                  [](unsigned char c){ return std::toupper(c); }
-                );
+    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) {
+        return std::toupper(c);
+    });
 
-  fty::Expected<Message> response = message.buildReply(data);
-  if(!response ) {
-    logError("Error while creating reply: {}", response.error());
-    return;
-  }
+    fty::Expected<Message> response = message.buildReply(data);
+    if (!response) {
+        logError("Error while creating reply: {}", response.error());
+        return;
+    }
 
-  //Send the message
-  fty::Expected<void> sendRet = bus.send(response.value());
-  if(!sendRet ) {
-    logError("Error while sending: {}", sendRet.error());
-    return;
-  }
+    // Send the message
+    auto sendRet = bus.send(response.value());
+    if (!sendRet) {
+        logError("Error while sending: {}", to_string(sendRet.error()));
+        return;
+    }
 }

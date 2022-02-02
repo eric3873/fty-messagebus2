@@ -23,36 +23,36 @@
 #include <fty/messagebus/MessageBus.h>
 #include <fty/messagebus/utils.h>
 
-namespace fty::messagebus::amqp
+namespace fty::messagebus::amqp {
+
+// Default amqp end point
+static auto constexpr DEFAULT_ENDPOINT{"amqp://127.0.0.1:5672"};
+
+static auto constexpr BUS_IDENTITY{"AMQP"};
+static const std::string TOPIC_PREFIX = "topic://";
+static const std::string QUEUE_PREFIX = "queue://";
+
+class MsgBusAmqp;
+
+class MessageBusAmqp final : public fty::messagebus::MessageBus
 {
-  // Default amqp end point
-  static auto constexpr DEFAULT_ENDPOINT{"amqp://127.0.0.1:5672"};
-
-  static auto constexpr BUS_IDENTITY{"AMQP"};
-  static const std::string TOPIC_PREFIX = "topic://";
-  static const std::string QUEUE_PREFIX = "queue://";
-
-  class MsgBusAmqp;
-
-  class MessageBusAmqp final : public fty::messagebus::MessageBus
-  {
-  public:
-    MessageBusAmqp(const ClientName& clientName = utils::getClientId("MessageBusAmqp"),
-                   const Endpoint& endpoint = DEFAULT_ENDPOINT);
+public:
+    MessageBusAmqp(const ClientName& clientName = utils::getClientId("MessageBusAmqp"), const Endpoint& endpoint = DEFAULT_ENDPOINT);
 
     ~MessageBusAmqp() = default;
 
-    [[nodiscard]] fty::Expected<void> connect() noexcept override;
-    [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept override;
-    [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept override;
-    [[nodiscard]] fty::Expected<void> unreceive(const Address& address) noexcept override;
-    [[nodiscard]] fty::Expected<Message> request(const Message& msg, int timeOut) noexcept override;
+    [[nodiscard]] fty::Expected<void, ComState>      connect() noexcept override;
+    [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& msg) noexcept override;
+    [[nodiscard]] fty::Expected<void, DeliveryState> receive(
+        const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept override;
+    [[nodiscard]] fty::Expected<void, DeliveryState>    unreceive(const Address& address) noexcept override;
+    [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& msg, int timeOut) noexcept override;
 
     [[nodiscard]] const ClientName& clientName() const noexcept override;
-    [[nodiscard]] const Identity& identity() const noexcept override;
+    [[nodiscard]] const Identity&   identity() const noexcept override;
 
-  private:
+private:
     std::shared_ptr<MsgBusAmqp> m_busAmqp;
-  };
+};
 
 } // namespace fty::messagebus::amqp

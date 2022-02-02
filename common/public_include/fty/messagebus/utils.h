@@ -21,18 +21,18 @@
 
 #include <string>
 
-namespace fty::messagebus::utils
-{
-  /// Generate an unique UUID
-  /// @return Uuid built
-  const std::string generateUuid();
+namespace fty::messagebus::utils {
 
-  /// Generate an id
-  /// @return Id built
-  const std::string generateId();
+/// Generate an unique UUID
+/// @return Uuid built
+const std::string generateUuid();
 
-  /// Generate a client id based on clock and prefix
-  /// @return Client id built
-  const std::string getClientId(const std::string& prefix);
+/// Generate an id
+/// @return Id built
+const std::string generateId();
+
+/// Generate a client id based on clock and prefix
+/// @return Client id built
+const std::string getClientId(const std::string& prefix);
 
 } // namespace fty::messagebus::utils
