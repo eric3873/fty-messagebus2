@@ -66,13 +66,13 @@ int main(int /*argc*/, char** argv)
 
     auto bus = amqp::MessageBusAmqp();
 
-    fty::Expected<void> connectionRet = bus.connect();
+    auto connectionRet = bus.connect();
     if (!connectionRet) {
         logError("Error while connecting {}", connectionRet.error());
         return EXIT_FAILURE;
     }
 
-    fty::Expected<void> subscribRet = bus.receive(SAMPLE_TOPIC, messageListener);
+    auto subscribRet = bus.receive(SAMPLE_TOPIC, messageListener);
     if (!subscribRet) {
         logError("Error while subscribing {}", subscribRet.error());
         return EXIT_FAILURE;
@@ -82,7 +82,7 @@ int main(int /*argc*/, char** argv)
     Message msg = Message::buildMessage(argv[0], SAMPLE_TOPIC, "PublishMessage", FooBar("event", "hello").serialize());
 
     // Send message
-    fty::Expected<void> sendRet = bus.send(msg);
+    auto sendRet = bus.send(msg);
     if (!sendRet) {
         logError("Error while sending {}", sendRet.error());
         return EXIT_FAILURE;

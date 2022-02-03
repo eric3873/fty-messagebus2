@@ -20,6 +20,7 @@
 #pragma once
 
 #include "fty/messagebus/Message.h"
+#include "fty/messagebus/MessageBusStatus.h"
 #include <fty/expected.h>
 #include <functional>
 #include <memory>
@@ -47,25 +48,25 @@ public:
 
     /// Connect to the MessageBus
     /// @return Success or Com Error
-    virtual fty::Expected<void> connect() noexcept = 0;
+    virtual fty::Expected<void, ComState> connect() noexcept = 0;
 
     /// Send a message
     /// @param msg the message object to send
     /// @return Success or Delivery error
-    [[nodiscard]] virtual fty::Expected<void> send(const Message& msg) noexcept = 0;
+    [[nodiscard]] virtual fty::Expected<void, DeliveryState> send(const Message& msg) noexcept = 0;
 
     /// Register a listener to a address using function
     /// @param address the address to receive
     /// @param func the function to receive
     /// @param filter constraint the receiver with a filter
     /// @return Success or error
-    [[nodiscard]] virtual fty::Expected<void> receive(
+    [[nodiscard]] virtual fty::Expected<void, DeliveryState> receive(
         const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept = 0;
 
     /// Unsubscribe from a address
     /// @param address the address to unsubscribe
     /// @return Success or error
-    [[nodiscard]] virtual fty::Expected<void> unreceive(const Address& address) noexcept = 0;
+    [[nodiscard]] virtual fty::Expected<void, DeliveryState> unreceive(const Address& address) noexcept = 0;
 
     /// Register a listener to a address using class
     /// @example
@@ -75,7 +76,7 @@ public:
     /// @param cls class instance
     /// @return Success or error
     template <typename Func, typename Cls>
-    [[nodiscard]] fty::Expected<void> receive(const Address& address, Func&& fnc, Cls* cls) noexcept
+    [[nodiscard]] fty::Expected<void, DeliveryState> receive(const Address& address, Func&& fnc, Cls* cls) noexcept
     {
         return registerListener(address, [f = std::move(fnc), c = cls](const Message& msg) -> void {
             std::invoke(f, *c, Message(msg));
@@ -86,7 +87,7 @@ public:
     /// @param msg the message to send
     /// @param timeOut the timeout in seconds for the request
     /// @return Response message or Delivery error
-    [[nodiscard]] virtual fty::Expected<Message> request(const Message& msg, int timeOut) noexcept = 0;
+    [[nodiscard]] virtual fty::Expected<Message, DeliveryState> request(const Message& msg, int timeOut) noexcept = 0;
 
     /// Get the client name
     /// @return Client name

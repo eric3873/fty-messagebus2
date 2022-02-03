@@ -69,7 +69,7 @@ int main(int argc, char** argv)
     auto bus = amqp::MessageBusAmqp(argv[0]);
 
     // Bus connection
-    fty::Expected<void> connectionRet = bus.connect();
+    auto connectionRet = bus.connect();
     if (!connectionRet) {
         logError("Error while connecting {}", connectionRet.error());
         return EXIT_FAILURE;
@@ -83,7 +83,7 @@ int main(int argc, char** argv)
     if (strcmp(argv[2], "sync") == 0) {
         _continue = false;
 
-        fty::Expected<Message> reply = bus.request(request, SYNC_REQUEST_TIMEOUT);
+        auto reply = bus.request(request, SYNC_REQUEST_TIMEOUT);
         if (!reply) {
             std::cerr << "Error while requesting " << reply.error() << std::endl;
             return EXIT_FAILURE;
@@ -98,7 +98,7 @@ int main(int argc, char** argv)
     } else {
         if (strcmp(argv[2], "async") == 0) {
 
-            fty::Expected<void> subscribRet = bus.receive(replyQueue, responseMessageListener, request.correlationId());
+            auto subscribRet = bus.receive(replyQueue, responseMessageListener, request.correlationId());
             if (!subscribRet) {
                 logError("Error while subscribing {}", subscribRet.error());
                 return EXIT_FAILURE;
@@ -108,7 +108,7 @@ int main(int argc, char** argv)
             _continue = false;
         }
 
-        fty::Expected<void> sendRet = bus.send(request);
+        auto sendRet = bus.send(request);
         if (!sendRet) {
             logError("Error while sending: {}", sendRet.error());
             return EXIT_FAILURE;

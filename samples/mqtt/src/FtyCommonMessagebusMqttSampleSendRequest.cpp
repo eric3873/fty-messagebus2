@@ -71,7 +71,7 @@ int main(int argc, char** argv)
 
     auto msgBus = mqtt::MessageBusMqtt();
     // Connect to the bus
-    fty::Expected<void> connectionRet = msgBus.connect();
+    auto connectionRet = msgBus.connect();
     if (!connectionRet) {
         logError("Error while connecting {}", connectionRet.error());
         return EXIT_FAILURE;
@@ -82,12 +82,12 @@ int main(int argc, char** argv)
     Message msg = Message::buildRequest(argv[0], requestQueue, "mathQuery", MATHS_OPERATOR_REPLY_QUEUE, query.serialize());
 
     if (strcmp(argv[2], "async") == 0) {
-        fty::Expected<void> subscribRet = msgBus.receive(msg.replyTo(), responseMessageListener);
+        auto subscribRet = msgBus.receive(msg.replyTo(), responseMessageListener);
         if (!subscribRet) {
             logError("Error while subscribing {}", subscribRet.error());
             return EXIT_FAILURE;
         }
-        fty::Expected<void> sendRet = msgBus.send(msg);
+        auto sendRet = msgBus.send(msg);
         if (!sendRet) {
             logError("Error while sending {}", sendRet.error());
             return EXIT_FAILURE;

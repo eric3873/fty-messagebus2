@@ -43,16 +43,15 @@ TEST_CASE("Amqp with no connection", "[MsgBusAmqp]")
 
     auto msgBus   = amqp::MsgBusAmqp("AmqpNoConnectionTestCase", AMQP_SERVER_URI);
     auto received = msgBus.receive(topic, {});
-    REQUIRE(received.error() == to_string(DeliveryState::Unavailable));
+    REQUIRE(received.error() == DeliveryState::Unavailable);
     auto sent = msgBus.send(msg);
-    REQUIRE(sent.error() == to_string(DeliveryState::Unavailable));
+    REQUIRE(sent.error() == DeliveryState::Unavailable);
 }
 
 TEST_CASE("Amqp without and with connection", "[MsgBusAmqp]")
 {
     auto msgBus = amqp::MsgBusAmqp("AmqpMessageBusStatusTestCase", AMQP_SERVER_URI);
     CHECK_FALSE(msgBus.isServiceAvailable());
-    auto connectionRet = msgBus.connect();
     REQUIRE(msgBus.connect());
     REQUIRE(msgBus.isServiceAvailable());
 

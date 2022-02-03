@@ -45,14 +45,15 @@ public:
     MsgBusAmqp(const MsgBusAmqp&)       = delete;
     MsgBusAmqp& operator=(const MsgBusAmqp&) = delete;
 
-    [[nodiscard]] fty::Expected<void> connect();
+    [[nodiscard]] fty::Expected<void, ComState> connect();
 
-    [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener messageListener, const std::string& filter = {});
-    [[nodiscard]] fty::Expected<void> unreceive(const Address& address);
-    [[nodiscard]] fty::Expected<void> send(const Message& message);
+    [[nodiscard]] fty::Expected<void, DeliveryState> receive(
+        const Address& address, MessageListener messageListener, const std::string& filter = {});
+    [[nodiscard]] fty::Expected<void, DeliveryState> unreceive(const Address& address);
+    [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& message);
 
     // Sync request with timeout
-    [[nodiscard]] fty::Expected<Message> request(const Message& message, int receiveTimeOut);
+    [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& message, int receiveTimeOut);
 
     const std::string& clientName() const
     {

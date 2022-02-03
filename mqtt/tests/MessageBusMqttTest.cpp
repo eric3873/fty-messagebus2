@@ -101,10 +101,10 @@ void replyerAddOK(const Message& message)
 
     // send the response
     auto msgBus    = mqtt::MessageBusMqtt("TestCase", MQTT_SERVER_URI);
-    auto connected = msgBus.connect();
+    REQUIRE(msgBus.connect());
     auto msgSent   = msgBus.send(response.value());
     if (!msgSent) {
-        std::cerr << msgSent.error() << std::endl;
+        FAIL(to_string(msgSent.error()));
     }
 }
 
@@ -166,7 +166,7 @@ TEST_CASE("queue", "[mqtt][request]")
         // Test without connection before.
         auto msgBusRequester = mqtt::MessageBusMqtt("SyncRequesterTestCase", MQTT_SERVER_URI);
         auto requester       = msgBusRequester.request(request, 5);
-        REQUIRE(requester.error() == to_string(DeliveryState::Unavailable));
+        REQUIRE(requester.error() == DeliveryState::Unavailable);
 
         // Test with connection after.
         REQUIRE(msgBusRequester.connect());
@@ -187,7 +187,7 @@ TEST_CASE("queue", "[mqtt][request]")
 
         auto replyMsg = msgBus.request(request, 1);
         REQUIRE(!replyMsg);
-        REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::Timeout);
+        REQUIRE(replyMsg.error() == DeliveryState::Timeout);
     }
 
     SECTION("Send async request")
@@ -244,7 +244,7 @@ TEST_CASE("topic", "[mqtt][pub]")
         std::string topic  = "/etn/test/message/unreceive";
 
         // Try to unreceive before a connection => UNAVAILABLE
-        REQUIRE(msgBus.unreceive(topic).error() == to_string(DeliveryState::Unavailable));
+        REQUIRE(msgBus.unreceive(topic).error() == DeliveryState::Unavailable);
         REQUIRE(msgBus.connect());
         REQUIRE(msgBus.receive(topic, messageListener));
 
@@ -258,7 +258,7 @@ TEST_CASE("topic", "[mqtt][pub]")
         CHECK(g_msgRecieved.isRecieved(1));
 
         // Try to unreceive a wrong topic => REJECTED
-        REQUIRE(msgBus.unreceive("/etn/t/wrongTopic").error() == to_string(DeliveryState::Rejected));
+        REQUIRE(msgBus.unreceive("/etn/t/wrongTopic").error() == DeliveryState::Rejected);
         // Try to unreceive a right topic => ACCEPTED
         REQUIRE(msgBus.unreceive(topic));
         REQUIRE(msgBusSender.send(msg));
@@ -291,23 +291,23 @@ TEST_CASE("Wrong", "[mqtt][messageStatus]")
 
         // Without mandatory fields (from, subject, to)
         auto wrongSendMsg = Message::buildMessage("WrongMessageTestCase", "", "TEST");
-        REQUIRE(msgBus.send(wrongSendMsg).error() == to_string(DeliveryState::Rejected));
+        REQUIRE(msgBus.send(wrongSendMsg).error() == DeliveryState::Rejected);
 
         // Without mandatory fields (from, subject, to)
         auto request = Message::buildRequest("WrongRequestTestCase", "", "SyncTest", "", QUERY);
         // Request reject
-        REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::Rejected));
+        REQUIRE(msgBus.request(request, 1).error() == DeliveryState::Rejected);
         request.from("/etn/q/request");
         request.to("/etn/q/reply");
         // Without reply request reject.
-        REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::Rejected));
+        REQUIRE(msgBus.request(request, 1).error() == DeliveryState::Rejected);
     }
 
     SECTION("Wrong connection")
     {
         auto msgBus        = mqtt::MessageBusMqtt("WrongConnectionTestCase", "tcp://wrong.address.ip.com");
         auto connectionRet = msgBus.connect();
-        REQUIRE(connectionRet.error() == to_string(ComState::ConnectFailed));
+        REQUIRE(connectionRet.error() == ComState::ConnectFailed);
     }
 }
 

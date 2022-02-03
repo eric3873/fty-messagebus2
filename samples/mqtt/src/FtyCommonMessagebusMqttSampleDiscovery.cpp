@@ -49,7 +49,7 @@ int main(int /*argc*/, char** argv)
 
     auto msgBus = mqtt::MessageBusMqtt();
     // Connect to the bus
-    fty::Expected<void> connectionRet = msgBus.connect();
+    auto connectionRet = msgBus.connect();
     if (!connectionRet) {
         logError("Error while connecting {}", connectionRet.error());
         return EXIT_FAILURE;

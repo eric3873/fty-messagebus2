@@ -41,12 +41,12 @@ public:
 
     ~MessageBusAmqp() = default;
 
-    [[nodiscard]] fty::Expected<void> connect() noexcept override;
-    [[nodiscard]] fty::Expected<void> send(const Message& msg) noexcept override;
-    [[nodiscard]] fty::Expected<void> receive(
+    [[nodiscard]] fty::Expected<void, ComState>      connect() noexcept override;
+    [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& msg) noexcept override;
+    [[nodiscard]] fty::Expected<void, DeliveryState> receive(
         const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept override;
-    [[nodiscard]] fty::Expected<void>    unreceive(const Address& address) noexcept override;
-    [[nodiscard]] fty::Expected<Message> request(const Message& msg, int timeOut) noexcept override;
+    [[nodiscard]] fty::Expected<void, DeliveryState>    unreceive(const Address& address) noexcept override;
+    [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& msg, int timeOut) noexcept override;
 
     [[nodiscard]] const ClientName& clientName() const noexcept override;
     [[nodiscard]] const Identity&   identity() const noexcept override;

@@ -43,14 +43,14 @@ int main(int /*argc*/, char** argv)
     std::signal(SIGTERM, signalHandler);
 
     // Connect to the bus
-    fty::Expected<void> connectionRet = bus.connect();
+    auto connectionRet = bus.connect();
     if (!connectionRet) {
         logError("Error while connecting {}", connectionRet.error());
         return EXIT_FAILURE;
     }
 
     // Subscrib to the bus
-    fty::Expected<void> subscribRet = bus.receive("/etn/samples/daemon-basic/mailbox", processMessage);
+    auto subscribRet = bus.receive("/etn/samples/daemon-basic/mailbox", processMessage);
     if (!subscribRet) {
         logError("Error while subscribing {}", subscribRet.error());
         return EXIT_FAILURE;
@@ -92,7 +92,7 @@ void processMessage(const Message& message)
     }
 
     // Send the message
-    fty::Expected<void> sendRet = bus.send(response.value());
+    auto sendRet = bus.send(response.value());
     if (!sendRet) {
         logError("Error while sending: {}", sendRet.error());
         return;

@@ -88,13 +88,13 @@ int main(int /*argc*/, char** argv)
     std::signal(SIGTERM, signalHandler);
 
     // Connect to the bus
-    fty::Expected<void> connectionRet = msgBus.connect();
+    auto connectionRet = msgBus.connect();
     if (!connectionRet) {
         logError("Error while connecting {}", connectionRet.error());
         return EXIT_FAILURE;
     }
 
-    fty::Expected<void> subscribRet = msgBus.receive(MATHS_OPERATOR_QUEUE, replyerMessageListener);
+    auto subscribRet = msgBus.receive(MATHS_OPERATOR_QUEUE, replyerMessageListener);
     if (!subscribRet) {
         logError("Error while subscribing {}", subscribRet.error());
         return EXIT_FAILURE;

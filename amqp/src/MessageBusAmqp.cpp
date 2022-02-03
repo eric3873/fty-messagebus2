@@ -32,37 +32,38 @@ MessageBusAmqp::MessageBusAmqp(const ClientName& clientName, const Endpoint& end
     m_busAmqp = std::make_shared<MsgBusAmqp>(clientName, endpoint);
 }
 
-fty::Expected<void> MessageBusAmqp::connect() noexcept
+fty::Expected<void, ComState> MessageBusAmqp::connect() noexcept
 {
     return m_busAmqp->connect();
 }
 
-fty::Expected<void> MessageBusAmqp::send(const Message& msg) noexcept
+fty::Expected<void, DeliveryState> MessageBusAmqp::send(const Message& msg) noexcept
 {
     if (!msg.isValidMessage()) {
-        return fty::unexpected(to_string(DeliveryState::Rejected));
+        return fty::unexpected(DeliveryState::Rejected);
     }
     return m_busAmqp->send(msg);
 }
 
-fty::Expected<void> MessageBusAmqp::receive(const Address& address, MessageListener&& func, const std::string& filter) noexcept
+fty::Expected<void, DeliveryState> MessageBusAmqp::receive(
+    const Address& address, MessageListener&& func, const std::string& filter) noexcept
 {
     return m_busAmqp->receive(address, func, filter);
 }
 
-fty::Expected<void> MessageBusAmqp::unreceive(const Address& address) noexcept
+fty::Expected<void, DeliveryState> MessageBusAmqp::unreceive(const Address& address) noexcept
 {
     return m_busAmqp->unreceive(address);
 }
 
-fty::Expected<Message> MessageBusAmqp::request(const Message& msg, int timeOut) noexcept
+fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& msg, int timeOut) noexcept
 {
     // Sanity check
     if (!msg.isValidMessage()) {
-        return fty::unexpected(to_string(DeliveryState::Rejected));
+        return fty::unexpected(DeliveryState::Rejected);
     }
     if (!msg.needReply()) {
-        return fty::unexpected(to_string(DeliveryState::Rejected));
+        return fty::unexpected(DeliveryState::Rejected);
     }
 
     // Send request

@@ -44,16 +44,15 @@ TEST_CASE("Mqtt with no connection", "[MsgBusMqtt]")
 
     auto msgBus   = MsgBusMqtt("MqttNoConnectionTestCase", MQTT_SERVER_URI);
     auto received = msgBus.receive(topic, {});
-    REQUIRE(received.error() == to_string(DeliveryState::Unavailable));
+    REQUIRE(received.error() == DeliveryState::Unavailable);
     auto sent = msgBus.send(msg);
-    REQUIRE(sent.error() == to_string(DeliveryState::Unavailable));
+    REQUIRE(sent.error() == DeliveryState::Unavailable);
 }
 
 TEST_CASE("Mqtt without and with connection", "[MsgBusMqtt]")
 {
     auto msgBus = MsgBusMqtt("MqttMessageBusStatusTestCase", MQTT_SERVER_URI);
     CHECK_FALSE(msgBus.isServiceAvailable());
-    auto connectionRet = msgBus.connect();
     REQUIRE(msgBus.connect());
     REQUIRE(msgBus.isServiceAvailable());
 

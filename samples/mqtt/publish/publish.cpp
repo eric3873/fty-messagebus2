@@ -39,14 +39,14 @@ int main(int /*argc*/, char** argv)
     auto bus = mqtt::MessageBusMqtt(argv[0]);
 
     // Connect to the bus
-    fty::Expected<void> connectionRet = bus.connect();
+    auto connectionRet = bus.connect();
     if (!connectionRet) {
         logError("Error while connecting {}", connectionRet.error());
         return EXIT_FAILURE;
     }
 
     // Subscrib to the bus
-    fty::Expected<void> subscribRet = bus.receive("/etn/samples/publish", messageListener);
+    auto subscribRet = bus.receive("/etn/samples/publish", messageListener);
     if (!subscribRet) {
         logError("Error while subscribing {}", subscribRet.error());
         return EXIT_FAILURE;
@@ -56,7 +56,7 @@ int main(int /*argc*/, char** argv)
     Message msg = Message::buildMessage(argv[0], "/etn/samples/publish", "MESSAGE", "This is my test message");
 
     // Send the message
-    fty::Expected<void> sendRet = bus.send(msg);
+    auto sendRet = bus.send(msg);
     if (!sendRet) {
         logError("Error while sending {}", sendRet.error());
         return EXIT_FAILURE;

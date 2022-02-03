@@ -19,6 +19,7 @@
 
 #pragma once
 
+#include <fmt/format.h>
 #include <string>
 
 namespace fty::messagebus {
@@ -141,3 +142,49 @@ inline DeliveryState from_deliveryState(const std::string& deliveryState)
 }
 
 } // namespace fty::messagebus
+
+inline std::ostream& operator<<(std::ostream& ss, fty::messagebus::ComState value)
+{
+    ss << fty::messagebus::to_string(value);
+    return ss;
+}
+
+inline std::ostream& operator<<(std::ostream& ss, fty::messagebus::DeliveryState value)
+{
+    ss << fty::messagebus::to_string(value);
+    return ss;
+}
+
+inline std::istream& operator>>(std::istream& ss, fty::messagebus::ComState& value)
+{
+    std::string strval;
+    ss >> strval;
+    value = fty::messagebus::from_com_state(strval);
+    return ss;
+}
+
+inline std::istream& operator>>(std::istream& ss, fty::messagebus::DeliveryState& value)
+{
+    std::string strval;
+    ss >> strval;
+    value = fty::messagebus::from_deliveryState(strval);
+    return ss;
+}
+
+/// Helper to format enums enity to fmt
+template <typename T>
+struct fmt::
+    formatter<T, std::enable_if_t<std::is_same_v<fty::messagebus::ComState, T> || std::is_same_v<fty::messagebus::DeliveryState, T>, char>>
+{
+    template <typename ParseContext>
+    constexpr auto parse(ParseContext& ctx)
+    {
+        return ctx.begin();
+    }
+
+    template <typename FormatContext>
+    auto format(const T& attr, FormatContext& ctx)
+    {
+        return fmt::format_to(ctx.out(), "{}", fty::messagebus::to_string(attr));
+    }
+};

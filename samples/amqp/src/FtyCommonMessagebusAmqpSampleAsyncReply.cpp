@@ -60,7 +60,7 @@ void replyerMessageListener(const Message& message)
         return;
     }
 
-    fty::Expected<void> sendRet = bus.send(response.value());
+    auto sendRet = bus.send(response.value());
     if (!sendRet) {
         logError("Error while sending: {}", sendRet.error());
         return;
@@ -86,13 +86,13 @@ int main(int argc, char** argv)
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
-    fty::Expected<void> connectionRet = bus.connect();
+    auto connectionRet = bus.connect();
     if (!connectionRet) {
         logError("Error while connecting {}", connectionRet.error());
         return EXIT_FAILURE;
     }
 
-    fty::Expected<void> subscribRet = bus.receive(address, replyerMessageListener);
+    auto subscribRet = bus.receive(address, replyerMessageListener);
     if (!subscribRet) {
         logError("Error while subscribing {}", subscribRet.error());
         return EXIT_FAILURE;

@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     auto bus = mqtt::MessageBusMqtt();
 
     // Connect to the bus
-    fty::Expected<void> connectionRet = bus.connect();
+    auto connectionRet = bus.connect();
     if (!connectionRet) {
         std::cerr << "Error while connecting " << connectionRet.error() << std::endl;
         return EXIT_FAILURE;
@@ -46,7 +46,7 @@ int main(int argc, char** argv)
         argv[0], "/etn/samples/daemon-basic/mailbox", "TO_UPPER", "/etn/samples/daemon-basic/reply/" + utils::generateId(), argv[1]);
 
     // Subscrib to the bus
-    fty::Expected<Message> reply = bus.request(request, 1);
+    auto reply = bus.request(request, 1);
     if (!reply) {
         std::cerr << "Error while requesting " << reply.error() << std::endl;
         return EXIT_FAILURE;

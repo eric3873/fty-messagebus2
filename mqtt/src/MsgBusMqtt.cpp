@@ -114,7 +114,7 @@ MsgBusMqtt::~MsgBusMqtt()
     }
 }
 
-fty::Expected<void> MsgBusMqtt::connect()
+fty::Expected<void, ComState> MsgBusMqtt::connect()
 {
     logDebug("Connecting for {} to {} ...", m_clientName, m_endpoint);
     ::mqtt::create_options opts(MQTTVERSION_5);
@@ -169,20 +169,20 @@ fty::Expected<void> MsgBusMqtt::connect()
         logInfo("{} => connect status: async client: {}", m_clientName.c_str(), m_asynClient->is_connected() ? "true" : "false");
     } catch (const ::mqtt::exception& e) {
         logError("Error to connect with the Mqtt server, reason: {}", e.get_message().c_str());
-        return fty::unexpected(to_string(ComState::ConnectFailed));
+        return fty::unexpected(ComState::ConnectFailed);
     } catch (const std::exception& e) {
         logError("unexpected error: {}", e.what());
-        return fty::unexpected(to_string(ComState::ConnectFailed));
+        return fty::unexpected(ComState::ConnectFailed);
     }
 
     return {};
 }
 
-fty::Expected<void> MsgBusMqtt::receive(const Address& address, MessageListener messageListener)
+fty::Expected<void, DeliveryState> MsgBusMqtt::receive(const Address& address, MessageListener messageListener)
 {
     if (!isServiceAvailable()) {
         logError("Service not available");
-        return fty::unexpected(to_string(DeliveryState::Unavailable));
+        return fty::unexpected(DeliveryState::Unavailable);
     }
 
     if (!m_cb.subscribed(address)) {
@@ -194,7 +194,7 @@ fty::Expected<void> MsgBusMqtt::receive(const Address& address, MessageListener 
 
         if (!m_asynClient->subscribe(address, _QOS)->wait_for(TIMEOUT)) {
             logError("Receive for {} (Rejected)", address);
-            return fty::unexpected(to_string(DeliveryState::Rejected));
+            return fty::unexpected(DeliveryState::Rejected);
         }
     } else {
         // Here after a reconnection
@@ -205,16 +205,16 @@ fty::Expected<void> MsgBusMqtt::receive(const Address& address, MessageListener 
     return {};
 }
 
-fty::Expected<void> MsgBusMqtt::unreceive(const Address& address)
+fty::Expected<void, DeliveryState> MsgBusMqtt::unreceive(const Address& address)
 {
     if (!isServiceAvailable()) {
         logError("Service not available");
-        return fty::unexpected(to_string(DeliveryState::Unavailable));
+        return fty::unexpected(DeliveryState::Unavailable);
     }
 
     if (!m_cb.subscribed(address)) {
         logError("Address not found {}, unsubscribed (Rejected)", address);
-        return fty::unexpected(to_string(DeliveryState::Rejected));
+        return fty::unexpected(DeliveryState::Rejected);
     }
 
     m_asynClient->unsubscribe(address)->wait_for(TIMEOUT);
@@ -223,11 +223,11 @@ fty::Expected<void> MsgBusMqtt::unreceive(const Address& address)
     return {};
 }
 
-fty::Expected<void> MsgBusMqtt::send(const Message& message)
+fty::Expected<void, DeliveryState> MsgBusMqtt::send(const Message& message)
 {
     if (!isServiceAvailable()) {
         logError("Service not available");
-        return fty::unexpected(to_string(DeliveryState::Unavailable));
+        return fty::unexpected(DeliveryState::Unavailable);
     }
 
     logDebug("Sending message {}", message.toString());
@@ -236,32 +236,32 @@ fty::Expected<void> MsgBusMqtt::send(const Message& message)
 
     if (!m_asynClient->publish(msgToSend)->wait_for(TIMEOUT)) {
         logError("Message sent (Rejected)");
-        return fty::unexpected(to_string(DeliveryState::Rejected));
+        return fty::unexpected(DeliveryState::Rejected);
     }
 
     logDebug("Message sent (Accepted)");
     return {};
 }
 
-fty::Expected<Message> MsgBusMqtt::request(const Message& message, int receiveTimeOut)
+fty::Expected<Message, DeliveryState> MsgBusMqtt::request(const Message& message, int receiveTimeOut)
 {
     if (!isServiceAvailable()) {
         logError("Service not available");
-        return fty::unexpected(to_string(DeliveryState::Unavailable));
+        return fty::unexpected(DeliveryState::Unavailable);
     }
 
     ::mqtt::const_message_ptr msg;
     m_asynClient->subscribe(message.replyTo(), _QOS);
     auto msgSent = send(message);
     if (!msgSent) {
-        return fty::unexpected(to_string(DeliveryState::Rejected));
+        return fty::unexpected(DeliveryState::Rejected);
     }
 
     auto messageArrived = m_asynClient->try_consume_message_for(&msg, std::chrono::seconds(receiveTimeOut));
     m_asynClient->unsubscribe(message.replyTo());
     if (!messageArrived) {
         logError("No message arrive in time!");
-        return fty::unexpected(to_string(DeliveryState::Timeout));
+        return fty::unexpected(DeliveryState::Timeout);
     }
 
     logDebug("Message arrived ({})", msg->get_payload_str().c_str());
