@@ -19,36 +19,35 @@
 
 #pragma once
 
+#include "fty/messagebus/Message.h"
+#include <fty/expected.h>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 
-#include <fty/expected.h>
-#include "fty/messagebus/Message.h"
+namespace fty::messagebus {
 
-namespace fty::messagebus
+using ClientName = std::string;
+using Endpoint   = std::string;
+using Identity   = std::string;
+
+using MessageListener = std::function<void(const Message&)>;
+
+class MessageBus
 {
-  using ClientName = std::string;
-  using Endpoint = std::string;
-  using Identity = std::string;
-
-  using MessageListener = std::function<void(const Message&)>;
-
-  class MessageBus
-  {
-  public:
+public:
     MessageBus() noexcept = default;
     virtual ~MessageBus() = default;
 
     MessageBus(const MessageBus&) = delete;
     MessageBus& operator=(const MessageBus&) = delete;
-    MessageBus(MessageBus&&) noexcept = delete;
+    MessageBus(MessageBus&&) noexcept        = delete;
     MessageBus& operator=(MessageBus&&) = delete;
 
     /// Connect to the MessageBus
     /// @return Success or Com Error
-    virtual [[nodiscard]] fty::Expected<void> connect() noexcept = 0;
+    virtual fty::Expected<void> connect() noexcept = 0;
 
     /// Send a message
     /// @param msg the message object to send
@@ -60,7 +59,8 @@ namespace fty::messagebus
     /// @param func the function to receive
     /// @param filter constraint the receiver with a filter
     /// @return Success or error
-    virtual [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept = 0;
+    virtual [[nodiscard]] fty::Expected<void> receive(
+        const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept = 0;
 
     /// Unsubscribe from a address
     /// @param address the address to unsubscribe
@@ -90,12 +90,11 @@ namespace fty::messagebus
 
     /// Get the client name
     /// @return Client name
-    virtual [[nodiscard]] const ClientName & clientName() const noexcept = 0;
+    virtual [[nodiscard]] const ClientName& clientName() const noexcept = 0;
 
     /// Get MessageBus Identity
     /// @return MessageBus Identity
-    virtual [[nodiscard]] const Identity & identity() const noexcept = 0;
-
-  };
+    virtual [[nodiscard]] const Identity& identity() const noexcept = 0;
+};
 
 } // namespace fty::messagebus

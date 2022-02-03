@@ -22,16 +22,15 @@
 #include <functional>
 #include <map>
 
-namespace fty::messagebus::utils
-{
+namespace fty::messagebus::utils {
 
-  /**
-  * @brief Callable dispatcher based on std::map.
-  */
-  template <class KeyType, typename WorkFunctionType, typename MissingFunctionType>
-  class Dispatcher
-  {
-  public:
+/**
+ * @brief Callable dispatcher based on std::map.
+ */
+template <class KeyType, typename WorkFunctionType, typename MissingFunctionType>
+class Dispatcher
+{
+public:
     /// @brief Map of (key -> callable).
     using Map = std::map<KeyType, WorkFunctionType>;
 
@@ -40,7 +39,7 @@ namespace fty::messagebus::utils
      * \param map Function map.
      */
     Dispatcher(const Map& map)
-      : Dispatcher(map, MissingFunctionType())
+        : Dispatcher(map, MissingFunctionType())
     {
     }
 
@@ -50,8 +49,8 @@ namespace fty::messagebus::utils
      * \param defaultHandler Default handler callable.
      */
     Dispatcher(const Map& map, MissingFunctionType defaultHandler)
-      : m_map(map)
-      , m_defaultHandler(defaultHandler)
+        : m_map(map)
+        , m_defaultHandler(defaultHandler)
     {
     }
 
@@ -65,17 +64,16 @@ namespace fty::messagebus::utils
     template <typename... ArgsType>
     typename WorkFunctionType::result_type operator()(const KeyType& key, ArgsType&&... args)
     {
-      auto it = m_map.find(key);
-      if (it != m_map.end())
-      {
-        return it->second(std::forward<ArgsType>(args)...);
-      }
-      return m_defaultHandler(key, std::forward<ArgsType>(args)...);
+        auto it = m_map.find(key);
+        if (it != m_map.end()) {
+            return it->second(std::forward<ArgsType>(args)...);
+        }
+        return m_defaultHandler(key, std::forward<ArgsType>(args)...);
     }
 
-  private:
-    Map m_map;
+private:
+    Map                 m_map;
     MissingFunctionType m_defaultHandler;
-  };
+};
 
 } // namespace fty::messagebus::utils

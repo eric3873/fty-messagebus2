@@ -18,45 +18,43 @@
 */
 
 #include "src/MsgBusAmqp.h"
+#include <catch2/catch.hpp>
 #include <fty/messagebus/Message.h>
 #include <fty/messagebus/MessageBusStatus.h>
-
-#include <catch2/catch.hpp>
 #include <iostream>
-
 #include <thread>
 
-namespace
-{
+namespace {
+
 #if defined(EXTERNAL_SERVER_FOR_TEST)
-  static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
+static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
 #else
-  static constexpr auto AMQP_SERVER_URI{"amqp://127.0.0.1:5672"};
+static constexpr auto AMQP_SERVER_URI{"amqp://127.0.0.1:5672"};
 #endif
 
-  using namespace fty::messagebus;
+using namespace fty::messagebus;
 
 } // namespace
 
 TEST_CASE("Amqp with no connection", "[MsgBusAmqp]")
 {
-  std::string topic = "topic://test.no.connection";
-  Message msg = Message::buildMessage("AmqpNoConnectionTestCase", topic, "TEST", "QUERY");
+    std::string topic = "topic://test.no.connection";
+    Message     msg   = Message::buildMessage("AmqpNoConnectionTestCase", topic, "TEST", "QUERY");
 
-  auto msgBus = amqp::MsgBusAmqp("AmqpNoConnectionTestCase", AMQP_SERVER_URI);
-  auto received = msgBus.receive(topic, {});
-  REQUIRE(received.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
-  auto sent = msgBus.send(msg);
-  REQUIRE(sent.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+    auto msgBus   = amqp::MsgBusAmqp("AmqpNoConnectionTestCase", AMQP_SERVER_URI);
+    auto received = msgBus.receive(topic, {});
+    REQUIRE(received.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+    auto sent = msgBus.send(msg);
+    REQUIRE(sent.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
 }
 
 TEST_CASE("Amqp without and with connection", "[MsgBusAmqp]")
 {
-  auto msgBus = amqp::MsgBusAmqp("AmqpMessageBusStatusTestCase", AMQP_SERVER_URI);
-  CHECK_FALSE(msgBus.isServiceAvailable());
-  auto connectionRet = msgBus.connect();
-  REQUIRE(msgBus.connect());
-  REQUIRE(msgBus.isServiceAvailable());
+    auto msgBus = amqp::MsgBusAmqp("AmqpMessageBusStatusTestCase", AMQP_SERVER_URI);
+    CHECK_FALSE(msgBus.isServiceAvailable());
+    auto connectionRet = msgBus.connect();
+    REQUIRE(msgBus.connect());
+    REQUIRE(msgBus.isServiceAvailable());
 
-  REQUIRE(msgBus.clientName() == "AmqpMessageBusStatusTestCase");
+    REQUIRE(msgBus.clientName() == "AmqpMessageBusStatusTestCase");
 }

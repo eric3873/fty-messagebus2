@@ -27,38 +27,35 @@
 */
 
 #include "fty/sample/dto/FtyCommonFooBarDto.h"
-
 #include <nlohmann/json.hpp>
 #include <ostream>
 
-
 using json = nlohmann::json;
 
-namespace fty::sample::dto
+namespace fty::sample::dto {
+const std::string FooBar::serialize() const
 {
-  const std::string FooBar::serialize() const
-  {
     json op;
     op["foo"] = foo;
     op["bar"] = bar;
 
     return op.dump();
-  }
+}
 
-  void FooBar::deserialize(const std::string& input)
-  {
+void FooBar::deserialize(const std::string& input)
+{
     auto jsonInput = json::parse(input);
-    foo = jsonInput["foo"];
-    bar = jsonInput["bar"];
-  }
+    foo            = jsonInput["foo"];
+    bar            = jsonInput["bar"];
+}
 
-  void operator<<(UserData& data, const FooBar& object)
-  {
+void operator<<(UserData& data, const FooBar& object)
+{
     data = object.serialize();
-  }
+}
 
-  void operator>>(UserData& data, FooBar& object)
-  {
+void operator>>(UserData& data, FooBar& object)
+{
     object = FooBar(data);
-  }
-} // namespace fty::messagebus::test
+}
+} // namespace fty::sample::dto

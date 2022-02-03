@@ -24,32 +24,31 @@
 #include <list>
 #include <string>
 
-namespace fty::sample::dto
-{
-  using UserData = std::string;
+namespace fty::sample::dto {
+using UserData = std::string;
 
-  struct FooBar
-  {
+struct FooBar
+{
     std::string foo;
     std::string bar;
 
     FooBar() = default;
     FooBar(const std::string& _foo, const std::string& _bar)
-      : foo(_foo)
-      , bar(_bar)
+        : foo(_foo)
+        , bar(_bar)
     {
     }
 
     FooBar(const std::string& input)
     {
-      deserialize(input);
+        deserialize(input);
     }
 
     const std::string serialize() const;
-    void deserialize(const std::string& input);
-  };
+    void              deserialize(const std::string& input);
+};
 
-  void operator<<(UserData& data, const FooBar& object);
-  void operator>>(UserData& payload, FooBar& object);
+void operator<<(UserData& data, const FooBar& object);
+void operator>>(UserData& payload, FooBar& object);
 
-} // namespace fty::messagebus::test
+} // namespace fty::sample::dto

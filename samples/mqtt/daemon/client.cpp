@@ -17,48 +17,48 @@
     =========================================================================
 */
 
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 #include <fty/messagebus/Message.h>
-
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 #include <iostream>
 
 using namespace fty::messagebus;
 
 int main(int argc, char** argv)
 {
-  //Check the argument
-  if(argc != 2) {
-    std::cerr << argv[0] << " usage:" << std::endl;
-    std::cerr << "\t" << argv[0] << " <string to change>" << std::endl;
-    return EXIT_FAILURE;
-  }
+    // Check the argument
+    if (argc != 2) {
+        std::cerr << argv[0] << " usage:" << std::endl;
+        std::cerr << "\t" << argv[0] << " <string to change>" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-  auto bus = mqtt::MessageBusMqtt();
+    auto bus = mqtt::MessageBusMqtt();
 
-  //Connect to the bus
-  fty::Expected<void> connectionRet = bus.connect();
-  if(! connectionRet ) {
-    std::cerr <<  "Error while connecting " << connectionRet.error() << std::endl;
-    return EXIT_FAILURE;
-  }
+    // Connect to the bus
+    fty::Expected<void> connectionRet = bus.connect();
+    if (!connectionRet) {
+        std::cerr << "Error while connecting " << connectionRet.error() << std::endl;
+        return EXIT_FAILURE;
+    }
 
-  //Build the request --> TODO: We need a way to auto generate the reply queue
-  Message request = Message::buildRequest(argv[0], "/etn/samples/daemon-basic/mailbox", "TO_UPPER", "/etn/samples/daemon-basic/reply/" + utils::generateId(), argv[1]);
+    // Build the request --> TODO: We need a way to auto generate the reply queue
+    Message request = Message::buildRequest(
+        argv[0], "/etn/samples/daemon-basic/mailbox", "TO_UPPER", "/etn/samples/daemon-basic/reply/" + utils::generateId(), argv[1]);
 
-  //Subscrib to the bus
-  fty::Expected<Message> reply = bus.request(request, 1);
-  if(! reply ) {
-    std::cerr << "Error while requesting " << reply.error() << std::endl;
-    return EXIT_FAILURE;
-  }
+    // Subscrib to the bus
+    fty::Expected<Message> reply = bus.request(request, 1);
+    if (!reply) {
+        std::cerr << "Error while requesting " << reply.error() << std::endl;
+        return EXIT_FAILURE;
+    }
 
-  if( reply.value().status() != STATUS_OK ) {
-    std::cerr << "An error occured, message status is not OK!" << std::endl;
-    return EXIT_FAILURE;
-  }
+    if (reply.value().status() != STATUS_OK) {
+        std::cerr << "An error occured, message status is not OK!" << std::endl;
+        return EXIT_FAILURE;
+    }
 
-  // We print the result
-  std::cout << reply.value().userData() << std::endl;
+    // We print the result
+    std::cout << reply.value().userData() << std::endl;
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }

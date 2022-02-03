@@ -20,74 +20,63 @@
 #pragma once
 
 #include "fty/messagebus/Message.h"
-
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/scalar_base.hpp>
 #include <proton/types.hpp>
 
-namespace fty::messagebus::amqp
-{
-  using property_map = std::map<std::string, proton::scalar>;
+namespace fty::messagebus::amqp {
 
-  inline const MetaData getMetaData(const proton::message& protonMsg)
-  {
+using property_map = std::map<std::string, proton::scalar>;
+
+inline const MetaData getMetaData(const proton::message& protonMsg)
+{
     Message message;
 
     // User properties
-    if (!protonMsg.properties().empty())
-    {
-      property_map props;
-      proton::get(protonMsg.properties(), props);
-      for (property_map::iterator it = props.begin(); it != props.end(); ++it)
-      {
-        message.metaData().emplace(proton::to_string(it->first), proton::to_string(it->second));
-      }
+    if (!protonMsg.properties().empty()) {
+        property_map props;
+        proton::get(protonMsg.properties(), props);
+        for (property_map::iterator it = props.begin(); it != props.end(); ++it) {
+            message.metaData().emplace(proton::to_string(it->first), proton::to_string(it->second));
+        }
     }
 
-    if (!protonMsg.user().empty())
-    {
-      message.from(protonMsg.user());
+    if (!protonMsg.user().empty()) {
+        message.from(protonMsg.user());
     }
-    if (!protonMsg.id().empty())
-    {
-      message.id(proton::to_string(protonMsg.id()));
-      message.from(proton::to_string(protonMsg.id()));
+    if (!protonMsg.id().empty()) {
+        message.id(proton::to_string(protonMsg.id()));
+        message.from(proton::to_string(protonMsg.id()));
     }
-    if (!protonMsg.subject().empty())
-    {
-      message.subject(protonMsg.subject());
+    if (!protonMsg.subject().empty()) {
+        message.subject(protonMsg.subject());
     }
     // Req/Rep pattern properties
-    if (!protonMsg.correlation_id().empty())
-    {
-      message.correlationId(proton::to_string(protonMsg.correlation_id()));
+    if (!protonMsg.correlation_id().empty()) {
+        message.correlationId(proton::to_string(protonMsg.correlation_id()));
     }
-    if (!protonMsg.address().empty())
-    {
-      message.replyTo(protonMsg.reply_to());
+    if (!protonMsg.address().empty()) {
+        message.replyTo(protonMsg.reply_to());
     }
-    if (!protonMsg.to().empty())
-    {
-      message.to(protonMsg.to());
+    if (!protonMsg.to().empty()) {
+        message.to(protonMsg.to());
     }
 
     return message.metaData();
-  }
+}
 
-  inline const proton::message getAmqpMessage(const Message& message)
-  {
+inline const proton::message getAmqpMessage(const Message& message)
+{
     proton::message protonMsg;
 
     // Fill in replyTo and CorrelationId only if there are not empty, otherwise filled in with empty values,
     // the filtering on correlationId with proton library does not work.
-    if (!message.replyTo().empty())
-    {
-      protonMsg.reply_to(message.replyTo());
+    if (!message.replyTo().empty()) {
+        protonMsg.reply_to(message.replyTo());
     }
-    if (!message.correlationId().empty())
-    {
-      protonMsg.correlation_id(message.correlationId());
+    if (!message.correlationId().empty()) {
+        protonMsg.correlation_id(message.correlationId());
     }
     protonMsg.to(message.to());
     protonMsg.subject(message.subject());
@@ -95,14 +84,13 @@ namespace fty::messagebus::amqp
     protonMsg.id(message.from());
 
     // All remaining properties
-    for (const auto& [key, value] : message.getUndefinedProperties())
-    {
-      protonMsg.properties().put(key, value);
+    for (const auto& [key, value] : message.getUndefinedProperties()) {
+        protonMsg.properties().put(key, value);
     }
 
     protonMsg.content_type("string");
     protonMsg.body(message.userData());
     return protonMsg;
-  }
+}
 
 } // namespace fty::messagebus::amqp

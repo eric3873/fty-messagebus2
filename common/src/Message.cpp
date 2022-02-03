@@ -17,161 +17,159 @@
     =========================================================================
 */
 #include <fty/messagebus/Message.h>
-
 #include <fty/messagebus/utils.h>
 
-namespace fty::messagebus
-{
+namespace fty::messagebus {
 
-  Message::Message(const MetaData& metaData, const UserData& userData)
+Message::Message(const MetaData& metaData, const UserData& userData)
     : m_metadata(metaData)
     , m_data(userData)
-  {
-  }
+{
+}
 
-  Message::Message(const Message& message)
+Message::Message(const Message& message)
     : Message(message.metaData(), message.userData())
-  {
-  }
+{
+}
 
-  Message::Message(const UserData& userData)
+Message::Message(const UserData& userData)
     : Message({}, userData)
-  {
-  }
+{
+}
 
-  MetaData& Message::metaData()
-  {
+MetaData& Message::metaData()
+{
     return m_metadata;
-  }
+}
 
-  const MetaData& Message::metaData() const
-  {
+const MetaData& Message::metaData() const
+{
     return m_metadata;
-  }
+}
 
-  void Message::metaData(const MetaData& metaData)
-  {
+void Message::metaData(const MetaData& metaData)
+{
     m_metadata = metaData;
-  }
+}
 
-  UserData& Message::userData()
-  {
+UserData& Message::userData()
+{
     return m_data;
-  }
+}
 
-  const UserData& Message::userData() const
-  {
+const UserData& Message::userData() const
+{
     return m_data;
-  }
+}
 
-  void Message::userData(const UserData& userData)
-  {
+void Message::userData(const UserData& userData)
+{
     m_data = userData;
-  }
+}
 
-  std::string Message::getMetaDataValue(const std::string& key) const
-  {
+std::string Message::getMetaDataValue(const std::string& key) const
+{
     std::string value{};
-    if (auto iter{m_metadata.find(key)}; iter != m_metadata.end())
-    {
-      value = iter->second;
+    if (auto iter{m_metadata.find(key)}; iter != m_metadata.end()) {
+        value = iter->second;
     }
     return value;
-  }
+}
 
-  void Message::setMetaDataValue(const std::string& key, const std::string& data)
-  {
+void Message::setMetaDataValue(const std::string& key, const std::string& data)
+{
     m_metadata[key] = data;
-  }
+}
 
-  std::string Message::correlationId() const
-  {
+std::string Message::correlationId() const
+{
     return getMetaDataValue(CORRELATION_ID);
-  }
+}
 
-  void Message::correlationId(const std::string& correlationId)
-  {
+void Message::correlationId(const std::string& correlationId)
+{
     setMetaDataValue(CORRELATION_ID, correlationId);
-  }
+}
 
-  std::string Message::from() const
-  {
+std::string Message::from() const
+{
     return getMetaDataValue(FROM);
-  }
+}
 
-  void Message::from(const std::string& from)
-  {
+void Message::from(const std::string& from)
+{
     setMetaDataValue(FROM, from);
-  }
+}
 
-  std::string Message::to() const
-  {
+std::string Message::to() const
+{
     return getMetaDataValue(TO);
-  }
+}
 
-  void Message::to(const std::string& to)
-  {
+void Message::to(const std::string& to)
+{
     setMetaDataValue(TO, to);
-  }
+}
 
-  std::string Message::replyTo() const
-  {
+std::string Message::replyTo() const
+{
     return getMetaDataValue(REPLY_TO);
-  }
+}
 
-  void Message::replyTo(const std::string& replyTo)
-  {
+void Message::replyTo(const std::string& replyTo)
+{
     setMetaDataValue(REPLY_TO, replyTo);
-  }
+}
 
-  std::string Message::subject() const
-  {
+std::string Message::subject() const
+{
     return getMetaDataValue(SUBJECT);
-  }
+}
 
-  void Message::subject(const std::string& subject)
-  {
+void Message::subject(const std::string& subject)
+{
     setMetaDataValue(SUBJECT, subject);
-  }
+}
 
-  std::string Message::status() const
-  {
+std::string Message::status() const
+{
     return getMetaDataValue(STATUS);
-  }
+}
 
-  void Message::status(const std::string& status)
-  {
+void Message::status(const std::string& status)
+{
     setMetaDataValue(STATUS, status);
-  }
+}
 
-  std::string Message::id() const
-  {
+std::string Message::id() const
+{
     return getMetaDataValue(MESSAGE_ID);
-  }
+}
 
-  void Message::id(const std::string& msgId)
-  {
+void Message::id(const std::string& msgId)
+{
     setMetaDataValue(MESSAGE_ID, msgId);
-  }
+}
 
-  bool Message::isValidMessage() const
-  {
+bool Message::isValidMessage() const
+{
     return ((!subject().empty()) && (!from().empty()) && (!to().empty()));
-  }
+}
 
-  bool Message::isRequest() const
-  {
+bool Message::isRequest() const
+{
     return ((!correlationId().empty()) && isValidMessage());
-  }
+}
 
-  bool Message::needReply() const
-  {
-    //Check that request have all the proper field set
+bool Message::needReply() const
+{
+    // Check that request have all the proper field set
     return (!replyTo().empty() && isRequest());
-  }
+}
 
-  Message Message::buildMessage(const Address& from, const Address& to, const std::string& subject, const UserData& userData, const MetaData& meta)
-  {
+Message Message::buildMessage(
+    const Address& from, const Address& to, const std::string& subject, const UserData& userData, const MetaData& meta)
+{
     Message msg;
     msg.metaData(meta);
 
@@ -181,23 +179,29 @@ namespace fty::messagebus
     msg.userData(userData);
 
     return msg;
-  }
+}
 
-  Message Message::buildRequest(const Address& from, const Address& to, const std::string& subject, const Address& replyTo, const UserData& userData, const MetaData& meta)
-  {
+Message Message::buildRequest(
+    const Address&     from,
+    const Address&     to,
+    const std::string& subject,
+    const Address&     replyTo,
+    const UserData&    userData,
+    const MetaData&    meta)
+{
     Message msg = buildMessage(from, to, subject, userData, meta);
     msg.replyTo(replyTo);
     msg.correlationId(utils::generateUuid());
 
     return msg;
-  }
+}
 
-  fty::Expected<Message> Message::buildReply(const UserData& userData, const std::string& status) const
-  {
+fty::Expected<Message> Message::buildReply(const UserData& userData, const std::string& status) const
+{
     if (!isValidMessage())
-      return fty::unexpected("Not a valid message!");
+        return fty::unexpected("Not a valid message!");
     if (!needReply())
-      return fty::unexpected("No where to reply!");
+        return fty::unexpected("No where to reply!");
 
     Message reply;
     reply.from(to());
@@ -208,42 +212,38 @@ namespace fty::messagebus
     reply.userData(userData);
 
     return reply;
-  }
+}
 
-  MetaData Message::getUndefinedProperties() const
-  {
+MetaData Message::getUndefinedProperties() const
+{
     MetaData metaData;
-    for (const auto& [key, value] : m_metadata)
-    {
-      if (key != CORRELATION_ID && key != FROM && key != TO && key != REPLY_TO && key != SUBJECT)
-      {
-        metaData.emplace(key, value);
-      }
+    for (const auto& [key, value] : m_metadata) {
+        if (key != CORRELATION_ID && key != FROM && key != TO && key != REPLY_TO && key != SUBJECT) {
+            metaData.emplace(key, value);
+        }
     }
     return metaData;
-  }
+}
 
-  std::string Message::toString() const
-  {
+std::string Message::toString() const
+{
     std::string data;
     data += "\n=== METADATA ===\n";
-    for (auto& [key, value] : m_metadata)
-    {
-      data += "[" + key + "]=" + value + "\n";
+    for (auto& [key, value] : m_metadata) {
+        data += "[" + key + "]=" + value + "\n";
     }
     data += "=== USERDATA ===\n";
     data += m_data;
     data += "\n================";
 
     return data;
-  }
+}
 
-  Message& Message::operator=(const Message& other)
-  {
+Message& Message::operator=(const Message& other)
+{
     m_metadata = std::move(other.metaData());
-    m_data = std::move(other.userData());
+    m_data     = std::move(other.userData());
     return *this;
-  }
+}
 
-
-} //namespace fty::messagebus
+} // namespace fty::messagebus

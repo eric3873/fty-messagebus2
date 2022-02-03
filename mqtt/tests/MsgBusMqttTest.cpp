@@ -18,46 +18,44 @@
 */
 
 #include "src/MsgBusMqtt.h"
+#include <catch2/catch.hpp>
 #include <fty/messagebus/Message.h>
 #include <fty/messagebus/MessageBusStatus.h>
-
-#include <catch2/catch.hpp>
 #include <iostream>
-
 #include <thread>
 
-namespace
-{
+namespace {
+
 #if defined(EXTERNAL_SERVER_FOR_TEST)
-  static constexpr auto MQTT_SERVER_URI{"tcp://mqtt.eclipse.org:1883"};
+static constexpr auto MQTT_SERVER_URI{"tcp://mqtt.eclipse.org:1883"};
 #else
-  static constexpr auto MQTT_SERVER_URI{"tcp://localhost:1883"};
+static constexpr auto MQTT_SERVER_URI{"tcp://localhost:1883"};
 #endif
 
-  using namespace fty::messagebus;
-  using namespace fty::messagebus::mqtt;
+using namespace fty::messagebus;
+using namespace fty::messagebus::mqtt;
 
 } // namespace
 
 TEST_CASE("Mqtt with no connection", "[MsgBusMqtt]")
 {
-  std::string topic = "topic://test.no.connection";
-  Message msg = Message::buildMessage("MqttNoConnectionTestCase", topic, "TEST", "QUERY");
+    std::string topic = "topic://test.no.connection";
+    Message     msg   = Message::buildMessage("MqttNoConnectionTestCase", topic, "TEST", "QUERY");
 
-  auto msgBus = MsgBusMqtt("MqttNoConnectionTestCase", MQTT_SERVER_URI);
-  auto received = msgBus.receive(topic, {});
-  REQUIRE(received.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
-  auto sent = msgBus.send(msg);
-  REQUIRE(sent.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+    auto msgBus   = MsgBusMqtt("MqttNoConnectionTestCase", MQTT_SERVER_URI);
+    auto received = msgBus.receive(topic, {});
+    REQUIRE(received.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+    auto sent = msgBus.send(msg);
+    REQUIRE(sent.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
 }
 
 TEST_CASE("Mqtt without and with connection", "[MsgBusMqtt]")
 {
-  auto msgBus = MsgBusMqtt("MqttMessageBusStatusTestCase", MQTT_SERVER_URI);
-  CHECK_FALSE(msgBus.isServiceAvailable());
-  auto connectionRet = msgBus.connect();
-  REQUIRE(msgBus.connect());
-  REQUIRE(msgBus.isServiceAvailable());
+    auto msgBus = MsgBusMqtt("MqttMessageBusStatusTestCase", MQTT_SERVER_URI);
+    CHECK_FALSE(msgBus.isServiceAvailable());
+    auto connectionRet = msgBus.connect();
+    REQUIRE(msgBus.connect());
+    REQUIRE(msgBus.isServiceAvailable());
 
-  REQUIRE(msgBus.clientName() == "MqttMessageBusStatusTestCase");
+    REQUIRE(msgBus.clientName() == "MqttMessageBusStatusTestCase");
 }

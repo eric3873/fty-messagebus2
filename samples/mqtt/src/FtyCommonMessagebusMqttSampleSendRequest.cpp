@@ -20,105 +20,93 @@
 */
 
 #include "fty/sample/dto/FtyCommonMathDto.h"
+#include <csignal>
 #include <fty/messagebus/MessageBus.h>
 #include <fty/messagebus/MessageBusStatus.h>
 #include <fty/messagebus/mqtt/MessageBusMqtt.h>
-
-#include <csignal>
 #include <fty_log.h>
 #include <iostream>
 #include <thread>
 
-namespace
+namespace {
+
+using namespace fty::messagebus;
+using namespace fty::sample::dto;
+
+static bool _continue                            = true;
+static auto constexpr SYNC_REQUEST_TIMEOUT       = 5;
+static auto constexpr MATHS_OPERATOR_REPLY_QUEUE = "/etn/q/reply/maths/operator";
+
+static void signalHandler(int signal)
 {
-  using namespace fty::messagebus;
-  using namespace fty::sample::dto;
-
-  static bool _continue = true;
-  static auto constexpr SYNC_REQUEST_TIMEOUT = 5;
-  static auto constexpr MATHS_OPERATOR_REPLY_QUEUE = "/etn/q/reply/maths/operator";
-
-  static void signalHandler(int signal)
-  {
     std::cout << "Signal " << signal << " received\n";
     _continue = false;
-  }
+}
 
-  void responseMessageListener(const Message& message)
-  {
+void responseMessageListener(const Message& message)
+{
     logInfo("Response arrived");
     auto mathresult = MathResult(message.userData());
     logInfo("  * status: '{}', result: %d, error: '{}'", mathresult.status.c_str(), mathresult.result, mathresult.error.c_str());
 
     _continue = false;
-  }
+}
 
 } // namespace
 
 int main(int argc, char** argv)
 {
-  if (argc != 6)
-  {
-    std::cout << "USAGE: " << argv[0] << " <reqQueue> <async|sync> <add|mult> <num1> <num2>" << std::endl;
-    return EXIT_FAILURE;
-  }
-
-  logInfo("{} - starting...", argv[0]);
-
-  auto requestQueue = std::string{argv[1]};
-
-  // Install a signal handler
-  std::signal(SIGINT, signalHandler);
-  std::signal(SIGTERM, signalHandler);
-
-  auto msgBus = mqtt::MessageBusMqtt();
-  //Connect to the bus
-  fty::Expected<void> connectionRet = msgBus.connect();
-  if (!connectionRet)
-  {
-    logError("Error while connecting {}", connectionRet.error());
-    return EXIT_FAILURE;
-  }
-
-  auto query = MathOperation(argv[3], std::stoi(argv[4]), std::stoi(argv[5]));
-  //Build the message to send
-  Message msg = Message::buildRequest(argv[0], requestQueue, "mathQuery", MATHS_OPERATOR_REPLY_QUEUE, query.serialize());
-
-  if (strcmp(argv[2], "async") == 0)
-  {
-    fty::Expected<void> subscribRet = msgBus.receive(msg.replyTo(), responseMessageListener);
-    if (!subscribRet)
-    {
-      logError("Error while subscribing {}", subscribRet.error());
-      return EXIT_FAILURE;
+    if (argc != 6) {
+        std::cout << "USAGE: " << argv[0] << " <reqQueue> <async|sync> <add|mult> <num1> <num2>" << std::endl;
+        return EXIT_FAILURE;
     }
-    fty::Expected<void> sendRet = msgBus.send(msg);
-    if (!sendRet)
-    {
-      logError("Error while sending {}", sendRet.error());
-      return EXIT_FAILURE;
-    }
-  }
-  else
-  {
-    _continue = false;
 
-    auto replyMsg = msgBus.request(msg, SYNC_REQUEST_TIMEOUT);
-    if (replyMsg)
-    {
-      responseMessageListener(replyMsg.value());
-    }
-    else
-    {
-      logError("Time out reached: (%ds)", SYNC_REQUEST_TIMEOUT);
-    }
-  }
+    logInfo("{} - starting...", argv[0]);
 
-  while (_continue)
-  {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
+    auto requestQueue = std::string{argv[1]};
 
-  logInfo("{} - end", argv[0]);
-  return EXIT_SUCCESS;
+    // Install a signal handler
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
+
+    auto msgBus = mqtt::MessageBusMqtt();
+    // Connect to the bus
+    fty::Expected<void> connectionRet = msgBus.connect();
+    if (!connectionRet) {
+        logError("Error while connecting {}", connectionRet.error());
+        return EXIT_FAILURE;
+    }
+
+    auto query = MathOperation(argv[3], std::stoi(argv[4]), std::stoi(argv[5]));
+    // Build the message to send
+    Message msg = Message::buildRequest(argv[0], requestQueue, "mathQuery", MATHS_OPERATOR_REPLY_QUEUE, query.serialize());
+
+    if (strcmp(argv[2], "async") == 0) {
+        fty::Expected<void> subscribRet = msgBus.receive(msg.replyTo(), responseMessageListener);
+        if (!subscribRet) {
+            logError("Error while subscribing {}", subscribRet.error());
+            return EXIT_FAILURE;
+        }
+        fty::Expected<void> sendRet = msgBus.send(msg);
+        if (!sendRet) {
+            logError("Error while sending {}", sendRet.error());
+            return EXIT_FAILURE;
+        }
+    } else {
+        _continue = false;
+
+        auto replyMsg = msgBus.request(msg, SYNC_REQUEST_TIMEOUT);
+        if (replyMsg) {
+            responseMessageListener(replyMsg.value());
+        } else {
+            logError("Time out reached: (%ds)", SYNC_REQUEST_TIMEOUT);
+        }
+    }
+
+    while (_continue) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    logInfo("{} - end", argv[0]);
+    return EXIT_SUCCESS;
 }

@@ -20,33 +20,29 @@
 #pragma once
 
 #include "AmqpClient.h"
-
 #include <fty/expected.h>
-
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
 #include <proton/listen_handler.hpp>
 
-namespace fty::messagebus::amqp
+namespace fty::messagebus::amqp {
+
+using MessagePointer    = std::shared_ptr<proton::message>;
+using AmqpClientPointer = std::shared_ptr<AmqpClient>;
+
+class MsgBusAmqp
 {
-
-  using MessagePointer = std::shared_ptr<proton::message>;
-  using AmqpClientPointer = std::shared_ptr<AmqpClient>;
-
-  class MsgBusAmqp
-  {
-  public:
-
+public:
     MsgBusAmqp(const std::string& clientName, const Endpoint& endpoint)
-      : m_clientName(clientName)
-      , m_endpoint(endpoint){};
+        : m_clientName(clientName)
+        , m_endpoint(endpoint){};
 
     MsgBusAmqp() = delete;
     ~MsgBusAmqp();
 
     MsgBusAmqp(MsgBusAmqp&&) = delete;
     MsgBusAmqp& operator=(MsgBusAmqp&&) = delete;
-    MsgBusAmqp(const MsgBusAmqp&) = delete;
+    MsgBusAmqp(const MsgBusAmqp&)       = delete;
     MsgBusAmqp& operator=(const MsgBusAmqp&) = delete;
 
     [[nodiscard]] fty::Expected<void> connect();
@@ -60,19 +56,19 @@ namespace fty::messagebus::amqp
 
     const std::string& clientName() const
     {
-      return m_clientName;
+        return m_clientName;
     }
 
     bool isServiceAvailable();
 
-  private:
+private:
     std::string m_clientName{};
-    Endpoint m_endpoint{};
+    Endpoint    m_endpoint{};
 
     // To handle all receivers and theirs message listener
     std::map<std::string, AmqpClientPointer> m_subScriptions;
     // To handle connection, etc.
     AmqpClientPointer m_amqpClient;
-  };
+};
 
 } // namespace fty::messagebus::amqp
