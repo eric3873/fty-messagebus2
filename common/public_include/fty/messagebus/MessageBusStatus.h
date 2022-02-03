@@ -23,31 +23,31 @@
 
 namespace fty::messagebus {
 
-enum ComState : uint8_t
+enum class ComState
 {
-    COM_STATE_UNKNOWN        = 0,
-    COM_STATE_NONE           = 1,
-    COM_STATE_OK             = 2,
-    COM_STATE_LOST           = 3,
-    COM_STATE_NO_CONTACT     = 4,
-    COM_STATE_CONNECT_FAILED = 5,
-    COM_STATE_UNDEFINED      = 6,
+    Unknown       = 0,
+    None          = 1,
+    Ok            = 2,
+    Lost          = 3,
+    NoContact     = 4,
+    ConnectFailed = 5,
+    Undefined     = 6,
 };
 
 inline std::string to_string(const ComState& state)
 {
     switch (state) {
-        case COM_STATE_UNKNOWN:
+        case ComState::Unknown:
             return "UNKNOWN";
-        case COM_STATE_NONE:
+        case ComState::None:
             return "NONE";
-        case COM_STATE_OK:
+        case ComState::Ok:
             return "OK";
-        case COM_STATE_LOST:
+        case ComState::Lost:
             return "LOST";
-        case COM_STATE_NO_CONTACT:
+        case ComState::NoContact:
             return "NO CONTACT";
-        case COM_STATE_CONNECT_FAILED:
+        case ComState::ConnectFailed:
             return "CONNECTION FAILED";
         default:
             break;
@@ -57,57 +57,57 @@ inline std::string to_string(const ComState& state)
 
 inline ComState from_com_state(const std::string& state)
 {
-    if (state == to_string(ComState::COM_STATE_UNKNOWN)) {
-        return ComState::COM_STATE_UNKNOWN;
-    } else if (state == to_string(ComState::COM_STATE_NONE)) {
-        return ComState::COM_STATE_NONE;
-    } else if (state == to_string(ComState::COM_STATE_OK)) {
-        return ComState::COM_STATE_OK;
-    } else if (state == to_string(ComState::COM_STATE_LOST)) {
-        return ComState::COM_STATE_LOST;
-    } else if (state == to_string(ComState::COM_STATE_NO_CONTACT)) {
-        return ComState::COM_STATE_NO_CONTACT;
-    } else if (state == to_string(ComState::COM_STATE_CONNECT_FAILED)) {
-        return ComState::COM_STATE_CONNECT_FAILED;
+    if (state == to_string(ComState::Unknown)) {
+        return ComState::Unknown;
+    } else if (state == to_string(ComState::None)) {
+        return ComState::None;
+    } else if (state == to_string(ComState::Ok)) {
+        return ComState::Ok;
+    } else if (state == to_string(ComState::Lost)) {
+        return ComState::Lost;
+    } else if (state == to_string(ComState::NoContact)) {
+        return ComState::NoContact;
+    } else if (state == to_string(ComState::ConnectFailed)) {
+        return ComState::ConnectFailed;
     } else {
-        return ComState::COM_STATE_UNDEFINED;
+        return ComState::Undefined;
     }
 }
 
-enum DeliveryState : uint8_t
+enum class DeliveryState
 {
-    DELIVERY_STATE_UNKNOWN       = 0,
-    DELIVERY_STATE_ACCEPTED      = 1,
-    DELIVERY_STATE_REJECTED      = 2,
-    DELIVERY_STATE_TIMEOUT       = 3,
-    DELIVERY_STATE_NOT_SUPPORTED = 4,
-    DELIVERY_STATE_PENDING       = 5,
-    DELIVERY_STATE_BUSY          = 6,
-    DELIVERY_STATE_ABORTED       = 7,
-    DELIVERY_STATE_UNAVAILABLE   = 9,
-    DELIVERY_STATE_UNDEFINED     = 10
+    Unknown      = 0,
+    Accepted     = 1,
+    Rejected     = 2,
+    Timeout      = 3,
+    NotSupported = 4,
+    Pending      = 5,
+    Busy         = 6,
+    Aborted      = 7,
+    Unavailable  = 9,
+    Undefined    = 10
 };
 
 inline std::string to_string(const DeliveryState& state)
 {
     switch (state) {
-        case DELIVERY_STATE_UNKNOWN:
+        case DeliveryState::Unknown:
             return "UNKNOWN";
-        case DELIVERY_STATE_ACCEPTED:
+        case DeliveryState::Accepted:
             return "ACCEPTED";
-        case DELIVERY_STATE_REJECTED:
+        case DeliveryState::Rejected:
             return "REJECTED";
-        case DELIVERY_STATE_TIMEOUT:
+        case DeliveryState::Timeout:
             return "TIMEOUT";
-        case DELIVERY_STATE_NOT_SUPPORTED:
+        case DeliveryState::NotSupported:
             return "NOT SUPPORTED";
-        case DELIVERY_STATE_PENDING:
+        case DeliveryState::Pending:
             return "PENDING";
-        case DELIVERY_STATE_BUSY:
+        case DeliveryState::Busy:
             return "BUSY";
-        case DELIVERY_STATE_ABORTED:
+        case DeliveryState::Aborted:
             return "ABORTED";
-        case DELIVERY_STATE_UNAVAILABLE:
+        case DeliveryState::Unavailable:
             return "SERVICE UNAVAILABLE";
         default:
             break;
@@ -117,26 +117,26 @@ inline std::string to_string(const DeliveryState& state)
 
 inline DeliveryState from_deliveryState(const std::string& deliveryState)
 {
-    if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_UNKNOWN)) {
-        return DeliveryState::DELIVERY_STATE_UNKNOWN;
-    } else if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_ACCEPTED)) {
-        return DeliveryState::DELIVERY_STATE_ACCEPTED;
-    } else if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_REJECTED)) {
-        return DeliveryState::DELIVERY_STATE_REJECTED;
-    } else if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_TIMEOUT)) {
-        return DeliveryState::DELIVERY_STATE_TIMEOUT;
-    } else if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_NOT_SUPPORTED)) {
-        return DeliveryState::DELIVERY_STATE_NOT_SUPPORTED;
-    } else if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_PENDING)) {
-        return DeliveryState::DELIVERY_STATE_PENDING;
-    } else if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_BUSY)) {
-        return DeliveryState::DELIVERY_STATE_BUSY;
-    } else if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_ABORTED)) {
-        return DeliveryState::DELIVERY_STATE_ABORTED;
-    } else if (deliveryState == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE)) {
-        return DeliveryState::DELIVERY_STATE_UNAVAILABLE;
+    if (deliveryState == to_string(DeliveryState::Unknown)) {
+        return DeliveryState::Unknown;
+    } else if (deliveryState == to_string(DeliveryState::Accepted)) {
+        return DeliveryState::Accepted;
+    } else if (deliveryState == to_string(DeliveryState::Rejected)) {
+        return DeliveryState::Rejected;
+    } else if (deliveryState == to_string(DeliveryState::Timeout)) {
+        return DeliveryState::Timeout;
+    } else if (deliveryState == to_string(DeliveryState::NotSupported)) {
+        return DeliveryState::NotSupported;
+    } else if (deliveryState == to_string(DeliveryState::Pending)) {
+        return DeliveryState::Pending;
+    } else if (deliveryState == to_string(DeliveryState::Busy)) {
+        return DeliveryState::Busy;
+    } else if (deliveryState == to_string(DeliveryState::Aborted)) {
+        return DeliveryState::Aborted;
+    } else if (deliveryState == to_string(DeliveryState::Unavailable)) {
+        return DeliveryState::Unavailable;
     } else {
-        return DeliveryState::DELIVERY_STATE_UNDEFINED;
+        return DeliveryState::Undefined;
     }
 }
 

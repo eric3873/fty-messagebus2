@@ -66,7 +66,7 @@ void AmqpClient::on_container_start(proton::container& container)
         container.connect(m_url, connectOpts().reconnect(reconnectOpts()));
     } catch (const std::exception& e) {
         logError("Exception {}", e.what());
-        m_connectPromise.set_value(ComState::COM_STATE_CONNECT_FAILED);
+        m_connectPromise.set_value(ComState::ConnectFailed);
     }
 }
 
@@ -80,7 +80,7 @@ void AmqpClient::on_connection_open(proton::connection& connection)
     } else {
         logDebug("Connected on url: {}", m_url);
     }
-    m_connectPromise.set_value(ComState::COM_STATE_OK);
+    m_connectPromise.set_value(ComState::Ok);
 }
 
 void AmqpClient::on_sender_open(proton::sender& sender)
@@ -108,7 +108,7 @@ void AmqpClient::on_error(const proton::error_condition& error)
 void AmqpClient::on_transport_error(proton::transport& transport)
 {
     logError("Transport error: {}", transport.error().what());
-    m_communicationState = ComState::COM_STATE_LOST;
+    m_communicationState = ComState::Lost;
 }
 
 void AmqpClient::resetPromise()
@@ -122,7 +122,7 @@ void AmqpClient::resetPromise()
 
 ComState AmqpClient::connected()
 {
-    if ((m_communicationState == ComState::COM_STATE_UNKNOWN) || (m_communicationState == ComState::COM_STATE_LOST)) {
+    if ((m_communicationState == ComState::Unknown) || (m_communicationState == ComState::Lost)) {
         if (m_connectFuture.wait_for(TIMEOUT) != std::future_status::timeout) {
             try {
                 m_communicationState = m_connectFuture.get();
@@ -130,7 +130,7 @@ ComState AmqpClient::connected()
                 logError("Caught future error {}", e.what());
             }
         } else {
-            m_communicationState = ComState::COM_STATE_CONNECT_FAILED;
+            m_communicationState = ComState::ConnectFailed;
         }
     }
     return m_communicationState;
@@ -138,8 +138,8 @@ ComState AmqpClient::connected()
 
 DeliveryState AmqpClient::send(const proton::message& msg)
 {
-    auto deliveryState = DeliveryState::DELIVERY_STATE_REJECTED;
-    if (connected() == ComState::COM_STATE_OK) {
+    auto deliveryState = DeliveryState::Rejected;
+    if (connected() == ComState::Ok) {
         m_promiseSender = std::promise<void>();
         logDebug("Sending message to {} ...", msg.to());
         m_message.clear();
@@ -151,7 +151,7 @@ DeliveryState AmqpClient::send(const proton::message& msg)
 
         // Wait the to know if the message has been sent or not
         if (m_promiseSender.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
-            deliveryState = DeliveryState::DELIVERY_STATE_ACCEPTED;
+            deliveryState = DeliveryState::Accepted;
         }
     }
     return deliveryState;
@@ -159,8 +159,8 @@ DeliveryState AmqpClient::send(const proton::message& msg)
 
 DeliveryState AmqpClient::receive(const Address& address, const std::string& filter, MessageListener messageListener)
 {
-    auto deliveryState = DeliveryState::DELIVERY_STATE_REJECTED;
-    if (connected() == ComState::COM_STATE_OK) {
+    auto deliveryState = DeliveryState::Rejected;
+    if (connected() == ComState::Ok) {
         logDebug("Set receiver to wait message(s) from {} ...", address);
         m_promiseReceiver = std::promise<void>();
 
@@ -172,7 +172,7 @@ DeliveryState AmqpClient::receive(const Address& address, const std::string& fil
         });
 
         if (futureReceiver.wait_for(TIMEOUT) != std::future_status::timeout) {
-            deliveryState = DeliveryState::DELIVERY_STATE_ACCEPTED;
+            deliveryState = DeliveryState::Accepted;
         }
     }
 
@@ -245,9 +245,9 @@ void AmqpClient::setSubscriptions(const Address& address, MessageListener messag
 DeliveryState AmqpClient::unreceive()
 {
     std::lock_guard<std::mutex> lock(m_lock);
-    auto                        deliveryState = DeliveryState::DELIVERY_STATE_UNAVAILABLE;
+    auto                        deliveryState = DeliveryState::Unavailable;
     if (m_receiver && m_receiver.active()) {
-        deliveryState = DeliveryState::DELIVERY_STATE_ACCEPTED;
+        deliveryState = DeliveryState::Accepted;
         m_receiver.close();
         logDebug("Receiver Closed");
     }

@@ -141,7 +141,7 @@ TEST_CASE("queue", "[amqp][request]")
 
         auto replyMsg = msgBus.request(request, 2);
         REQUIRE(!replyMsg);
-        REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::DELIVERY_STATE_TIMEOUT);
+        REQUIRE(from_deliveryState(replyMsg.error()) == DeliveryState::Timeout);
     }
 
     SECTION("Send sync request")
@@ -160,7 +160,7 @@ TEST_CASE("queue", "[amqp][request]")
         // Test without connection before.
         auto msgBusRequester = amqp::MessageBusAmqp("SyncRequesterTestCase", AMQP_SERVER_URI);
         auto requester       = msgBusRequester.request(request, 2);
-        REQUIRE(requester.error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+        REQUIRE(requester.error() == to_string(DeliveryState::Unavailable));
 
         // Test with connection after.
         REQUIRE(msgBusRequester.connect());
@@ -237,7 +237,7 @@ TEST_CASE("topic", "[amqp][pub]")
 
         for (int i = 0; i < 3; i++) {
             auto delivState = msgBusSender.send(msg);
-            REQUIRE(delivState == DeliveryState::DELIVERY_STATE_ACCEPTED);
+            REQUIRE(delivState);
             std::this_thread::sleep_for(ONE_SECOND);
             CHECK(msgReceived.isRecieved(i + 1));
         }
@@ -250,7 +250,7 @@ TEST_CASE("topic", "[amqp][pub]")
         std::string topic  = "topic://test.message.unreceive." + generateUuid();
 
         // Try to unreceive before a connection => UNAVAILABLE
-        REQUIRE(msgBus.unreceive(topic).error() == to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+        REQUIRE(msgBus.unreceive(topic).error() == to_string(DeliveryState::Unavailable));
         // After a connection
         REQUIRE(msgBus.connect());
         REQUIRE(msgBus.receive(topic, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
@@ -259,15 +259,15 @@ TEST_CASE("topic", "[amqp][pub]")
         REQUIRE(msgBusSender.connect());
 
         Message msg = Message::buildMessage("UnreceiveTestCase", topic, "TEST", QUERY);
-        REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+        REQUIRE(msgBusSender.send(msg));
         std::this_thread::sleep_for(TWO_SECONDS);
         CHECK(msgReceived.isRecieved(1));
 
         // Try to unreceive a wrong topic => REJECTED
-        REQUIRE(msgBus.unreceive("/etn/t/wrongTopic").error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        REQUIRE(msgBus.unreceive("/etn/t/wrongTopic").error() == to_string(DeliveryState::Rejected));
         // Try to unreceive a right topic => ACCEPTED
         REQUIRE(msgBus.unreceive(topic));
-        REQUIRE(msgBusSender.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+        REQUIRE(msgBusSender.send(msg));
         std::this_thread::sleep_for(ONE_SECOND);
         CHECK(msgReceived.isRecieved(1));
     }
@@ -285,7 +285,7 @@ TEST_CASE("topic", "[amqp][pub]")
         Message msg = Message::buildMessage("PubTestCaseWithSameObject", topic, "TEST", QUERY);
         std::this_thread::sleep_for(TWO_SECONDS);
 
-        REQUIRE(msgBus.send(msg) == DeliveryState::DELIVERY_STATE_ACCEPTED);
+        REQUIRE(msgBus.send(msg));
         std::this_thread::sleep_for(ONE_SECOND);
         CHECK(msgReceived.isRecieved(1));
     }
@@ -299,22 +299,22 @@ TEST_CASE("wrong", "[amqp][messageStatus]")
 
         // Without mandatory fields (from, subject, to)
         auto wrongSendMsg = Message::buildMessage("WrongMessageTestCase", "", "TEST");
-        REQUIRE(msgBus.send(wrongSendMsg).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        REQUIRE(msgBus.send(wrongSendMsg).error() == to_string(DeliveryState::Rejected));
 
         // Without mandatory fields (from, subject, to)
         auto request = Message::buildRequest("WrongRequestTestCase", "", "SyncTest", "", QUERY);
         // Request reject
-        REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::Rejected));
         request.from("queue://etn.q.request");
         request.to("queue://etn.q.reply");
         // Without reply request reject.
-        REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        REQUIRE(msgBus.request(request, 1).error() == to_string(DeliveryState::Rejected));
     }
 
     SECTION("Wrong ip address")
     {
         auto msgBus        = amqp::MessageBusAmqp("WrongConnectionTestCase", "amqp://wrong.address.ip.com:5672");
         auto connectionRet = msgBus.connect();
-        REQUIRE(connectionRet.error() == to_string(ComState::COM_STATE_CONNECT_FAILED));
+        REQUIRE(connectionRet.error() == to_string(ComState::ConnectFailed));
     }
 }

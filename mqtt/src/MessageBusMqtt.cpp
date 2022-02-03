@@ -45,7 +45,7 @@ fty::Expected<void> MessageBusMqtt::connect() noexcept
 fty::Expected<void> MessageBusMqtt::send(const Message& msg) noexcept
 {
     if (!msg.isValidMessage()) {
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        return fty::unexpected(to_string(DeliveryState::Rejected));
     }
     return m_busMqtt->send(msg);
 }
@@ -64,9 +64,9 @@ fty::Expected<Message> MessageBusMqtt::request(const Message& msg, int timeOut) 
 {
     // Sanity check
     if (!msg.isValidMessage())
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        return fty::unexpected(to_string(DeliveryState::Rejected));
     if (!msg.needReply())
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        return fty::unexpected(to_string(DeliveryState::Rejected));
 
     // Sendrequest
     return m_busMqtt->request(msg, timeOut);

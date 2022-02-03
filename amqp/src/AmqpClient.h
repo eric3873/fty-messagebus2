@@ -65,7 +65,7 @@ private:
     Endpoint             m_url;
     SubScriptionListener m_subscriptions;
     // Default communication state
-    fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::COM_STATE_UNKNOWN;
+    fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::Unknown;
 
     // Proton object
     proton::connection m_connection;

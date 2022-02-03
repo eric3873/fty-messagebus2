@@ -40,7 +40,7 @@ fty::Expected<void> MessageBusAmqp::connect() noexcept
 fty::Expected<void> MessageBusAmqp::send(const Message& msg) noexcept
 {
     if (!msg.isValidMessage()) {
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        return fty::unexpected(to_string(DeliveryState::Rejected));
     }
     return m_busAmqp->send(msg);
 }
@@ -59,10 +59,10 @@ fty::Expected<Message> MessageBusAmqp::request(const Message& msg, int timeOut) 
 {
     // Sanity check
     if (!msg.isValidMessage()) {
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        return fty::unexpected(to_string(DeliveryState::Rejected));
     }
     if (!msg.needReply()) {
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        return fty::unexpected(to_string(DeliveryState::Rejected));
     }
 
     // Send request

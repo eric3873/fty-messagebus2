@@ -53,26 +53,26 @@ fty::Expected<void> MsgBusAmqp::connect()
         });
         thrdSender.detach();
 
-        if (m_amqpClient->connected() != ComState::COM_STATE_OK) {
+        if (m_amqpClient->connected() != ComState::Ok) {
             return fty::unexpected(to_string(m_amqpClient->connected()));
         }
     } catch (const std::exception& e) {
         logError("Unexpected error: {}", e.what());
-        return fty::unexpected(to_string(ComState::COM_STATE_CONNECT_FAILED));
+        return fty::unexpected(to_string(ComState::ConnectFailed));
     }
     return {};
 }
 
 bool MsgBusAmqp::isServiceAvailable()
 {
-    return (m_amqpClient && (m_amqpClient->connected() == ComState::COM_STATE_OK));
+    return (m_amqpClient && (m_amqpClient->connected() == ComState::Ok));
 }
 
 fty::Expected<void> MsgBusAmqp::receive(const Address& address, MessageListener messageListener, const std::string& filter)
 {
     if (!isServiceAvailable()) {
         logDebug("Service not available");
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+        return fty::unexpected(to_string(DeliveryState::Unavailable));
     }
 
     auto        receiver = std::make_shared<AmqpClient>(m_endpoint);
@@ -83,9 +83,9 @@ fty::Expected<void> MsgBusAmqp::receive(const Address& address, MessageListener 
     m_subScriptions.emplace(address, receiver);
     thrd.detach();
 
-    if (received != DeliveryState::DELIVERY_STATE_ACCEPTED) {
+    if (received != DeliveryState::Accepted) {
         logError("Message receive (Rejected)");
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        return fty::unexpected(to_string(DeliveryState::Rejected));
     }
     return {};
 }
@@ -94,7 +94,7 @@ fty::Expected<void> MsgBusAmqp::unreceive(const Address& address)
 {
     if (!isServiceAvailable()) {
         logDebug("Service not available");
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+        return fty::unexpected(to_string(DeliveryState::Unavailable));
     }
 
     if (auto it{m_subScriptions.find(address)}; it != m_subScriptions.end()) {
@@ -103,7 +103,7 @@ fty::Expected<void> MsgBusAmqp::unreceive(const Address& address)
         logTrace("Unsubscribed for: '{}'", address);
     } else {
         logError("Unsubscribed '{}' (Rejected)", address);
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+        return fty::unexpected(to_string(DeliveryState::Rejected));
     }
     return {};
 }
@@ -112,7 +112,7 @@ fty::Expected<void> MsgBusAmqp::send(const Message& message)
 {
     if (!isServiceAvailable()) {
         logDebug("Service not available");
-        return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+        return fty::unexpected(to_string(DeliveryState::Unavailable));
     }
 
     logDebug("Sending message {}", message.toString());
@@ -126,7 +126,7 @@ fty::Expected<void> MsgBusAmqp::send(const Message& message)
     sender.close();
     thrd.join();
 
-    if (msgSent != DeliveryState::DELIVERY_STATE_ACCEPTED) {
+    if (msgSent != DeliveryState::Accepted) {
         logError("Message sent (Rejected)");
         return fty::unexpected(to_string(msgSent));
     }
@@ -140,7 +140,7 @@ fty::Expected<Message> MsgBusAmqp::request(const Message& message, int receiveTi
     try {
         if (!isServiceAvailable()) {
             logDebug("Service not available");
-            return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_UNAVAILABLE));
+            return fty::unexpected(to_string(DeliveryState::Unavailable));
         }
 
         proton::message msgToSend = getAmqpMessage(message);
@@ -152,7 +152,7 @@ fty::Expected<Message> MsgBusAmqp::request(const Message& message, int receiveTi
         requester.receive(msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
         auto msgSent = send(message);
         if (!msgSent) {
-            return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_REJECTED));
+            return fty::unexpected(to_string(DeliveryState::Rejected));
         }
 
         MessagePointer response       = std::make_shared<proton::message>();
@@ -163,7 +163,7 @@ fty::Expected<Message> MsgBusAmqp::request(const Message& message, int receiveTi
 
         if (!messageArrived) {
             logError("No message arrive in time!");
-            return fty::unexpected(to_string(DeliveryState::DELIVERY_STATE_TIMEOUT));
+            return fty::unexpected(to_string(DeliveryState::Timeout));
         }
 
         logDebug("Message arrived ({})", proton::to_string(*response));
