@@ -78,7 +78,7 @@ public:
     template <typename Func, typename Cls>
     [[nodiscard]] fty::Expected<void, DeliveryState> receive(const Address& address, Func&& fnc, Cls* cls) noexcept
     {
-        return registerListener(address, [f = std::move(fnc), c = cls](const Message& msg) -> void {
+        return receive(address, [f = std::move(fnc), c = cls](const Message& msg) -> void {
             std::invoke(f, *c, Message(msg));
         });
     }

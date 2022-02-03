@@ -34,7 +34,7 @@ static const std::string QUEUE_PREFIX = "queue://";
 
 class MsgBusAmqp;
 
-class MessageBusAmqp final : public fty::messagebus::MessageBus
+class MessageBusAmqp final : public MessageBus
 {
 public:
     MessageBusAmqp(const ClientName& clientName = utils::getClientId("MessageBusAmqp"), const Endpoint& endpoint = DEFAULT_ENDPOINT);
@@ -51,6 +51,7 @@ public:
     [[nodiscard]] const ClientName& clientName() const noexcept override;
     [[nodiscard]] const Identity&   identity() const noexcept override;
 
+    using MessageBus::receive;
 private:
     std::shared_ptr<MsgBusAmqp> m_busAmqp;
 };

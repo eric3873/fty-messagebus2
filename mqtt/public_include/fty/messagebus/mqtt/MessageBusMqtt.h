@@ -56,6 +56,7 @@ public:
     [[nodiscard]] const ClientName& clientName() const noexcept override;
     [[nodiscard]] const Identity&   identity() const noexcept override;
 
+    using MessageBus::receive;
 private:
     std::shared_ptr<MsgBusMqtt> m_busMqtt;
 };
