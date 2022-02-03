@@ -189,7 +189,7 @@ bool AmqpClient::tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int
     auto futureSynRequest = m_promiseSyncRequest.get_future();
     if (futureSynRequest.wait_for(std::chrono::seconds(timeoutInSeconds)) != std::future_status::timeout) {
         try {
-            *resp          = std::move(futureSynRequest.get());
+            *resp          = futureSynRequest.get();
             messageArrived = true;
         } catch (const std::future_error& e) {
             logError("Caught a future_error {}", e.what());
