@@ -38,7 +38,9 @@ proton::reconnect_options reconnectOpts()
 
 proton::connection_options connectOpts()
 {
-    return proton::connection_options();
+    proton::connection_options opts;
+    opts.idle_timeout(proton::duration(100));
+    return opts;
 }
 
 } // namespace
