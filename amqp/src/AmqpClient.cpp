@@ -39,7 +39,7 @@ proton::reconnect_options reconnectOpts()
 proton::connection_options connectOpts()
 {
     proton::connection_options opts;
-    opts.idle_timeout(proton::duration(100));
+    opts.idle_timeout(proton::duration(2000));
     return opts;
 }
 
@@ -49,7 +49,7 @@ namespace fty::messagebus::amqp {
 using namespace fty::messagebus;
 using MessageListener = fty::messagebus::MessageListener;
 
-static auto constexpr TIMEOUT = std::chrono::seconds(5);
+static auto constexpr TIMEOUT = std::chrono::seconds(2);
 
 AmqpClient::AmqpClient(const Endpoint& url)
     : m_url(url)
@@ -185,18 +185,32 @@ bool AmqpClient::tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int
 {
     logDebug("Checking answer for {} second(s)...", timeoutInSeconds);
 
-    m_promiseSyncRequest = std::promise<proton::message>();
+    /* m_promiseSyncRequest = std::promise<proton::message>(); */
 
     bool messageArrived   = false;
-    auto futureSynRequest = m_promiseSyncRequest.get_future();
+    if (!m_replyListMessage.empty()) {
+      logDebug("ds");
+      *resp          = m_replyListMessage.front();
+      m_replyListMessage.pop_back();
+      messageArrived = true;
+
+        /* try {
+            *resp          = futureSynRequest.get();
+            messageArrived = true;
+        } catch (const std::future_error& e) {
+            logError("Caught a future_error {}", e.what());
+        } */
+    }
+    /* auto futureSynRequest = m_promiseSyncRequest.get_future();
     if (futureSynRequest.wait_for(std::chrono::seconds(timeoutInSeconds)) != std::future_status::timeout) {
+      logDebug("ds");
         try {
             *resp          = futureSynRequest.get();
             messageArrived = true;
         } catch (const std::future_error& e) {
             logError("Caught a future_error {}", e.what());
         }
-    }
+    } */
     return messageArrived;
 }
 
@@ -216,7 +230,9 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
             } else {
                 // Synchronous reply
                 logDebug("Synchronous mode");
-                m_promiseSyncRequest.set_value(msg);
+                /* m_promiseSyncRequest = std::promise<proton::message>();
+                m_promiseSyncRequest.set_value(msg); */
+                m_replyListMessage.push_back(msg);
             }
         } else {
             if (auto it{m_subscriptions.find(msg.address())}; it != m_subscriptions.end()) {
@@ -237,7 +253,10 @@ void AmqpClient::setSubscriptions(const Address& address, MessageListener messag
     if (messageListener) {
         if (auto it{m_subscriptions.find(address)}; it == m_subscriptions.end()) {
             auto ret = m_subscriptions.emplace(address, messageListener);
-            logTrace("Subscriptions emplaced: {} {}", address, ret.second ? "true" : "false");
+            if (!ret.second) {
+              logWarn("Subscriptions not emplaced: {}", address);
+            }
+            //
         } else {
             logWarn("Set subscriptions skipped");
         }
@@ -258,11 +277,12 @@ DeliveryState AmqpClient::unreceive()
 
 void AmqpClient::close()
 {
+    unreceive();
     std::lock_guard<std::mutex> lock(m_lock);
-    if (m_receiver && m_receiver.active()) {
+    /* if (m_receiver && m_receiver.active()) {
         m_receiver.close();
         logDebug("Receiver Closed");
-    }
+    } */
     if (m_connection && m_connection.active()) {
         m_connection.close();
         logDebug("Connection Closed");

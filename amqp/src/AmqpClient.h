@@ -66,6 +66,7 @@ private:
     SubScriptionListener m_subscriptions;
     // Default communication state
     fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::Unknown;
+    std::vector<proton::message> m_replyListMessage;
 
     // Proton object
     proton::connection m_connection;
