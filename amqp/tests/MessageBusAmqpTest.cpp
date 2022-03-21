@@ -155,7 +155,7 @@ TEST_CASE("queue", "[amqp][request]")
 
         // Send synchronous request
         Message request = Message::
-            buildRequest("SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:");
+            buildRequest("SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", "test:", {}, SYNC_REQUEST_TIMEOUT);
 
         auto replyMsg = msgBus.request(request, SYNC_REQUEST_TIMEOUT);
         REQUIRE(!replyMsg);
@@ -173,7 +173,7 @@ TEST_CASE("queue", "[amqp][request]")
       REQUIRE(msgBusReplyer.connect());
 
       // Build synchronous request and set all receiver
-      Message request = Message::buildRequest("RequestTestCase", syncTestQueue + "request", "TEST", syncTestQueue + "reply", QUERY);
+      Message request = Message::buildRequest("RequestTestCase", syncTestQueue + "request", "TEST", syncTestQueue + "reply", QUERY, {}, SYNC_REQUEST_TIMEOUT);
       REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
       auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);

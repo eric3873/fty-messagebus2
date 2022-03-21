@@ -136,6 +136,16 @@ std::string Message::status() const
     return getMetaDataValue(STATUS);
 }
 
+void Message::timeout(const int timeout)
+{
+    setMetaDataValue(TIME_OUT, std::to_string(timeout));
+}
+
+int Message::timeout() const
+{
+    return std::stoi(getMetaDataValue(TIME_OUT));
+}
+
 void Message::status(const std::string& status)
 {
     setMetaDataValue(STATUS, status);
@@ -187,11 +197,14 @@ Message Message::buildRequest(
     const std::string& subject,
     const Address&     replyTo,
     const UserData&    userData,
-    const MetaData&    meta)
+    const MetaData&    meta,
+    const int          timeout)
 {
     Message msg = buildMessage(from, to, subject, userData, meta);
     msg.replyTo(replyTo);
     msg.correlationId(utils::generateUuid());
+    // Set timeout in ms
+    msg.timeout(timeout * 1000);
 
     return msg;
 }

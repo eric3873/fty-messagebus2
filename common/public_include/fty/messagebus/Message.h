@@ -40,6 +40,7 @@ static constexpr auto TO             = "TO";             // Destination queue
 static constexpr auto REPLY_TO       = "REPLY_TO";       // Reply queue
 static constexpr auto SUBJECT        = "SUBJECT";        // Message subject
 static constexpr auto STATUS         = "STATUS";         // Message status
+static constexpr auto TIME_OUT       = "TIMEOUT";        // Request timeout
 
 class Message;
 class Message
@@ -73,6 +74,8 @@ public:
     void        subject(const std::string& subject);
     std::string status() const;
     void        status(const std::string& status);
+    int         timeout() const;
+    void        timeout(const int timeout);
     std::string id() const;
     void        id(const std::string& id);
 
@@ -92,7 +95,8 @@ public:
         const std::string& subject,
         const Address&     replyTo,
         const UserData&    userData = {},
-        const MetaData&    meta     = {});
+        const MetaData&    meta     = {},
+        const int          timeout  = -1);
 
     MetaData getUndefinedProperties() const;
 

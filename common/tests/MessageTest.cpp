@@ -15,12 +15,13 @@ TEST_CASE("Build message", "[Message]")
     REQUIRE(!msg.needReply());
 }
 
-TEST_CASE("Build request with reply", "[Message]")
+TEST_CASE("Build request with reply and timeout", "[Message]")
 {
-    Message msg = Message::buildRequest("FROM", "Q.TO", "TEST_SUBJECT", "Q.REPLY", "data");
+    Message msg = Message::buildRequest("FROM", "Q.TO", "TEST_SUBJECT", "Q.REPLY", "data", {}, 10);
     REQUIRE(msg.isValidMessage());
     REQUIRE(msg.isRequest());
     REQUIRE(msg.needReply());
+    REQUIRE(msg.timeout() == 10000);
 
     auto reply = msg.buildReply("data reply");
     REQUIRE(reply);
