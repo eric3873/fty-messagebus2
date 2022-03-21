@@ -58,7 +58,6 @@ public:
     fty::messagebus::DeliveryState receive(const Address& address, const std::string& filter = {}, MessageListener messageListener = {});
     fty::messagebus::DeliveryState unreceive();
     fty::messagebus::DeliveryState send(const proton::message& msg);
-    bool                           tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeoutInSeconds);
     void                           close();
 
 private:
@@ -66,8 +65,6 @@ private:
     SubScriptionListener m_subscriptions;
     // Default communication state
     fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::Unknown;
-    std::vector<proton::message> m_replyListMessage;
-
     // Proton object
     proton::connection m_connection;
     proton::receiver   m_receiver;
@@ -79,7 +76,6 @@ private:
     std::future<fty::messagebus::ComState>  m_connectFuture;
     std::promise<void>                      m_promiseSender;
     std::promise<void>                      m_promiseReceiver;
-    std::promise<proton::message>           m_promiseSyncRequest;
 
     void setSubscriptions(const Address& address, MessageListener messageListener);
     void resetPromise();

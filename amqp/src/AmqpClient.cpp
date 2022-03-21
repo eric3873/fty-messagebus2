@@ -177,41 +177,7 @@ DeliveryState AmqpClient::receive(const Address& address, const std::string& fil
             deliveryState = DeliveryState::Accepted;
         }
     }
-
     return deliveryState;
-}
-
-bool AmqpClient::tryConsumeMessageFor(std::shared_ptr<proton::message> resp, int timeoutInSeconds)
-{
-    logDebug("Checking answer for {} second(s)...", timeoutInSeconds);
-
-    /* m_promiseSyncRequest = std::promise<proton::message>(); */
-
-    bool messageArrived   = false;
-    if (!m_replyListMessage.empty()) {
-      logDebug("ds");
-      *resp          = m_replyListMessage.front();
-      m_replyListMessage.pop_back();
-      messageArrived = true;
-
-        /* try {
-            *resp          = futureSynRequest.get();
-            messageArrived = true;
-        } catch (const std::future_error& e) {
-            logError("Caught a future_error {}", e.what());
-        } */
-    }
-    /* auto futureSynRequest = m_promiseSyncRequest.get_future();
-    if (futureSynRequest.wait_for(std::chrono::seconds(timeoutInSeconds)) != std::future_status::timeout) {
-      logDebug("ds");
-        try {
-            *resp          = futureSynRequest.get();
-            messageArrived = true;
-        } catch (const std::future_error& e) {
-            logError("Caught a future_error {}", e.what());
-        }
-    } */
-    return messageArrived;
 }
 
 void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
@@ -224,15 +190,10 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
     if (m_connection) {
         if (!msg.correlation_id().empty() && msg.reply_to().empty()) {
             if (auto it{m_subscriptions.find(proton::to_string(msg.correlation_id()))}; it != m_subscriptions.end()) {
-                // Asynchronous reply
-                logDebug("Asynchronous mode");
+                // Message listener called by qpid-proton library
                 m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
             } else {
-                // Synchronous reply
-                logDebug("Synchronous mode");
-                /* m_promiseSyncRequest = std::promise<proton::message>();
-                m_promiseSyncRequest.set_value(msg); */
-                m_replyListMessage.push_back(msg);
+                logWarn("Not message listener recorded for: {}", msg.address());
             }
         } else {
             if (auto it{m_subscriptions.find(msg.address())}; it != m_subscriptions.end()) {
@@ -250,6 +211,7 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
 
 void AmqpClient::setSubscriptions(const Address& address, MessageListener messageListener)
 {
+    std::lock_guard<std::mutex> lock(m_lock);
     if (messageListener) {
         if (auto it{m_subscriptions.find(address)}; it == m_subscriptions.end()) {
             auto ret = m_subscriptions.emplace(address, messageListener);
@@ -279,10 +241,6 @@ void AmqpClient::close()
 {
     unreceive();
     std::lock_guard<std::mutex> lock(m_lock);
-    /* if (m_receiver && m_receiver.active()) {
-        m_receiver.close();
-        logDebug("Receiver Closed");
-    } */
     if (m_connection && m_connection.active()) {
         m_connection.close();
         logDebug("Connection Closed");

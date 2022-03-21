@@ -103,7 +103,7 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::unreceive(const Address& address)
         m_subScriptions.erase(address);
         logTrace("Unsubscribed for: '{}'", address);
     } else {
-        logError("Unsubscribed '{}' (Rejected)", address);
+        logWarn("Unsubscribed '{}' (Rejected)", address);
         return fty::unexpected(DeliveryState::Rejected);
     }
     return {};
@@ -116,22 +116,16 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::send(const Message& message)
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
-    logDebug("Sending message {}", message.toString());
-    //logDebug("Sending message ...");
+    logDebug("Sending message ...");
     proton::message msgToSend = getAmqpMessage(message);
-    //logDebug("1");
 
     auto        sender = AmqpClient(m_endpoint);
     std::thread thrd([&]() {
         proton::container(sender).run();
     });
-    //logDebug("2");
     auto        msgSent = sender.send(msgToSend);
-    //logDebug("3");
     sender.close();
-    //logDebug("4");
     thrd.join();
-    //logDebug("5");
 
     if (msgSent != DeliveryState::Accepted) {
         logError("Message sent (Rejected)");
@@ -144,9 +138,6 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::send(const Message& message)
 
 fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message, int receiveTimeOut)
 {
-    //std::future<int> result1(std::async(func2));
-    auto f = std::async(std::launch::async, fty::messagebus::amqp::MsgBusAmqp::func2, 8);
-    logWarn("result is {}", f.get());
     try {
         if (!isServiceAvailable()) {
             logDebug("Service not available");
@@ -154,67 +145,39 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
         }
 
         proton::message msgToSend = getAmqpMessage(message);
-
-        //auto promiseSyncRequest = std::promise<proton::message>();
-
+        // Promise and future to check if the answer arrive constraint by timeout.
         auto promiseSyncRequest = std::promise<Message>();
 
         Message reply;
-        bool messageArrived = false;
-        MessageListener func1 = [&](const Message& message2) {
-          logDebug("Message arrived: '{}'", message2.toString());
-          promiseSyncRequest.set_value(message2);
-          //reply = std::move(message2);
-          //messageArrived = true;
+        bool msgArrived = false;
+        MessageListener syncMessageListener = [&](const Message& replyMessage) {
+          promiseSyncRequest.set_value(replyMessage);
         };
 
-        /* Message reply2 = [=](const Message& message2) {
-          logDebug("Message arrived: '{}'", message2.toString());
-          return message2;
-          //messageArrived = true;
-        }; */
-
-
-        auto received = receive(msgToSend.reply_to(), func1, proton::to_string(msgToSend.correlation_id()));
-
-        // AmqpClient  requester(m_endpoint);
-        // std::thread thrd([&]() {
-        //     proton::container(requester).run();
-        // });
-        // auto received = requester.receive(msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
-        // if (received != DeliveryState::Accepted) {
-        //     return fty::unexpected(DeliveryState::Aborted);
-        // }
-        // // Let the time to the receiver to be in the place
-
+        auto msgReceived = receive(msgToSend.reply_to(), syncMessageListener, proton::to_string(msgToSend.correlation_id()));
+        if (!msgReceived) {
+            return fty::unexpected(DeliveryState::Aborted);
+        }
         auto msgSent = send(message);
         if (!msgSent) {
             return fty::unexpected(DeliveryState::Aborted);
         }
 
-
         auto futureSynRequest = promiseSyncRequest.get_future();
         if (futureSynRequest.wait_for(std::chrono::seconds(receiveTimeOut)) != std::future_status::timeout) {
-          messageArrived = true;
+          msgArrived = true;
+        }
+        // Answer or without answer unreceive to not let any receiver for nothings
+        auto unreceived = unreceive(msgToSend.reply_to());
+        if (!unreceived) {
+            logWarn("Issue on unreceive");
         }
 
-        //std::this_thread::sleep_for(std::chrono::seconds(2));
-        //MessagePointer response       = std::make_shared<proton::message>();
-        //bool           messageArrived = true;
-        //bool           messageArrived = m_amqpClient->tryConsumeMessageFor(response, receiveTimeOut);
-        //bool           messageArrived = m_subScriptions.at(msgToSend.reply_to())->tryConsumeMessageFor(response, receiveTimeOut);
-        /* requester.close();
-        thrd.join(); */
-        unreceive(msgToSend.reply_to());
-
-        if (!messageArrived) {
+        if (!msgArrived) {
             logError("No message arrive in time!");
             return fty::unexpected(DeliveryState::Timeout);
         }
 
-        //logDebug("Message arrived ({})", proton::to_string(*response));
-        //return Message();
-        //return Message{getMetaData(*response), response->body().empty() ? std::string{} : proton::to_string(response->body())};
         return futureSynRequest.get();
     } catch (std::exception& e) {
         logError("Exception in amqp receive: {}", e.what());
