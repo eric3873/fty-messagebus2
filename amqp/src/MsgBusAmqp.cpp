@@ -156,6 +156,11 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
 
         auto msgReceived = receive(msgToSend.reply_to(), syncMessageListener, proton::to_string(msgToSend.correlation_id()));
         if (!msgReceived) {
+            // In the doubt unreceive
+            auto unreceived = unreceive(msgToSend.reply_to());
+            if (!unreceived) {
+                logWarn("Issue on unreceive");
+            }
             return fty::unexpected(DeliveryState::Aborted);
         }
         auto msgSent = send(message);
@@ -167,7 +172,7 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
         if (futureSynRequest.wait_for(std::chrono::seconds(receiveTimeOut)) != std::future_status::timeout) {
           msgArrived = true;
         }
-        // Answer or without answer unreceive to not let any receiver for nothings
+        // Unreceive in any case, to not let any ghost receiver.
         auto unreceived = unreceive(msgToSend.reply_to());
         if (!unreceived) {
             logWarn("Issue on unreceive");

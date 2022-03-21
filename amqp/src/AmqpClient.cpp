@@ -188,20 +188,15 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
     Message amqpMsg(getMetaData(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
 
     if (m_connection) {
+        std::string key = msg.address();
         if (!msg.correlation_id().empty() && msg.reply_to().empty()) {
-            if (auto it{m_subscriptions.find(proton::to_string(msg.correlation_id()))}; it != m_subscriptions.end()) {
-                // Message listener called by qpid-proton library
-                m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
-            } else {
-                logWarn("Not message listener recorded for: {}", msg.address());
-            }
+            key = proton::to_string(msg.correlation_id());
+        }
+        if (auto it{m_subscriptions.find(key)}; it != m_subscriptions.end()) {
+            // Message listener called by qpid-proton library
+            m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
         } else {
-            if (auto it{m_subscriptions.find(msg.address())}; it != m_subscriptions.end()) {
-                // Any subscription
-                m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
-            } else {
-                logWarn("Message skipped for {}", msg.address());
-            }
+            logWarn("Not message listener recorded for: {}", key);
         }
     } else {
         // Connection object not set
@@ -218,9 +213,8 @@ void AmqpClient::setSubscriptions(const Address& address, MessageListener messag
             if (!ret.second) {
               logWarn("Subscriptions not emplaced: {}", address);
             }
-            //
         } else {
-            logWarn("Set subscriptions skipped");
+            logWarn("Subscriptions skipped");
         }
     }
 }
@@ -229,10 +223,14 @@ DeliveryState AmqpClient::unreceive()
 {
     std::lock_guard<std::mutex> lock(m_lock);
     auto                        deliveryState = DeliveryState::Unavailable;
-    if (m_receiver && m_receiver.active()) {
-        deliveryState = DeliveryState::Accepted;
-        m_receiver.close();
-        logDebug("Receiver Closed");
+    if (m_receiver) {
+        std::string address = m_receiver.source().address();
+        if (m_receiver.active()) {
+          deliveryState = DeliveryState::Accepted;
+          m_receiver.close();
+          logDebug("Receiver Closed");
+        }
+        m_subscriptions.erase(address);
     }
     return deliveryState;
 }
