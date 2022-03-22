@@ -151,7 +151,7 @@ DeliveryState AmqpClient::send(const proton::message& msg)
             m_connection.open_sender(msg.to());
         });
 
-        // Wait the to know if the message has been sent or not
+        // Wait to know if the message has been sent or not
         if (m_promiseSender.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
             deliveryState = DeliveryState::Accepted;
         }
@@ -224,7 +224,7 @@ DeliveryState AmqpClient::unreceive()
     std::lock_guard<std::mutex> lock(m_lock);
     auto                        deliveryState = DeliveryState::Unavailable;
     if (m_receiver) {
-        std::string address = m_receiver.source().address();
+        auto address = m_receiver.source().address();
         if (m_receiver.active()) {
           deliveryState = DeliveryState::Accepted;
           m_receiver.close();
