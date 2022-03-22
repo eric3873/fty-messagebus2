@@ -55,6 +55,9 @@ cmake -B build -DBUILD_AMQP=ON -DBUILD_MQTT=ON
 To have sample and tests
 cmake -B build -DBUILD_SAMPLES=ON -DBUILD_TESTING=ON
 
+For the debug mode, adding
+-DCMAKE_BUILD_TYPE=Debug
+
 And
 cmake --build build
 ```
