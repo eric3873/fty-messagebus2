@@ -66,10 +66,8 @@ private:
     std::string m_clientName{};
     Endpoint    m_endpoint{};
 
-    // To handle all receivers and theirs message listener
+    // Handle all AmqpClient
     std::map<std::string, AmqpClientPointer> m_subScriptions;
-    // To handle connection, etc.
-    AmqpClientPointer m_amqpClient;
 };
 
 } // namespace fty::messagebus::amqp

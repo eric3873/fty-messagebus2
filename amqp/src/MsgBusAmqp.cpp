@@ -38,8 +38,6 @@ MsgBusAmqp::~MsgBusAmqp()
             logDebug("Cleaning: {}...", key);
             receiver->close();
         }
-        logDebug("Cleaning amqp client connection");
-        m_amqpClient->close();
         logDebug("{} cleaned", m_clientName);
     }
 }
@@ -48,14 +46,15 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
 {
     logDebug("Connecting for {} to {} ...", m_clientName, m_endpoint);
     try {
-        m_amqpClient = std::make_shared<AmqpClient>(m_endpoint);
+        auto amqpClient = std::make_shared<AmqpClient>(m_endpoint);
         std::thread thrdSender([=]() {
-            proton::container(*m_amqpClient).run();
+            proton::container(*amqpClient).run();
         });
         thrdSender.detach();
+        m_subScriptions.emplace(m_endpoint, amqpClient);
 
-        if (m_amqpClient->connected() != ComState::Ok) {
-            return fty::unexpected(m_amqpClient->connected());
+        if (amqpClient->connected() != ComState::Ok) {
+            return fty::unexpected(amqpClient->connected());
         }
     } catch (const std::exception& e) {
         logError("Unexpected error: {}", e.what());
@@ -66,7 +65,11 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
 
 bool MsgBusAmqp::isServiceAvailable()
 {
-    return (m_amqpClient && (m_amqpClient->connected() == ComState::Ok));
+    bool serviceAvailable = false;
+    if (auto it{m_subScriptions.find(m_endpoint)}; it != m_subScriptions.end()) {
+        serviceAvailable = (m_subScriptions.at(m_endpoint)->connected() == ComState::Ok);
+    }
+    return serviceAvailable;
 }
 
 fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, MessageListener messageListener, const std::string& filter)
