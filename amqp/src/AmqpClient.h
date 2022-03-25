@@ -23,7 +23,6 @@
 #include <fty/messagebus/MessageBus.h>
 #include <fty/messagebus/MessageBusStatus.h>
 #include <future>
-#include <map>
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
 #include <proton/delivery.hpp>
@@ -38,7 +37,7 @@
 namespace fty::messagebus::amqp {
 
 using MessageListener      = fty::messagebus::MessageListener;
-using SubScriptionListener = std::map<Address, MessageListener>;
+using SubScriptionListener = std::pair<Address, MessageListener>;
 
 class AmqpClient : public proton::messaging_handler
 {

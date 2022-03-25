@@ -192,14 +192,13 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
         if (!msg.correlation_id().empty() && msg.reply_to().empty()) {
             key = proton::to_string(msg.correlation_id());
         }
-        if (auto it{m_subscriptions.find(key)}; it != m_subscriptions.end()) {
-            // Message listener called by qpid-proton library
-            m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
+        if (!m_subscriptions.first.empty() && !m_subscriptions.first.compare(key) && m_subscriptions.second != nullptr) {
+          m_connection.work_queue().add(proton::make_work(m_subscriptions.second, amqpMsg));
         } else {
-            logWarn("Not message listener checked in for: {}", key);
+            logWarn("No message listener checked in for: {}", key);
         }
     } else {
-        // Connection object not set
+        // Connection not set
         logError("Nothing to do, connection object not set");
     }
 }
@@ -207,15 +206,10 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
 void AmqpClient::setSubscriptions(const Address& address, MessageListener messageListener)
 {
     std::lock_guard<std::mutex> lock(m_lock);
-    if (messageListener) {
-        if (auto it{m_subscriptions.find(address)}; it == m_subscriptions.end()) {
-            auto ret = m_subscriptions.emplace(address, messageListener);
-            if (!ret.second) {
-              logWarn("Subscriptions not emplaced: {}", address);
-            }
-        } else {
-            logWarn("Subscriptions skipped");
-        }
+    if (!address.empty() && messageListener) {
+        m_subscriptions = std::make_pair(address, messageListener);
+    } else {
+        logWarn("Subscriptions skipped, call back information not filled!");
     }
 }
 
@@ -227,9 +221,9 @@ DeliveryState AmqpClient::unreceive()
         if (m_receiver.active()) {
           deliveryState = DeliveryState::Accepted;
           m_receiver.close();
-          logDebug("Receiver Closed");
+          logDebug("Receiver Closed for {}", m_receiver.source().address());
         }
-        m_subscriptions.clear();
+        m_subscriptions = {};
     }
     return deliveryState;
 }
