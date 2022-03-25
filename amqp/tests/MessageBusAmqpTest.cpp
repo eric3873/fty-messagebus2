@@ -35,12 +35,9 @@ static constexpr auto AMQP_SERVER_URI{"amqp://127.0.0.1:5672"};
 using namespace fty::messagebus;
 using namespace fty::messagebus::utils;
 
-auto constexpr MILLI  = std::chrono::milliseconds(500);
-auto constexpr ONE_SECOND  = std::chrono::seconds(1);
+auto constexpr ONE_SECOND  =  std::chrono::seconds(1);
 auto constexpr TWO_SECONDS = std::chrono::seconds(2);
-auto constexpr THREE_SECONDS = std::chrono::seconds(3);
-auto constexpr SYNC_REQUEST_TIMEOUT = 3;
-auto constexpr FOUR_SECONDS = std::chrono::seconds(4);
+auto constexpr SYNC_REQUEST_TIMEOUT = 2; // in second
 
 static const std::string QUERY        = "query";
 static const std::string QUERY_2      = "query2";
@@ -53,7 +50,6 @@ class MsgReceived
 private:
     // Mutex
     std::mutex m_lock;
-    std::vector<fty::messagebus::Message> m_listMessage;
 
 public:
     int receiver;
@@ -103,14 +99,6 @@ public:
     {
         incReceiver();
         std::cout << "Message arrived " << message.toString() << std::endl;
-    }
-
-    void messageListenerEric(const Message& message)
-    {
-        std::lock_guard<std::mutex> lock(m_lock);
-        receiver++;
-        std::cout << "Message recieved " << message.toString() << std::endl;
-        m_listMessage.push_back(message);
     }
 
     void replyerAddOK(const Message& message)

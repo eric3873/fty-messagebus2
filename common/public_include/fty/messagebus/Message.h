@@ -96,7 +96,7 @@ public:
         const Address&     replyTo,
         const UserData&    userData = {},
         const MetaData&    meta     = {},
-        const int          timeout  = -1);
+        const int          timeout_s  = -1);
 
     MetaData getUndefinedProperties() const;
 

@@ -198,13 +198,13 @@ Message Message::buildRequest(
     const Address&     replyTo,
     const UserData&    userData,
     const MetaData&    meta,
-    const int          timeout)
+    const int          timeout_s)
 {
     Message msg = buildMessage(from, to, subject, userData, meta);
     msg.replyTo(replyTo);
     msg.correlationId(utils::generateUuid());
     // Set timeout in ms
-    msg.timeout(timeout * 1000);
+    msg.timeout(timeout_s * 1000);
 
     return msg;
 }

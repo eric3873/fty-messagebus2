@@ -81,13 +81,13 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, M
         proton::container(*receiver).run();
     });
     auto        received = receiver->receive(address, filter, messageListener);
-    m_subScriptions.emplace(address, receiver);
     thrd.detach();
 
     if (received != DeliveryState::Accepted) {
         logError("Message receive (Rejected)");
         return fty::unexpected(DeliveryState::Rejected);
     }
+    m_subScriptions.emplace(address, receiver);
     return {};
 }
 
@@ -156,15 +156,15 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
 
         auto msgReceived = receive(msgToSend.reply_to(), syncMessageListener, proton::to_string(msgToSend.correlation_id()));
         if (!msgReceived) {
-            // In the doubt unreceive
+            return fty::unexpected(DeliveryState::Aborted);
+        }
+
+        auto msgSent = send(message);
+        if (!msgSent) {
             auto unreceived = unreceive(msgToSend.reply_to());
             if (!unreceived) {
                 logWarn("Issue on unreceive");
             }
-            return fty::unexpected(DeliveryState::Aborted);
-        }
-        auto msgSent = send(message);
-        if (!msgSent) {
             return fty::unexpected(DeliveryState::Aborted);
         }
 
