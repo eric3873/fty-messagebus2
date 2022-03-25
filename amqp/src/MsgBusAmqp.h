@@ -29,6 +29,7 @@ namespace fty::messagebus::amqp {
 
 using MessagePointer    = std::shared_ptr<proton::message>;
 using AmqpClientPointer = std::shared_ptr<AmqpClient>;
+using AmqpClientHandler = std::map<Endpoint, AmqpClientPointer>;
 
 class MsgBusAmqp
 {
@@ -59,15 +60,20 @@ public:
     {
         return m_clientName;
     }
-
+    // Test if the service is available or not
     bool isServiceAvailable();
 
 private:
+    // Client name
     std::string m_clientName{};
+    // Amqp endpoint
     Endpoint    m_endpoint{};
-
-    // Handle all AmqpClient
-    std::map<std::string, AmqpClientPointer> m_subScriptions;
+    // AmqpClient's handler
+    AmqpClientHandler m_clientHandler;
+    // Mutex
+    std::mutex m_lock;
+    // Set all handlers
+    void setHandler(const Endpoint& endPoint, const AmqpClientPointer& amqpClient);
 };
 
 } // namespace fty::messagebus::amqp

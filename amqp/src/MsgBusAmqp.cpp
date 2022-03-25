@@ -34,7 +34,7 @@ MsgBusAmqp::~MsgBusAmqp()
     // Cleaning amqp ressources
     if (isServiceAvailable()) {
         logDebug("Cleaning Amqp ressources for: {}", m_clientName);
-        for (const auto& [key, receiver] : m_subScriptions) {
+        for (const auto& [key, receiver] : m_clientHandler) {
             logDebug("Cleaning: {}...", key);
             receiver->close();
         }
@@ -51,7 +51,7 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
             proton::container(*amqpClient).run();
         });
         thrdSender.detach();
-        m_subScriptions.emplace(m_endpoint, amqpClient);
+        setHandler(m_endpoint, amqpClient);
 
         if (amqpClient->connected() != ComState::Ok) {
             return fty::unexpected(amqpClient->connected());
@@ -66,10 +66,16 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
 bool MsgBusAmqp::isServiceAvailable()
 {
     bool serviceAvailable = false;
-    if (auto it{m_subScriptions.find(m_endpoint)}; it != m_subScriptions.end()) {
-        serviceAvailable = (m_subScriptions.at(m_endpoint)->connected() == ComState::Ok);
+    if (auto it{m_clientHandler.find(m_endpoint)}; it != m_clientHandler.end()) {
+        serviceAvailable = (m_clientHandler.at(m_endpoint)->connected() == ComState::Ok);
     }
     return serviceAvailable;
+}
+
+void MsgBusAmqp::setHandler(const Endpoint& endPoint, const AmqpClientPointer& amqpClient)
+{
+  std::lock_guard<std::mutex> lock(m_lock);
+  m_clientHandler.emplace(endPoint, amqpClient);
 }
 
 fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, MessageListener messageListener, const std::string& filter)
@@ -90,7 +96,7 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, M
         logError("Message receive (Rejected)");
         return fty::unexpected(DeliveryState::Rejected);
     }
-    m_subScriptions.emplace(address, receiver);
+    setHandler(address, receiver);
     return {};
 }
 
@@ -101,9 +107,10 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::unreceive(const Address& address)
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
-    if (auto it{m_subScriptions.find(address)}; it != m_subScriptions.end()) {
-        m_subScriptions.at(address)->unreceive();
-        m_subScriptions.erase(address);
+    std::lock_guard<std::mutex> lock(m_lock);
+    if (auto it{m_clientHandler.find(address)}; it != m_clientHandler.end()) {
+        m_clientHandler.at(address)->unreceive();
+        m_clientHandler.erase(address);
         logTrace("Unsubscribed for: '{}'", address);
     } else {
         logWarn("Unsubscribed '{}' (Rejected)", address);
