@@ -136,7 +136,7 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::send(const Message& message)
     return {};
 }
 
-fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message, int receiveTimeOut)
+fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message, int timeoutInSeconds)
 {
     try {
         if (!isServiceAvailable()) {
@@ -144,6 +144,7 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
             return fty::unexpected(DeliveryState::Unavailable);
         }
 
+        logDebug("Synchronous request and checking answer until {} second(s)...", timeoutInSeconds);
         proton::message msgToSend = getAmqpMessage(message);
         // Promise and future to check if the answer arrive constraint by timeout.
         auto promiseSyncRequest = std::promise<Message>();
@@ -169,7 +170,7 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
         }
 
         auto futureSynRequest = promiseSyncRequest.get_future();
-        if (futureSynRequest.wait_for(std::chrono::seconds(receiveTimeOut)) != std::future_status::timeout) {
+        if (futureSynRequest.wait_for(std::chrono::seconds(timeoutInSeconds)) != std::future_status::timeout) {
           msgArrived = true;
         }
         // Unreceive in any case, to not let any ghost receiver.
@@ -179,13 +180,13 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
         }
 
         if (!msgArrived) {
-            logError("No message arrive in time!");
+            logError("No message arrived within {} seconds!", timeoutInSeconds);
             return fty::unexpected(DeliveryState::Timeout);
         }
 
         return futureSynRequest.get();
     } catch (std::exception& e) {
-        logError("Exception in amqp receive: {}", e.what());
+        logError("Exception in synchronous request: {}", e.what());
         return fty::unexpected(DeliveryState::Aborted);
     }
 }

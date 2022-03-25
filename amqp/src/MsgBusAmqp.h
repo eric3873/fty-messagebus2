@@ -53,7 +53,7 @@ public:
     [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& message);
 
     // Sync request with timeout
-    [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& message, int receiveTimeOut);
+    [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& message, int timeoutInSeconds);
 
     const std::string& clientName() const
     {

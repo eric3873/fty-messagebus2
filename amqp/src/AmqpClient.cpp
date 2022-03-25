@@ -196,7 +196,7 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
             // Message listener called by qpid-proton library
             m_connection.work_queue().add(proton::make_work(it->second, amqpMsg));
         } else {
-            logWarn("Not message listener recorded for: {}", key);
+            logWarn("Not message listener checked in for: {}", key);
         }
     } else {
         // Connection object not set
@@ -224,13 +224,12 @@ DeliveryState AmqpClient::unreceive()
     std::lock_guard<std::mutex> lock(m_lock);
     auto                        deliveryState = DeliveryState::Unavailable;
     if (m_receiver) {
-        auto address = m_receiver.source().address();
         if (m_receiver.active()) {
           deliveryState = DeliveryState::Accepted;
           m_receiver.close();
           logDebug("Receiver Closed");
         }
-        m_subscriptions.erase(address);
+        m_subscriptions.clear();
     }
     return deliveryState;
 }
