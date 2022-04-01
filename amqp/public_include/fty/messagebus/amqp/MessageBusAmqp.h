@@ -41,6 +41,11 @@ public:
 
     ~MessageBusAmqp() = default;
 
+    MessageBusAmqp(MessageBusAmqp&&) = delete;
+    MessageBusAmqp& operator=(MessageBusAmqp&&) = delete;
+    MessageBusAmqp(const MessageBusAmqp&)       = delete;
+    MessageBusAmqp& operator=(const MessageBusAmqp&) = delete;
+
     [[nodiscard]] fty::Expected<void, ComState>      connect() noexcept override;
     [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& msg) noexcept override;
     [[nodiscard]] fty::Expected<void, DeliveryState> receive(

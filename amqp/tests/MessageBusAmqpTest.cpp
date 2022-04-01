@@ -50,6 +50,7 @@ class MsgReceived
 private:
     // Mutex
     std::mutex m_lock;
+    std::shared_ptr<amqp::MessageBusAmqp> m_msgBusReplyer;
 
 public:
     int receiver;
@@ -59,7 +60,11 @@ public:
         : receiver(0)
         , replyer(0)
     {
+      m_msgBusReplyer = std::make_shared<amqp::MessageBusAmqp>("TestCase", AMQP_SERVER_URI);
+      REQUIRE(m_msgBusReplyer->connect());
     }
+
+    ~MsgReceived() = default;
 
     void reset()
     {
@@ -112,9 +117,7 @@ public:
         }
 
         // send the response
-        auto msgBus = amqp::MessageBusAmqp("TestCase", AMQP_SERVER_URI);
-        REQUIRE(msgBus.connect());
-        auto msgSent = msgBus.send(response.value());
+        auto msgSent = m_msgBusReplyer->send(response.value());
         if (!msgSent) {
             FAIL(to_string(msgSent.error()));
         }
@@ -237,7 +240,7 @@ TEST_CASE("queue", "[amqp][request]")
 TEST_CASE("queueWithSameObject", "[amqp][request]")
 {
   MsgReceived msgReceived;
-  std::string asyncTestQueue  = "queue://test.message.licensing.";
+  std::string asyncTestQueue  = "queue://test.message.sameobject.";
 
   auto        msgBusRequesterSync = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
   REQUIRE(msgBusRequesterSync.connect());
@@ -261,11 +264,13 @@ TEST_CASE("queueWithSameObject", "[amqp][request]")
         request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(asyncMsgReceived), std::placeholders::_1),
         request.correlationId()));
 
-      for (int i = 0; i < 3; i++) {
+      int i = 0;
+      for (i = 0; i < 3; i++) {
           REQUIRE(msgBusRequesterAsync.send(request));
           std::this_thread::sleep_for(ONE_SECOND);
-          CHECK(asyncMsgReceived.isRecieved(i + 1));
       }
+      std::this_thread::sleep_for(ONE_SECOND);
+      CHECK(asyncMsgReceived.isRecieved(i));
       REQUIRE(msgBusRequesterAsync.unreceive(request.replyTo()));
   }
 

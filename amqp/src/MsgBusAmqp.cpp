@@ -53,7 +53,7 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
         thrdSender.detach();
         setHandler(m_endpoint, amqpClient);
 
-        if (amqpClient->connected() != ComState::Ok) {
+        if (amqpClient->connected() != ComState::Connected) {
             return fty::unexpected(amqpClient->connected());
         }
     } catch (const std::exception& e) {
@@ -67,7 +67,7 @@ bool MsgBusAmqp::isServiceAvailable()
 {
     bool serviceAvailable = false;
     if (auto it{m_clientHandler.find(m_endpoint)}; it != m_clientHandler.end()) {
-        serviceAvailable = (m_clientHandler.at(m_endpoint)->connected() == ComState::Ok);
+        serviceAvailable = (m_clientHandler.at(m_endpoint)->connected() == ComState::Connected);
     }
     return serviceAvailable;
 }

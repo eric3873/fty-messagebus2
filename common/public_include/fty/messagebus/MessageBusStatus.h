@@ -28,11 +28,12 @@ enum class ComState
 {
     Unknown       = 0,
     None          = 1,
-    Ok            = 2,
+    Connected     = 2,
     Lost          = 3,
     NoContact     = 4,
     ConnectFailed = 5,
-    Undefined     = 6,
+    Closed        = 6,
+    Undefined     = 7,
 };
 
 inline std::string to_string(const ComState& state)
@@ -42,14 +43,16 @@ inline std::string to_string(const ComState& state)
             return "UNKNOWN";
         case ComState::None:
             return "NONE";
-        case ComState::Ok:
-            return "OK";
+        case ComState::Connected:
+            return "CONNECTED";
         case ComState::Lost:
             return "LOST";
         case ComState::NoContact:
             return "NO CONTACT";
         case ComState::ConnectFailed:
             return "CONNECTION FAILED";
+        case ComState::Closed:
+            return "CONNECTION CLOSED";
         default:
             break;
     }
@@ -62,14 +65,16 @@ inline ComState from_com_state(const std::string& state)
         return ComState::Unknown;
     } else if (state == to_string(ComState::None)) {
         return ComState::None;
-    } else if (state == to_string(ComState::Ok)) {
-        return ComState::Ok;
+    } else if (state == to_string(ComState::Connected)) {
+        return ComState::Connected;
     } else if (state == to_string(ComState::Lost)) {
         return ComState::Lost;
     } else if (state == to_string(ComState::NoContact)) {
         return ComState::NoContact;
     } else if (state == to_string(ComState::ConnectFailed)) {
         return ComState::ConnectFailed;
+    } else if (state == to_string(ComState::Closed)) {
+        return ComState::Closed;
     } else {
         return ComState::Undefined;
     }

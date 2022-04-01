@@ -27,7 +27,6 @@
 
 namespace fty::messagebus::amqp {
 
-using MessagePointer    = std::shared_ptr<proton::message>;
 using AmqpClientPointer = std::shared_ptr<AmqpClient>;
 using AmqpClientHandler = std::map<Endpoint, AmqpClientPointer>;
 

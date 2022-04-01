@@ -45,10 +45,12 @@ public:
     AmqpClient(const Endpoint& url);
     ~AmqpClient();
 
+    // proton::messaging_handler Callback
     void on_container_start(proton::container& container) override;
     void on_connection_open(proton::connection& connection) override;
     void on_sender_open(proton::sender& sender) override;
     void on_receiver_open(proton::receiver& receiver) override;
+    void on_receiver_close(proton::receiver&) override;
     void on_message(proton::delivery& delivery, proton::message& msg) override;
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
@@ -72,7 +74,6 @@ private:
     std::mutex m_lock;
     // Set of promise for synchronization
     std::promise<fty::messagebus::ComState> m_connectPromise;
-    std::future<fty::messagebus::ComState>  m_connectFuture;
     std::promise<void>                      m_promiseSender;
     std::promise<void>                      m_promiseReceiver;
 
