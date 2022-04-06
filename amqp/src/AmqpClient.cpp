@@ -227,8 +227,11 @@ DeliveryState AmqpClient::unreceive()
         if (m_receiver.active()) {
           deliveryState = DeliveryState::Accepted;
           m_receiver.close();
-          m_promiseReceiver.get_future().wait_for(TIMEOUT);
-          logDebug("Receiver Closed for {}", m_receiver.source().address());
+          if (m_promiseReceiver.get_future().wait_for(TIMEOUT) == std::future_status::timeout) {
+            logError("Error on receiver close for {}, timeout reached", m_receiver.source().address());
+          } else {
+            logDebug("Receiver closed for {}", m_receiver.source().address());
+          }
         }
         m_subscriptions = {};
     }
