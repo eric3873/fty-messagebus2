@@ -294,33 +294,13 @@ TEST_CASE("requestAsync", "[amqp][request]")
         for (i = 0; i < MESSAGE_TO_SEND; i++) {
             REQUIRE(msgBusReplyer.send(request));
         }
+<<<<<<< HEAD
         CHECK(msgReceived.assertValue(i));
     }
+=======
+    } */
 
-    SECTION("Send")
-    {
-        MsgReceived msgReceived;
-        std::string sendTestQueue = "queue://test.message.send";
-
-        auto msgBus = amqp::MessageBusAmqp("MessageRecieverSendTestCase", AMQP_SERVER_URI);
-        REQUIRE(msgBus.connect());
-
-        auto msgBusSender = amqp::MessageBusAmqp("MessageSenderSendTestCase", AMQP_SERVER_URI);
-        REQUIRE(msgBusSender.connect());
-
-        REQUIRE(
-            msgBusSender.receive(sendTestQueue, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
-
-        // Send message on queue
-        Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
-
-        int i;
-        for (i = 0; i < MESSAGE_TO_SEND; i++) {
-            REQUIRE(msgBusSender.send(msg));
         }
-        CHECK(msgReceived.isRecieved(i));
-    }
-}
 
 TEST_CASE("RequestWithSameObject", "[amqp][request]")
 {

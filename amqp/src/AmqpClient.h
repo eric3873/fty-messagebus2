@@ -51,6 +51,7 @@ public:
     void on_sender_open(proton::sender& sender) override;
     void on_receiver_open(proton::receiver& receiver) override;
     void on_receiver_close(proton::receiver&) override;
+    //void on_session_open (proton::session &) override;
     void on_message(proton::delivery& delivery, proton::message& msg) override;
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
@@ -68,6 +69,7 @@ private:
     fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::Unknown;
     // Proton object
     proton::connection m_connection;
+    proton::session    m_session;
     proton::receiver   m_receiver;
     proton::message    m_message;
     // Mutex

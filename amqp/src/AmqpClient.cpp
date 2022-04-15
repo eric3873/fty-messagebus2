@@ -39,7 +39,7 @@ namespace {
   proton::connection_options connectOpts()
   {
       proton::connection_options opts;
-      opts.idle_timeout(proton::duration(2000));
+      opts.idle_timeout(proton::duration(5000));
       return opts;
   }
 
@@ -49,7 +49,7 @@ namespace fty::messagebus::amqp {
 using namespace fty::messagebus;
 using MessageListener = fty::messagebus::MessageListener;
 
-static auto constexpr TIMEOUT = std::chrono::seconds(2);
+static auto constexpr TIMEOUT = std::chrono::seconds(4);
 
 AmqpClient::AmqpClient(const Endpoint& url)
     : m_url(url)
@@ -81,6 +81,7 @@ void AmqpClient::on_connection_open(proton::connection& connection)
     } else {
         logDebug("Connected on url: {}", m_url);
     }
+    //m_session = m_connection.open_session();
     m_connectPromise.set_value(ComState::Connected);
 }
 
@@ -88,8 +89,8 @@ void AmqpClient::on_sender_open(proton::sender& sender)
 {
     logDebug("Sending message ...");
     sender.send(m_message);
-    sender.connection().close();
     m_promiseSender.set_value();
+    sender.connection().close();
     logDebug("Message sent");
 }
 
@@ -105,6 +106,11 @@ void AmqpClient::on_receiver_close(proton::receiver&)
 {
   m_promiseReceiver.set_value();
 }
+
+/* void AmqpClient::on_session_open(proton::session&)
+{
+  logDebug("on_session_open");
+} */
 
 void AmqpClient::on_error(const proton::error_condition& error)
 {
@@ -153,8 +159,13 @@ DeliveryState AmqpClient::send(const proton::message& msg)
         m_message.clear();
         m_message = msg;
 
+        /* proton::session session = m_connection.open_session();
+        session.open_sender(msg.to()); */
+
         m_connection.work_queue().add([=]() {
-            m_connection.open_sender(msg.to());
+            //m_connection.open_sender(msg.to());
+            proton::session session = m_connection.open_session();
+            session.open_sender(msg.to());
         });
 
         // Wait to know if the message has been sent or not

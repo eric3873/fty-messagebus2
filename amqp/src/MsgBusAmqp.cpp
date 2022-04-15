@@ -129,13 +129,15 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::send(const Message& message)
     logDebug("Sending message ...");
     proton::message msgToSend = getAmqpMessage(message);
 
-    auto        sender = AmqpClient(m_endpoint);
+    /* auto        sender = AmqpClient(m_endpoint);
     std::thread thrd([&]() {
         proton::container(sender).run();
     });
     auto        msgSent = sender.send(msgToSend);
     sender.close();
-    thrd.join();
+    thrd.join(); */
+
+    auto        msgSent = m_clientHandler.at(m_endpoint)->send(msgToSend);
 
     if (msgSent != DeliveryState::Accepted) {
         logError("Message sent (Rejected)");
