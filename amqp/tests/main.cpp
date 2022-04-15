@@ -18,6 +18,13 @@
 */
 
 // This tells Catch to provide a main() - only do this in one cpp file
-#define CATCH_CONFIG_MAIN
-
+#define CATCH_CONFIG_RUNNER
 #include <catch2/catch.hpp>
+#include <fty_log.h>
+
+int main(int argc, char* argv[]) {
+
+  ftylog_setInstance("MessageBusAmqpTest", FTY_COMMON_LOGGING_DEFAULT_CFG);
+
+  return Catch::Session().run(argc, argv);
+}
