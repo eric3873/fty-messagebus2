@@ -37,30 +37,57 @@ using namespace fty::messagebus;
 using namespace fty::messagebus::utils;
 
 auto constexpr FIVE_HUNDRED_MILLI_SECONDS = std::chrono::milliseconds(500);
-auto constexpr SYNC_REQUEST_TIMEOUT = 2; // in second
+auto constexpr SYNC_REQUEST_TIMEOUT       = 2; // in second
+auto constexpr MESSAGE_TO_SEND            = 3;
 
 static const std::string QUERY        = "query";
-static const std::string QUERY_2      = "query2";
 static const std::string OK           = ":OK";
 static const std::string QUERY_AND_OK = QUERY + OK;
-static const std::string RESPONSE_2   = QUERY_2 + OK;
 
 class MsgReceived
 {
 private:
     // Mutex
     std::mutex m_lock;
-    std::promise<int> m_promise;
     std::shared_ptr<amqp::MessageBusAmqp> m_msgBusReplyer;
 
-    void waitExpected(const int expected)
+    enum class ExpectedTest
+    {
+        Receiver            = 0,
+        ReceiverAndReplyer  = 1
+    };
+
+    bool testAndWaitExpected(const ExpectedTest expectedTest, const int expected)
     {
       int retry = 0;
-      while ((m_promise.get_future().get() != expected) && (retry <= expected + 2))
+      bool process = true;
+      while (process && (retry <= expected * 2))
       {
-        std::this_thread::sleep_for(FIVE_HUNDRED_MILLI_SECONDS);
+        switch (expectedTest)
+        {
+        case ExpectedTest::Receiver:
+          if (receiver == expected)
+          {
+            process = false;
+          }
+          break;
+        case ExpectedTest::ReceiverAndReplyer:
+          if (receiver == expected && replyer == expected)
+          {
+            process = false;
+          }
+          break;
+
+        default:
+          break;
+        }
+        if (process)
+        {
+          std::this_thread::sleep_for(FIVE_HUNDRED_MILLI_SECONDS);
+        }
         retry++;
       }
+      return !process;
     }
 
 public:
@@ -88,8 +115,6 @@ public:
     {
       std::lock_guard<std::mutex> lock(m_lock);
       receiver++;
-      m_promise = std::promise<int>();
-      m_promise.set_value(receiver);
     }
 
     void incReplyer()
@@ -100,22 +125,12 @@ public:
 
     bool assertValue(const int expected)
     {
-      if (receiver == expected && replyer == expected)
-      {
-        return true;
-      }
-      waitExpected(expected);
-      return (receiver == expected && replyer == expected);
+      return testAndWaitExpected(ExpectedTest::ReceiverAndReplyer, expected);
     }
 
     bool isRecieved(const int expected)
     {
-      if (receiver == expected)
-      {
-        return true;
-      }
-      waitExpected(expected);
-      return (receiver == expected);
+      return testAndWaitExpected(ExpectedTest::Receiver, expected);
     }
 
     int getRecieved()
@@ -225,7 +240,7 @@ TEST_CASE("queue", "[amqp][request]")
             request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
             request.correlationId()));
         int i;
-        for (i = 0; i < 3; i++) {
+        for (i = 0; i < MESSAGE_TO_SEND; i++) {
             REQUIRE(msgBusReplyer.send(request));
         }
         CHECK(msgReceived.assertValue(i));
@@ -249,7 +264,7 @@ TEST_CASE("queue", "[amqp][request]")
         Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
 
         int i;
-        for (i = 0; i < 3; i++) {
+        for (i = 0; i < MESSAGE_TO_SEND; i++) {
             REQUIRE(msgBusSender.send(msg));
         }
         CHECK(msgReceived.isRecieved(i));
@@ -286,7 +301,7 @@ TEST_CASE("queueWithSameObject", "[amqp][request]")
             request.correlationId()));
 
           int i = 0;
-          for (i = 0; i < 3; i++) {
+          for (i = 0; i < MESSAGE_TO_SEND; i++) {
               REQUIRE(msgBusRequesterAsync.send(request));
           }
           CHECK(asyncMsgReceived.isRecieved(i));
@@ -294,7 +309,7 @@ TEST_CASE("queueWithSameObject", "[amqp][request]")
       }
 
       {
-        for (int i = 0; i < 2; i++) {
+        for (int i = 0; i < MESSAGE_TO_SEND; i++) {
           auto otherReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
           REQUIRE(otherReplyMsg.value().userData() == QUERY_AND_OK);
         }
@@ -318,7 +333,7 @@ TEST_CASE("topic", "[amqp][pub]")
 
         Message msg = Message::buildMessage("PubSubTestCase", topic, "TEST", QUERY);
         int i;
-        for (i = 0; i < 3; i++) {
+        for (i = 0; i < MESSAGE_TO_SEND; i++) {
             REQUIRE(msgBusSender.send(msg));
         }
         CHECK(msgReceived.isRecieved(i));
