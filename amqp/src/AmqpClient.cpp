@@ -87,10 +87,9 @@ void AmqpClient::on_connection_open(proton::connection& connection)
 
 void AmqpClient::on_sender_open(proton::sender& sender)
 {
-    logDebug("Sending message ...");
     sender.send(m_message);
     m_promiseSender.set_value();
-    sender.connection().close();
+    sender.session().close();
     logDebug("Message sent");
 }
 
@@ -164,8 +163,9 @@ DeliveryState AmqpClient::send(const proton::message& msg)
 
         m_connection.work_queue().add([=]() {
             //m_connection.open_sender(msg.to());
-            proton::session session = m_connection.open_session();
-            session.open_sender(msg.to());
+            /*proton::session session = */
+            m_connection.open_session().open_sender(msg.to());
+            /* session.open_sender(msg.to()) */;
         });
 
         // Wait to know if the message has been sent or not
