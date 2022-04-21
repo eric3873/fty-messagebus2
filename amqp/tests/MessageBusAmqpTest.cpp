@@ -1,13 +1,16 @@
 /*  =========================================================================
     Copyright (C) 2014 - 2021 Eaton
+
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation; either version 2 of the License, or
     (at your option) any later version.
+
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
+
     You should have received a copy of the GNU General Public License along
     with this program; if not, write to the Free Software Foundation, Inc.,
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
@@ -161,53 +164,6 @@ public:
 //----------------------------------------------------------------------
 // Test case
 //----------------------------------------------------------------------
-
-
-TEST_CASE("queueWithSameObject", "[amqp][request]")
-{
-    SECTION("Async")
-    {
-      MsgReceived msgReceived;
-      std::string asyncTestQueue  = "queue://test.message.sameobject.";
-
-      auto        msgBusRequesterSync = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
-      REQUIRE(msgBusRequesterSync.connect());
-
-      auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
-      REQUIRE(msgBusReplyer.connect());
-
-      // Build asynchronous request and set all receiver
-      Message request = Message::buildRequest("RequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
-      REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
-
-      auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
-      REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
-
-      {
-        MsgReceived asyncMsgReceived;
-        auto  msgBusRequesterAsync = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
-        REQUIRE(msgBusRequesterAsync.connect());
-
-        REQUIRE(msgBusRequesterAsync.receive(
-            request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(asyncMsgReceived), std::placeholders::_1),
-            request.correlationId()));
-
-          int i = 0;
-          for (i = 0; i < 1; i++) {
-              REQUIRE(msgBusRequesterAsync.send(request));
-          }
-          CHECK(asyncMsgReceived.isRecieved(i));
-          REQUIRE(msgBusRequesterAsync.unreceive(request.replyTo()));
-      }
-
-      {
-        for (int i = 0; i < 2; i++) {
-          auto otherReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
-          REQUIRE(otherReplyMsg.value().userData() == QUERY_AND_OK);
-        }
-      }
-    }
-}
 
 TEST_CASE("Identity", "[amqp][identity]")
 {
@@ -363,10 +319,56 @@ TEST_CASE("RequestWithSameObject", "[amqp][request]")
         Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);
 
         int i;
-        for (i = 0; i < 3; i++) {
+        for (i = 0; i < MESSAGE_TO_SEND; i++) {
             REQUIRE(msgBusSender.send(msg));
         }
         CHECK(msgReceived.isRecieved(i));
+    }
+}
+
+TEST_CASE("RequestWithSameObject", "[amqp][request]")
+{
+    SECTION("Request")
+    {
+      MsgReceived msgReceived;
+      std::string asyncTestQueue  = "queue://test.message.sameobject.";
+
+      auto        msgBusRequesterSync = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
+      REQUIRE(msgBusRequesterSync.connect());
+
+      auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+      REQUIRE(msgBusReplyer.connect());
+
+      // Build asynchronous request and set all receiver
+      Message request = Message::buildRequest("RequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
+      REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+
+      auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+      REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
+
+      {
+        MsgReceived asyncMsgReceived;
+        auto  msgBusRequesterAsync = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequesterAsync.connect());
+
+        REQUIRE(msgBusRequesterAsync.receive(
+            request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(asyncMsgReceived), std::placeholders::_1),
+            request.correlationId()));
+
+          int i = 0;
+          for (i = 0; i < MESSAGE_TO_SEND; i++) {
+              REQUIRE(msgBusRequesterAsync.send(request));
+          }
+          CHECK(asyncMsgReceived.isRecieved(i));
+          REQUIRE(msgBusRequesterAsync.unreceive(request.replyTo()));
+      }
+
+      {
+        for (int i = 0; i < MESSAGE_TO_SEND; i++) {
+          auto otherReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+          REQUIRE(otherReplyMsg.value().userData() == QUERY_AND_OK);
+        }
+      }
     }
 }
 

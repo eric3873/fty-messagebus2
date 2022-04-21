@@ -167,10 +167,11 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
           promiseSyncRequest.set_value(replyMessage);
         };
 
-        auto msgReceived = receive(msgToSend.reply_to(), syncMessageListener, proton::to_string(msgToSend.correlation_id()));
-        if (!msgReceived) {
+        auto msgReceived = m_clientHandler.at(m_endpoint)->receive(msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()), syncMessageListener);
+        //auto msgReceived = receive(msgToSend.reply_to(), syncMessageListener, proton::to_string(msgToSend.correlation_id()));
+        /* if (!msgReceived) {
             return fty::unexpected(DeliveryState::Aborted);
-        }
+        } */
 
         auto msgSent = send(message);
         if (!msgSent) {
@@ -186,10 +187,11 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
           msgArrived = true;
         }
         // Unreceive in any case, to not let any ghost receiver.
-        auto unreceived = unreceive(msgToSend.reply_to());
-        if (!unreceived) {
+        auto unreceived = m_clientHandler.at(m_endpoint)->unreceive();
+        //auto unreceived = unreceive(msgToSend.reply_to());
+        /* if (!unreceived) {
             logWarn("Issue on unreceive");
-        }
+        } */
 
         if (!msgArrived) {
             logError("No message arrived within {} seconds!", timeoutInSeconds);

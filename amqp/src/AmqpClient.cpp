@@ -106,11 +106,6 @@ void AmqpClient::on_receiver_close(proton::receiver&)
   m_promiseReceiver.set_value();
 }
 
-/* void AmqpClient::on_session_open(proton::session&)
-{
-  logDebug("on_session_open");
-} */
-
 void AmqpClient::on_error(const proton::error_condition& error)
 {
     logError("Protocol error: {}", error.what());
@@ -186,7 +181,7 @@ DeliveryState AmqpClient::receive(const Address& address, const std::string& fil
         (!filter.empty()) ? setSubscriptions(filter, messageListener) : setSubscriptions(address, messageListener);
 
         m_connection.work_queue().add([=]() {
-            m_connection.open_receiver(address, proton::receiver_options().auto_accept(true));
+            m_connection.open_session().open_receiver(address, proton::receiver_options().auto_accept(true));
         });
 
         if (m_promiseReceiver.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
