@@ -57,17 +57,8 @@ private:
     bool testAndWaitExpected(const ExpectedTest expectedTest, const int expected)
     {
       int retry = 0;
-      while ((receiver != expected) && (retry <= expected * 2))
-      {
-        std::this_thread::sleep_for(FIVE_HUNDRED_MILLI_SECONDS);
-        retry++;
-      }
-    }
-
-    void waitExpected2(const int expected)
-    {
-      int retry = 0;
-      while ((receiver != expected && replyer != expected) && (retry <= expected * 2))
+      bool process = true;
+      while (process && (retry <= expected * 2))
       {
         switch (expectedTest)
         {
@@ -131,12 +122,7 @@ public:
 
     bool assertValue(const int expected)
     {
-      if (receiver == expected && replyer == expected)
-      {
-        return true;
-      }
-      waitExpected2(expected);
-      return (receiver == expected && replyer == expected);
+      return testAndWaitExpected(ExpectedTest::ReceiverAndReplyer, expected);
     }
 
     bool isRecieved(const int expected)
