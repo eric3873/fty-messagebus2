@@ -172,7 +172,7 @@ TEST_CASE("Identity", "[amqp][identity]")
     REQUIRE(msgBus.identity() == amqp::BUS_IDENTITY);
 }
 
-TEST_CASE("queue", "[amqp][request]")
+TEST_CASE("requestSync", "[amqp][request]")
 {
     SECTION("Send request sync timeout reached")
     {
@@ -221,6 +221,57 @@ TEST_CASE("queue", "[amqp][request]")
       auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
       REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
     }
+}
+
+TEST_CASE("requestAsync", "[amqp][request]")
+{
+    /* SECTION("Send request sync timeout reached")
+    {
+        MsgReceived msgReceived;
+        std::string syncTimeOutTestQueue = "queue://test.message.synctimeout.";
+        auto        msgBusRequesterSync  = amqp::MessageBusAmqp("SyncRequesterTimeOutTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequesterSync.connect());
+
+        auto        msgBusReplyer        = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusReplyer.connect());
+
+        // Send synchronous request
+        Message request = Message::
+            buildRequest("SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", QUERY, {}, SYNC_REQUEST_TIMEOUT);
+
+        REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+
+        auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+        REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
+
+        REQUIRE(msgBusReplyer.unreceive(request.to()));
+
+        auto noReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+        REQUIRE(!noReplyMsg);
+        REQUIRE(noReplyMsg.error() == DeliveryState::Timeout);
+
+        REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+        auto withReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+        REQUIRE(withReplyMsg.value().userData() == QUERY_AND_OK);
+    }
+
+    SECTION("Send sync request")
+    {
+      MsgReceived msgReceived;
+      std::string syncTestQueue  = "queue://test.message.sync.";
+      auto        msgBusRequesterSync = amqp::MessageBusAmqp("SyncReceiverTestCase", AMQP_SERVER_URI);
+      REQUIRE(msgBusRequesterSync.connect());
+
+      auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+      REQUIRE(msgBusReplyer.connect());
+
+      // Build synchronous request and set all receiver
+      Message request = Message::buildRequest("RequestTestCase", syncTestQueue + "request", "TEST", syncTestQueue + "reply", QUERY, {}, SYNC_REQUEST_TIMEOUT);
+      REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+
+      auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+      REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
+    } */
 
     SECTION("Send async request")
     {
@@ -271,9 +322,9 @@ TEST_CASE("queue", "[amqp][request]")
     }
 }
 
-TEST_CASE("queueWithSameObject", "[amqp][request]")
+TEST_CASE("RequestWithSameObject", "[amqp][request]")
 {
-    SECTION("Async")
+    SECTION("Request")
     {
       MsgReceived msgReceived;
       std::string asyncTestQueue  = "queue://test.message.sameobject.";
