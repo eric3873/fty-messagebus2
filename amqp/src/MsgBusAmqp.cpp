@@ -175,6 +175,7 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
 
         auto msgSent = send(message);
         if (!msgSent) {
+            logError("Issue on send message");
             auto unreceived = unreceive(msgToSend.reply_to());
             if (!unreceived) {
                 logWarn("Issue on unreceive");
@@ -187,7 +188,7 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
           msgArrived = true;
         }
         // Unreceive in any case, to not let any ghost receiver.
-        auto unreceived = m_clientHandler.at(m_endpoint)->unreceive();
+        //auto unreceived = m_clientHandler.at(m_endpoint)->unreceive();
         //auto unreceived = unreceive(msgToSend.reply_to());
         /* if (!unreceived) {
             logWarn("Issue on unreceive");
