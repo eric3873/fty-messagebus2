@@ -59,7 +59,7 @@ public:
     fty::messagebus::DeliveryState receive(const Address& address, const std::string& filter = {}, MessageListener messageListener = {});
     fty::messagebus::DeliveryState unreceive();
     fty::messagebus::DeliveryState send(const proton::message& msg);
-    void                           close();
+    fty::messagebus::DeliveryState close();
 
 private:
     Endpoint             m_url;
