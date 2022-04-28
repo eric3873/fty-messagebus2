@@ -51,7 +51,7 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
             proton::container(*amqpClient).run();
         });
         thrdSender.detach();
-        setHandler(m_endpoint, amqpClient);
+        setHandler(instanceName(), amqpClient);
 
         if (amqpClient->connected() != ComState::Connected) {
             return fty::unexpected(amqpClient->connected());
@@ -66,8 +66,8 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
 bool MsgBusAmqp::isServiceAvailable()
 {
     bool serviceAvailable = false;
-    if (auto it{m_clientHandler.find(m_endpoint)}; it != m_clientHandler.end()) {
-        serviceAvailable = (m_clientHandler.at(m_endpoint)->connected() == ComState::Connected);
+    if (auto it{m_clientHandler.find(instanceName())}; it != m_clientHandler.end()) {
+        serviceAvailable = (m_clientHandler.at(instanceName())->connected() == ComState::Connected);
     }
     return serviceAvailable;
 }
@@ -78,6 +78,11 @@ void MsgBusAmqp::setHandler(const Endpoint& endPoint, const AmqpClientPointer& a
   m_clientHandler.emplace(endPoint, amqpClient);
 }
 
+std::string MsgBusAmqp::instanceName() const
+{
+  return m_endpoint + "_" + m_clientName;
+}
+
 fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, MessageListener messageListener, const std::string& filter)
 {
     if (!isServiceAvailable()) {
@@ -85,11 +90,11 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, M
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
-    auto        receiver = std::make_shared<AmqpClient>(m_endpoint);
+    auto receiver = std::make_shared<AmqpClient>(m_endpoint);
     std::thread thrd([=]() {
         proton::container(*receiver).run();
     });
-    auto        received = receiver->receive(address, filter, messageListener);
+    auto received = receiver->receive(address, filter, messageListener);
     thrd.detach();
 
     if (received != DeliveryState::Accepted) {
@@ -129,7 +134,7 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::send(const Message& message)
     logDebug("Sending message ...");
     proton::message msgToSend = getAmqpMessage(message);
 
-    auto msgSent = m_clientHandler.at(m_endpoint)->send(msgToSend);
+    auto msgSent = m_clientHandler.at(instanceName())->send(msgToSend);
 
     if (msgSent != DeliveryState::Accepted) {
         logError("Message sent (Rejected)");
