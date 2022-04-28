@@ -51,8 +51,6 @@ public:
     void on_sender_open(proton::sender& sender) override;
     void on_receiver_open(proton::receiver& receiver) override;
     void on_receiver_close(proton::receiver&) override;
-    void on_session_open (proton::session &) override;
-    void on_session_close (proton::session &) override;
     void on_message(proton::delivery& delivery, proton::message& msg) override;
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
@@ -76,7 +74,6 @@ private:
     std::mutex m_mutex;
     // Set of promise for synchronization
     std::promise<fty::messagebus::ComState> m_connectPromise;
-    std::promise<void>                      m_promiseSession;
     std::promise<void>                      m_promiseSender;
     std::promise<void>                      m_promiseReceiver;
 

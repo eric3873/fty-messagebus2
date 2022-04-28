@@ -109,7 +109,7 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::unreceive(const Address& address)
 
     std::lock_guard<std::mutex> lock(m_lock);
     if (auto it{m_clientHandler.find(address)}; it != m_clientHandler.end()) {
-        m_clientHandler.at(address)->unreceive();
+        m_clientHandler.at(address)->close();
         m_clientHandler.erase(address);
         logTrace("Unsubscribed for: '{}'", address);
     } else {
@@ -129,15 +129,7 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::send(const Message& message)
     logDebug("Sending message ...");
     proton::message msgToSend = getAmqpMessage(message);
 
-    /* auto        sender = AmqpClient(m_endpoint);
-    std::thread thrd([&]() {
-        proton::container(sender).run();
-    });
-    auto        msgSent = sender.send(msgToSend);
-    sender.close();
-    thrd.join(); */
-
-    auto        msgSent = m_clientHandler.at(m_endpoint)->send(msgToSend);
+    auto msgSent = m_clientHandler.at(m_endpoint)->send(msgToSend);
 
     if (msgSent != DeliveryState::Accepted) {
         logError("Message sent (Rejected)");
@@ -167,11 +159,10 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
           promiseSyncRequest.set_value(replyMessage);
         };
 
-        auto msgReceived = m_clientHandler.at(m_endpoint)->receive(msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()), syncMessageListener);
-        //auto msgReceived = receive(msgToSend.reply_to(), syncMessageListener, proton::to_string(msgToSend.correlation_id()));
-        /* if (!msgReceived) {
+        auto msgReceived = receive(msgToSend.reply_to(), syncMessageListener, proton::to_string(msgToSend.correlation_id()));
+        if (!msgReceived) {
             return fty::unexpected(DeliveryState::Aborted);
-        } */
+        }
 
         auto msgSent = send(message);
         if (!msgSent) {
@@ -188,11 +179,10 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
           msgArrived = true;
         }
         // Unreceive in any case, to not let any ghost receiver.
-        //auto unreceived = m_clientHandler.at(m_endpoint)->unreceive();
-        //auto unreceived = unreceive(msgToSend.reply_to());
-        /* if (!unreceived) {
+        auto unreceived = unreceive(msgToSend.reply_to());
+        if (!unreceived) {
             logWarn("Issue on unreceive");
-        } */
+        }
 
         if (!msgArrived) {
             logError("No message arrived within {} seconds!", timeoutInSeconds);

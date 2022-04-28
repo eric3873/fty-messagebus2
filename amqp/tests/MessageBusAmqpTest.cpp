@@ -204,7 +204,7 @@ TEST_CASE("requestSync", "[amqp][request]")
         REQUIRE(withReplyMsg.value().userData() == QUERY_AND_OK);
     }
 
-    /* SECTION("Send sync request")
+    SECTION("Send sync request")
     {
       MsgReceived msgReceived;
       std::string syncTestQueue  = "queue://test.message.sync.";
@@ -220,7 +220,7 @@ TEST_CASE("requestSync", "[amqp][request]")
 
       auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
       REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
-    } */
+    }
 }
 
 TEST_CASE("requestAsync", "[amqp][request]")
@@ -244,7 +244,7 @@ TEST_CASE("requestAsync", "[amqp][request]")
             request.correlationId()));
         int i;
         for (i = 0; i < MESSAGE_TO_SEND; i++) {
-            REQUIRE(msgBusReplyer.send(request));
+            REQUIRE(msgBusRequester.send(request));
         }
         //std::this_thread::sleep_for(std::chrono::seconds(2));
         CHECK(msgReceived.assertValue(i));
