@@ -246,7 +246,6 @@ TEST_CASE("requestAsync", "[amqp][request]")
         for (i = 0; i < MESSAGE_TO_SEND; i++) {
             REQUIRE(msgBusRequester.send(request));
         }
-        //std::this_thread::sleep_for(std::chrono::seconds(2));
         CHECK(msgReceived.assertValue(i));
     }
 
