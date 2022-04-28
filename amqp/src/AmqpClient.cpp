@@ -49,7 +49,7 @@ namespace fty::messagebus::amqp {
 using namespace fty::messagebus;
 using MessageListener = fty::messagebus::MessageListener;
 
-static auto constexpr TIMEOUT = std::chrono::seconds(4);
+static auto constexpr TIMEOUT = std::chrono::seconds(2);
 
 AmqpClient::AmqpClient(const Endpoint& url)
     : m_url(url)
