@@ -51,11 +51,12 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
             proton::container(*amqpClient).run();
         });
         thrdSender.detach();
-        setHandler(m_endpoint, amqpClient);
+        setHandler(instanceName(), amqpClient);
 
         if (amqpClient->connected() != ComState::Connected) {
             return fty::unexpected(amqpClient->connected());
         }
+        logDebug("Connected");
     } catch (const std::exception& e) {
         logError("Unexpected error: {}", e.what());
         return fty::unexpected(ComState::ConnectFailed);
@@ -66,8 +67,11 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
 bool MsgBusAmqp::isServiceAvailable()
 {
     bool serviceAvailable = false;
-    if (auto it{m_clientHandler.find(m_endpoint)}; it != m_clientHandler.end()) {
-        serviceAvailable = (m_clientHandler.at(m_endpoint)->connected() == ComState::Connected);
+    if (auto it{m_clientHandler.find(instanceName())}; it != m_clientHandler.end()) {
+        serviceAvailable = (m_clientHandler.at(instanceName())->connected() == ComState::Connected);
+    }
+    if (!serviceAvailable) {
+      logWarn("Service not available");
     }
     return serviceAvailable;
 }
@@ -78,18 +82,24 @@ void MsgBusAmqp::setHandler(const Endpoint& endPoint, const AmqpClientPointer& a
   m_clientHandler.emplace(endPoint, amqpClient);
 }
 
+std::string MsgBusAmqp::instanceName() const
+{
+  return m_endpoint + "_" + m_clientName;
+}
+
 fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, MessageListener messageListener, const std::string& filter)
 {
     if (!isServiceAvailable()) {
-        logDebug("Service not available");
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
-    auto        receiver = std::make_shared<AmqpClient>(m_endpoint);
+    logDebug("Receive message on {} ...", address);
+
+    auto receiver = std::make_shared<AmqpClient>(m_endpoint);
     std::thread thrd([=]() {
         proton::container(*receiver).run();
     });
-    auto        received = receiver->receive(address, filter, messageListener);
+    auto received = receiver->receive(address, filter, messageListener);
     thrd.detach();
 
     if (received != DeliveryState::Accepted) {
@@ -97,21 +107,21 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, M
         return fty::unexpected(DeliveryState::Rejected);
     }
     setHandler(address, receiver);
+    logDebug("Message receive (Accepted)");
     return {};
 }
 
 fty::Expected<void, DeliveryState> MsgBusAmqp::unreceive(const Address& address)
 {
     if (!isServiceAvailable()) {
-        logDebug("Service not available");
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
     std::lock_guard<std::mutex> lock(m_lock);
     if (auto it{m_clientHandler.find(address)}; it != m_clientHandler.end()) {
-        m_clientHandler.at(address)->unreceive();
+        m_clientHandler.at(address)->close();
         m_clientHandler.erase(address);
-        logTrace("Unsubscribed for: '{}'", address);
+        logDebug("Unsubscribed for: '{}' (Accepted)", address);
     } else {
         logWarn("Unsubscribed '{}' (Rejected)", address);
         return fty::unexpected(DeliveryState::Rejected);
@@ -122,20 +132,13 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::unreceive(const Address& address)
 fty::Expected<void, DeliveryState> MsgBusAmqp::send(const Message& message)
 {
     if (!isServiceAvailable()) {
-        logDebug("Service not available");
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
-    logDebug("Sending message ...");
+    logDebug("Sending message on {} ...", message.to());
     proton::message msgToSend = getAmqpMessage(message);
 
-    auto        sender = AmqpClient(m_endpoint);
-    std::thread thrd([&]() {
-        proton::container(sender).run();
-    });
-    auto        msgSent = sender.send(msgToSend);
-    sender.close();
-    thrd.join();
+    auto msgSent = m_clientHandler.at(instanceName())->send(msgToSend);
 
     if (msgSent != DeliveryState::Accepted) {
         logError("Message sent (Rejected)");
@@ -150,11 +153,10 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
 {
     try {
         if (!isServiceAvailable()) {
-            logDebug("Service not available");
             return fty::unexpected(DeliveryState::Unavailable);
         }
 
-        logDebug("Synchronous request and checking answer until {} second(s)...", timeoutInSeconds);
+        logDebug("Synchronous request on {}, and checking answer until {} second(s)...", message.to(), timeoutInSeconds);
         proton::message msgToSend = getAmqpMessage(message);
         // Promise and future to check if the answer arrive constraint by timeout.
         auto promiseSyncRequest = std::promise<Message>();
@@ -172,6 +174,7 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
 
         auto msgSent = send(message);
         if (!msgSent) {
+            logError("Issue on send message");
             auto unreceived = unreceive(msgToSend.reply_to());
             if (!unreceived) {
                 logWarn("Issue on unreceive");
@@ -190,7 +193,7 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
         }
 
         if (!msgArrived) {
-            logError("No message arrived within {} seconds!", timeoutInSeconds);
+            logError("No message arrived on {} within {} second(s)!", message.to(), timeoutInSeconds);
             return fty::unexpected(DeliveryState::Timeout);
         }
 

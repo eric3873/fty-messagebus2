@@ -73,6 +73,8 @@ private:
     std::mutex m_lock;
     // Set all handlers
     void setHandler(const Endpoint& endPoint, const AmqpClientPointer& amqpClient);
+    // Get instance name.
+    std::string instanceName() const;
 };
 
 } // namespace fty::messagebus::amqp

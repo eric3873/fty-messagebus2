@@ -59,7 +59,7 @@ public:
     fty::messagebus::DeliveryState receive(const Address& address, const std::string& filter = {}, MessageListener messageListener = {});
     fty::messagebus::DeliveryState unreceive();
     fty::messagebus::DeliveryState send(const proton::message& msg);
-    void                           close();
+    fty::messagebus::DeliveryState close();
 
 private:
     Endpoint             m_url;
@@ -71,7 +71,7 @@ private:
     proton::receiver   m_receiver;
     proton::message    m_message;
     // Mutex
-    std::mutex m_lock;
+    std::mutex m_mutex;
     // Set of promise for synchronization
     std::promise<fty::messagebus::ComState> m_connectPromise;
     std::promise<void>                      m_promiseSender;
