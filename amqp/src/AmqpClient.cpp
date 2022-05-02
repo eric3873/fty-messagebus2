@@ -151,7 +151,7 @@ DeliveryState AmqpClient::send(const proton::message& msg)
         if (m_promiseSender.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
             deliveryState = DeliveryState::Accepted;
         } else {
-          logError("Error on send for {}, timeout reached", msg.to());
+            logError("Error on send for {}, timeout reached", msg.to());
         }
     }
     return deliveryState;
@@ -172,7 +172,7 @@ DeliveryState AmqpClient::receive(const Address& address, const std::string& fil
         if (m_promiseReceiver.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
             deliveryState = DeliveryState::Accepted;
         } else {
-          logError("Error on receive for {}, timeout reached", address);
+            logError("Error on receive for {}, timeout reached", address);
         }
     }
     return deliveryState;
