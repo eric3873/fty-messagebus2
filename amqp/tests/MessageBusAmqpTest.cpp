@@ -249,11 +249,7 @@ TEST_CASE("requestAsync", "[amqp][request]")
         CHECK(msgReceived.assertValue(i));
     }
 
-        }
-
-TEST_CASE("RequestWithSameObject", "[amqp][request]")
-{
-    SECTION("Request")
+    SECTION("Send")
     {
         MsgReceived msgReceived;
         std::string sendTestQueue = "queue://test.message.send";
