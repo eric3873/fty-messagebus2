@@ -19,79 +19,71 @@
 
 #include "fty/messagebus/utils/MsgBusPoolWorker.hpp"
 
-namespace fty::messagebus::utils
-{
-  PoolWorker::PoolWorker(size_t workers)
+namespace fty::messagebus::utils {
+
+PoolWorker::PoolWorker(size_t workers)
     : m_terminated(false)
-  {
+{
     auto workerMainloop = [this]() {
-      while (true)
-      {
-        std::unique_lock<std::mutex> lk(m_mutex);
-        m_cv.wait(lk, [this]() -> bool { return m_terminated.load() || !m_jobs.empty(); });
+        while (true) {
+            std::unique_lock<std::mutex> lk(m_mutex);
+            m_cv.wait(lk, [this]() -> bool {
+                return m_terminated.load() || !m_jobs.empty();
+            });
 
-        while (!m_jobs.empty())
-        {
-          auto job = std::move(m_jobs.front());
-          m_jobs.pop();
-          lk.unlock();
+            while (!m_jobs.empty()) {
+                auto job = std::move(m_jobs.front());
+                m_jobs.pop();
+                lk.unlock();
 
-          auto shouldReschedule = job();
+                auto shouldReschedule = job();
 
-          lk.lock();
-          if (shouldReschedule)
-          {
-            m_jobs.emplace(std::move(job));
-            m_cv.notify_one();
-          }
+                lk.lock();
+                if (shouldReschedule) {
+                    m_jobs.emplace(std::move(job));
+                    m_cv.notify_one();
+                }
+            }
+
+            if (m_terminated.load()) {
+                break;
+            }
         }
-
-        if (m_terminated.load())
-        {
-          break;
-        }
-      }
     };
 
     m_workers.reserve(workers);
-    for (size_t cpt = 0; cpt < workers; cpt++)
-    {
-      m_workers.emplace_back(std::thread(workerMainloop));
+    for (size_t cpt = 0; cpt < workers; cpt++) {
+        m_workers.emplace_back(std::thread(workerMainloop));
     }
-  }
+}
 
-  PoolWorker::~PoolWorker()
-  {
-    if (!m_workers.empty())
-    {
-      {
-        std::unique_lock<std::mutex> lk(m_mutex);
-        m_terminated.store(true);
-        m_cv.notify_all();
-      }
+PoolWorker::~PoolWorker()
+{
+    if (!m_workers.empty()) {
+        {
+            std::unique_lock<std::mutex> lk(m_mutex);
+            m_terminated.store(true);
+            m_cv.notify_all();
+        }
 
-      for (auto& th : m_workers)
-      {
-        th.join();
-      }
+        for (auto& th : m_workers) {
+            th.join();
+        }
     }
-  }
+}
 
-  void PoolWorker::addJob(Job&& work)
-  {
+void PoolWorker::addJob(Job&& work)
+{
     std::unique_lock<std::mutex> lk(m_mutex);
 
-    if (m_workers.empty())
-    {
-      // No workers, run work unit synchronously.
-      work();
+    if (m_workers.empty()) {
+        // No workers, run work unit synchronously.
+        work();
+    } else {
+        // Got workers, schedule.
+        m_jobs.emplace(work);
+        m_cv.notify_one();
     }
-    else
-    {
-      // Got workers, schedule.
-      m_jobs.emplace(work);
-      m_cv.notify_one();
-    }
-  }
+}
 
 } // namespace fty::messagebus::utils

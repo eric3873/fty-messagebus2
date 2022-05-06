@@ -21,51 +21,50 @@
 
 #include "CallBack.h"
 
-namespace fty::messagebus::mqtt
-{
-  class MsgBusMqtt
-  {
-  public:
+namespace fty::messagebus::mqtt {
 
+class MsgBusMqtt
+{
+public:
     MsgBusMqtt(const std::string& clientName, const Endpoint& endpoint, const Message& will = Message())
-      : m_clientName(clientName)
-      , m_endpoint(endpoint)
-      , m_will(will) {};
+        : m_clientName(clientName)
+        , m_endpoint(endpoint)
+        , m_will(will){};
 
     MsgBusMqtt() = delete;
     ~MsgBusMqtt();
 
     MsgBusMqtt(MsgBusMqtt&&) = delete;
     MsgBusMqtt& operator=(MsgBusMqtt&&) = delete;
-    MsgBusMqtt(const MsgBusMqtt&) = delete;
+    MsgBusMqtt(const MsgBusMqtt&)       = delete;
     MsgBusMqtt& operator=(const MsgBusMqtt&) = delete;
 
-    [[nodiscard]] fty::Expected<void> connect();
+    [[nodiscard]] fty::Expected<void, ComState> connect();
 
-    [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener messageListener);
-    [[nodiscard]] fty::Expected<void> unreceive(const Address& address);
-    [[nodiscard]] fty::Expected<void> send(const Message& message);
+    [[nodiscard]] fty::Expected<void, DeliveryState> receive(const Address& address, MessageListener messageListener);
+    [[nodiscard]] fty::Expected<void, DeliveryState> unreceive(const Address& address);
+    [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& message);
 
     // Sync request with timeout
-    [[nodiscard]] fty::Expected<Message> request(const Message& message, int receiveTimeOut);
+    [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& message, int receiveTimeOut);
 
     const std::string& clientName() const
     {
-      return m_clientName;
+        return m_clientName;
     }
 
     bool isServiceAvailable();
 
-  private:
+private:
     std::string m_clientName;
-    Endpoint m_endpoint;
-    Message m_will;
+    Endpoint    m_endpoint;
+    Message     m_will;
 
     // Asynchronous and synchronous mqtt client
     AsynClientPointer m_asynClient;
-    SynClientPointer m_synClient;
+    SynClientPointer  m_synClient;
 
     // Call back
     CallBack m_cb;
-  };
+};
 } // namespace fty::messagebus::mqtt

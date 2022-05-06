@@ -24,39 +24,37 @@
 #include <fty/messagebus/Message.h>
 #include <fty/messagebus/MessageBus.h>
 #include <fty/messagebus/utils/MsgBusPoolWorker.hpp>
-
 #include <map>
 #include <mqtt/async_client.h>
 #include <mqtt/client.h>
 #include <string>
 #include <thread>
 
-namespace fty::messagebus::mqtt
+namespace fty::messagebus::mqtt {
+
+using AsynClientPointer    = std::shared_ptr<::mqtt::async_client>;
+using SynClientPointer     = std::shared_ptr<::mqtt::client>;
+using MessageListener      = fty::messagebus::MessageListener;
+using SubScriptionListener = std::map<std::string, MessageListener>;
+
+using PoolWorkerPointer = std::shared_ptr<utils::PoolWorker>;
+
+class CallBack : public ::mqtt::callback
 {
-
-  using AsynClientPointer = std::shared_ptr<::mqtt::async_client>;
-  using SynClientPointer = std::shared_ptr<::mqtt::client>;
-  using MessageListener = fty::messagebus::MessageListener;
-  using SubScriptionListener = std::map<std::string, MessageListener>;
-
-  using PoolWorkerPointer = std::shared_ptr<utils::PoolWorker>;
-
-  class CallBack : public ::mqtt::callback
-  {
-  public:
+public:
     CallBack();
     ~CallBack() = default;
     void connection_lost(const std::string& cause) override;
     void onMessageArrived(::mqtt::const_message_ptr msg, AsynClientPointer clientPointer = nullptr);
 
     SubScriptionListener subscriptions();
-    void subscriptions(const std::string& topic, const MessageListener& messageListener);
-    bool subscribed(const std::string& topic);
-    void eraseSubscriptions(const std::string& topic);
+    void                 subscriptions(const std::string& topic, const MessageListener& messageListener);
+    bool                 subscribed(const std::string& topic);
+    void                 eraseSubscriptions(const std::string& topic);
 
-  private:
+private:
     SubScriptionListener m_subscriptions;
-    PoolWorkerPointer m_poolWorkers;
-  };
+    PoolWorkerPointer    m_poolWorkers;
+};
 
 } // namespace fty::messagebus::mqtt

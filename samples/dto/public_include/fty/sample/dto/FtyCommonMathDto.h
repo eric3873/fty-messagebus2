@@ -21,56 +21,54 @@
 
 #pragma once
 
-
 #include <list>
 #include <string>
 
-namespace fty::sample::dto
+namespace fty::sample::dto {
+struct MathOperation
 {
-  struct MathOperation
-  {
     std::string operation;
-    int param_1;
-    int param_2;
+    int         param_1;
+    int         param_2;
     MathOperation() = default;
     MathOperation(const std::string& _operation, int _param_1, int _param_2)
-      : operation(_operation)
-      , param_1(_param_1)
-      , param_2(_param_2)
+        : operation(_operation)
+        , param_1(_param_1)
+        , param_2(_param_2)
     {
     }
     MathOperation(const std::string& input)
     {
-      deserialize(input);
+        deserialize(input);
     }
 
     auto serialize() -> const std::string;
     void deserialize(const std::string& input);
-  };
+};
 
-  struct MathResult
-  {
+struct MathResult
+{
     static auto constexpr STATUS_OK{"Ok"};
     static auto constexpr STATUS_KO{"KO"};
 
     std::string status = STATUS_OK;
-    int result = 0;
-    std::string error = "";
+    int         result = 0;
+    std::string error  = "";
 
     MathResult() = default;
     MathResult(const std::string& _status, int _result, const std::string& _error)
-      : status(_status)
-      , result(_result)
-      , error(_error)
+        : status(_status)
+        , result(_result)
+        , error(_error)
     {
     }
     MathResult(const std::string& input)
     {
-      deserialize(input);
+        deserialize(input);
     }
 
     auto serialize() -> const std::string;
     void deserialize(const std::string& input);
-  };
+};
 
-} // namespace fty::messagebus::test
+} // namespace fty::sample::dto

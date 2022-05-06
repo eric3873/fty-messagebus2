@@ -23,77 +23,88 @@
 #include <map>
 #include <string>
 
-namespace fty::messagebus
+namespace fty::messagebus {
+
+using UserData = std::string;
+using MetaData = std::map<std::string, std::string>;
+using Address  = std::string;
+
+static constexpr auto STATUS_OK = "OK";
+static constexpr auto STATUS_KO = "KO";
+
+// Metadata user property
+static constexpr auto CORRELATION_ID = "CORRELATION_ID"; // Correlation Id used for request reply pattern
+static constexpr auto MESSAGE_ID     = "MESSAGE_ID";     // Message Id
+static constexpr auto FROM           = "FROM";           // ClientId of the message
+static constexpr auto TO             = "TO";             // Destination queue
+static constexpr auto REPLY_TO       = "REPLY_TO";       // Reply queue
+static constexpr auto SUBJECT        = "SUBJECT";        // Message subject
+static constexpr auto STATUS         = "STATUS";         // Message status
+static constexpr auto TIME_OUT       = "TIMEOUT";        // Request timeout
+
+class Message;
+class Message
 {
-  using UserData = std::string;
-  using MetaData = std::map<std::string, std::string>;
-  using Address = std::string;
-
-  static constexpr auto STATUS_OK = "OK";
-  static constexpr auto STATUS_KO = "KO";
-
-  // Metadata user property
-  static constexpr auto CORRELATION_ID = "CORRELATION_ID"; // Correlation Id used for request reply pattern
-  static constexpr auto MESSAGE_ID     = "MESSAGE_ID";     // Message Id
-  static constexpr auto FROM           = "FROM";           // ClientId of the message
-  static constexpr auto TO             = "TO";             // Destination queue
-  static constexpr auto REPLY_TO       = "REPLY_TO";       // Reply queue
-  static constexpr auto SUBJECT        = "SUBJECT";        // Message subject
-  static constexpr auto STATUS         = "STATUS";         // Message status
-
-  class Message;
-  class Message
-  {
-  public:
+public:
     Message() = default;
     Message(const MetaData& metaData, const UserData& userData);
     Message(const Message& message);
     Message(const UserData& userData);
 
     ~Message() noexcept = default;
-    Message& operator=(const Message& other);
+    Message& operator   =(const Message& other);
 
-    MetaData& metaData();
+    MetaData&       metaData();
     const MetaData& metaData() const;
-    void metaData(const MetaData& metaData);
+    void            metaData(const MetaData& metaData);
 
-    UserData& userData();
+    UserData&       userData();
     const UserData& userData() const;
-    void userData(const UserData& userData);
+    void            userData(const UserData& userData);
 
     std::string correlationId() const;
-    void correlationId(const std::string& correlationId);
+    void        correlationId(const std::string& correlationId);
     std::string from() const;
-    void from(const std::string& from);
+    void        from(const std::string& from);
     std::string to() const;
-    void to(const std::string& to);
+    void        to(const std::string& to);
     std::string replyTo() const;
-    void replyTo(const std::string& replyTo);
+    void        replyTo(const std::string& replyTo);
     std::string subject() const;
-    void subject(const std::string& subject);
+    void        subject(const std::string& subject);
     std::string status() const;
-    void status(const std::string& status);
+    void        status(const std::string& status);
+    int         timeout() const;
+    void        timeout(const int timeout);
     std::string id() const;
-    void id(const std::string& id);
+    void        id(const std::string& id);
 
     std::string getMetaDataValue(const std::string& key) const;
-    void setMetaDataValue(const std::string& key, const std::string& data);
+    void        setMetaDataValue(const std::string& key, const std::string& data);
 
     bool isValidMessage() const;
     bool isRequest() const;
     bool needReply() const;
 
     fty::Expected<Message> buildReply(const UserData& userData, const std::string& status = STATUS_OK) const;
-    static Message buildMessage(const Address& from, const Address& to, const std::string& subject, const UserData& userData = {}, const MetaData& meta = {});
-    static Message buildRequest(const Address& from, const Address& to, const std::string& subject, const Address& replyTo, const UserData& userData = {}, const MetaData& meta = {});
+    static Message         buildMessage(
+                const Address& from, const Address& to, const std::string& subject, const UserData& userData = {}, const MetaData& meta = {});
+    static Message buildRequest(
+        const Address&     from,
+        const Address&     to,
+        const std::string& subject,
+        const Address&     replyTo,
+        const UserData&    userData = {},
+        const MetaData&    meta     = {},
+        const int          timeout_s  = -1);
 
     MetaData getUndefinedProperties() const;
 
     std::string toString() const;
 
-  protected:
+protected:
     MetaData m_metadata;
     UserData m_data;
-  };
+};
 
 } // namespace fty::messagebus

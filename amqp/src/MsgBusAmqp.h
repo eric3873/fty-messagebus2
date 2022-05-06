@@ -20,59 +20,59 @@
 #pragma once
 
 #include "AmqpClient.h"
-
 #include <fty/expected.h>
-
 #include <proton/connection_options.hpp>
 #include <proton/container.hpp>
 #include <proton/listen_handler.hpp>
 
-namespace fty::messagebus::amqp
+namespace fty::messagebus::amqp {
+
+using AmqpClientPointer = std::shared_ptr<AmqpClient>;
+using AmqpClientHandler = std::map<Endpoint, AmqpClientPointer>;
+
+class MsgBusAmqp
 {
-
-  using MessagePointer = std::shared_ptr<proton::message>;
-  using AmqpClientPointer = std::shared_ptr<AmqpClient>;
-
-  class MsgBusAmqp
-  {
-  public:
-
+public:
     MsgBusAmqp(const std::string& clientName, const Endpoint& endpoint)
-      : m_clientName(clientName)
-      , m_endpoint(endpoint){};
+        : m_clientName(clientName)
+        , m_endpoint(endpoint){};
 
     MsgBusAmqp() = delete;
     ~MsgBusAmqp();
 
     MsgBusAmqp(MsgBusAmqp&&) = delete;
     MsgBusAmqp& operator=(MsgBusAmqp&&) = delete;
-    MsgBusAmqp(const MsgBusAmqp&) = delete;
+    MsgBusAmqp(const MsgBusAmqp&)       = delete;
     MsgBusAmqp& operator=(const MsgBusAmqp&) = delete;
 
-    [[nodiscard]] fty::Expected<void> connect();
+    [[nodiscard]] fty::Expected<void, ComState> connect();
 
-    [[nodiscard]] fty::Expected<void> receive(const Address& address, MessageListener messageListener, const std::string& filter = {});
-    [[nodiscard]] fty::Expected<void> unreceive(const Address& address);
-    [[nodiscard]] fty::Expected<void> send(const Message& message);
+    [[nodiscard]] fty::Expected<void, DeliveryState> receive(
+        const Address& address, MessageListener messageListener, const std::string& filter = {});
+    [[nodiscard]] fty::Expected<void, DeliveryState> unreceive(const Address& address);
+    [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& message);
 
     // Sync request with timeout
-    [[nodiscard]] fty::Expected<Message> request(const Message& message, int receiveTimeOut);
+    [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& message, int timeoutInSeconds);
 
     const std::string& clientName() const
     {
-      return m_clientName;
+        return m_clientName;
     }
-
+    // Test if the service is available or not
     bool isServiceAvailable();
 
-  private:
+private:
+    // Client name
     std::string m_clientName{};
-    Endpoint m_endpoint{};
-
-    // To handle all receivers and theirs message listener
-    std::map<std::string, AmqpClientPointer> m_subScriptions;
-    // To handle connection, etc.
-    AmqpClientPointer m_amqpClient;
-  };
+    // Amqp endpoint
+    Endpoint    m_endpoint{};
+    // AmqpClient's handler
+    AmqpClientHandler m_clientHandler;
+    // Mutex
+    std::mutex m_lock;
+    // Set all handlers
+    void setHandler(const Endpoint& endPoint, const AmqpClientPointer& amqpClient);
+};
 
 } // namespace fty::messagebus::amqp

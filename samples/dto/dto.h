@@ -21,21 +21,20 @@
 
 #include <pack/pack.h>
 
-namespace fty::sample
+namespace fty::sample {
+struct requestDto : public pack::Node
 {
-    struct requestDto: public pack::Node
-    {
-            pack::String string = FIELD("string");
+    pack::String string = FIELD("string");
 
-            using pack::Node::Node;
-            META(requestDto, string);
-    };
+    using pack::Node::Node;
+    META(requestDto, string);
+};
 
-    struct responseDto: public pack::Node
-    {
-        pack::List<char> arrayChar = FIELD("array_char");
+struct responseDto : public pack::Node
+{
+    pack::List<char> arrayChar = FIELD("array_char");
 
-        using pack::Node::Node;
-        META(responseDto, arrayChar);
-    };
-}
+    using pack::Node::Node;
+    META(responseDto, arrayChar);
+};
+} // namespace fty::sample

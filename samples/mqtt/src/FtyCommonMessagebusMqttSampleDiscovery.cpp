@@ -19,48 +19,46 @@
     =========================================================================
 */
 
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
-
 #include <csignal>
+#include <fty/messagebus/mqtt/MessageBusMqtt.h>
 #include <fty_log.h>
 #include <iostream>
 #include <thread>
 
-namespace
+namespace {
+
+using namespace fty::messagebus;
+
+static bool _continue = true;
+
+static void signalHandler(int signal)
 {
-  using namespace fty::messagebus;
-
-  static bool _continue = true;
-
-  static void signalHandler(int signal)
-  {
     std::cout << "Signal " << signal << " received\n";
     _continue = false;
-  }
+}
+
 } // namespace
 
 int main(int /*argc*/, char** argv)
 {
-  logInfo("{} - starting...", argv[0]);
+    logInfo("{} - starting...", argv[0]);
 
-  // Install a signal handler
-  std::signal(SIGINT, signalHandler);
-  std::signal(SIGTERM, signalHandler);
+    // Install a signal handler
+    std::signal(SIGINT, signalHandler);
+    std::signal(SIGTERM, signalHandler);
 
-  auto msgBus = mqtt::MessageBusMqtt();
-  //Connect to the bus
-  fty::Expected<void> connectionRet = msgBus.connect();
-  if (!connectionRet)
-  {
-    logError("Error while connecting {}", connectionRet.error());
-    return EXIT_FAILURE;
-  }
+    auto msgBus = mqtt::MessageBusMqtt();
+    // Connect to the bus
+    auto connectionRet = msgBus.connect();
+    if (!connectionRet) {
+        logError("Error while connecting {}", connectionRet.error());
+        return EXIT_FAILURE;
+    }
 
-  while (_continue)
-  {
-    std::this_thread::sleep_for(std::chrono::milliseconds(10));
-  }
+    while (_continue) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
 
-  logInfo("{} - end", argv[0]);
-  return EXIT_SUCCESS;
+    logInfo("{} - end", argv[0]);
+    return EXIT_SUCCESS;
 }

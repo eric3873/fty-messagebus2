@@ -29,14 +29,13 @@
 #include <type_traits>
 #include <vector>
 
-namespace fty::messagebus::utils
-{
-  /**
+namespace fty::messagebus::utils {
+/**
  * @brief Pool of worker threads.
  */
-  class PoolWorker
-  {
-  public:
+class PoolWorker
+{
+public:
     /**
      * @brief Create a pool of worker threads.
      * \param workers Number of workers (work will be processed synchronously if 0).
@@ -44,11 +43,11 @@ namespace fty::messagebus::utils
     PoolWorker(size_t workers = std::thread::hardware_concurrency() + 1);
 
     // PoolWorker can't be copied, assigned or moved.
-    PoolWorker() = delete;
+    PoolWorker()                  = delete;
     PoolWorker(const PoolWorker&) = delete;
-    PoolWorker(PoolWorker&&) = delete;
+    PoolWorker(PoolWorker&&)      = delete;
     PoolWorker& operator=(const PoolWorker&) = delete;
-    void operator=(PoolWorker&&) = delete;
+    void        operator=(PoolWorker&&) = delete;
 
     /**
      * @brief Destroy the pool of workers.
@@ -63,16 +62,17 @@ namespace fty::messagebus::utils
      * \param job Callable of the job to do.
      * \param args Arguments to pass to the callable.
      */
-    template <
-      typename Function,
-      typename... Args>
+    template <typename Function, typename... Args>
     auto offload(Function&& fn, Args&&... args) -> void
     {
-      // Package the job into a storable form.
-      std::function<void()> packagedJob = std::bind(std::forward<Function&&>(fn), std::forward<Args&&>(args)...);
+        // Package the job into a storable form.
+        std::function<void()> packagedJob = std::bind(std::forward<Function&&>(fn), std::forward<Args&&>(args)...);
 
-      // Add a non-rescheduling job.
-      addJob([packagedJob]() -> bool { packagedJob(); return false; });
+        // Add a non-rescheduling job.
+        addJob([packagedJob]() -> bool {
+            packagedJob();
+            return false;
+        });
     }
 
     /**
@@ -81,18 +81,19 @@ namespace fty::messagebus::utils
      * \param args Arguments to pass to the callable.
      * \return A future of the return value of the callable.
      */
-    template <
-      typename Function,
-      typename... Args,
-      typename ReturnType = decltype(std::declval<Function&&>()(std::declval<Args&&>()...))>
+    template <typename Function, typename... Args, typename ReturnType = decltype(std::declval<Function&&>()(std::declval<Args&&>()...))>
     auto queue(Function&& fn, Args&&... args) -> std::future<ReturnType>
     {
-      // Package the job into a storable form.
-      auto packagedJob = std::make_shared<std::packaged_task<ReturnType()>>(std::bind(std::forward<Function&&>(fn), std::forward<Args&&>(args)...));
+        // Package the job into a storable form.
+        auto packagedJob =
+            std::make_shared<std::packaged_task<ReturnType()>>(std::bind(std::forward<Function&&>(fn), std::forward<Args&&>(args)...));
 
-      // Add a non-rescheduling job.
-      addJob([packagedJob]() -> bool { (*packagedJob)(); return false; });
-      return packagedJob->get_future();
+        // Add a non-rescheduling job.
+        addJob([packagedJob]() -> bool {
+            (*packagedJob)();
+            return false;
+        });
+        return packagedJob->get_future();
     }
 
     /**
@@ -101,23 +102,20 @@ namespace fty::messagebus::utils
      * \param fn Callable of the job to do.
      * \param arg Future argument to pass to the callable.
      */
-    template <
-      typename Function,
-      typename Arg>
+    template <typename Function, typename Arg>
     auto schedule(Function&& fn, std::shared_future<Arg> arg) -> void
     {
-      /**
+        /**
          * Add a self-rescheduling job that yields if the future isn't ready.
          * Once the future is ready, execute the job and don't reschedule.
          */
-      addJob([fn = std::forward<decltype(fn)>(fn), arg = std::move(arg)]() -> bool {
-        if (arg.wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
-        {
-          fn(arg.get());
-          return false;
-        }
-        return true;
-      });
+        addJob([fn = std::forward<decltype(fn)>(fn), arg = std::move(arg)]() -> bool {
+            if (arg.wait_for(std::chrono::milliseconds(50)) == std::future_status::ready) {
+                fn(arg.get());
+                return false;
+            }
+            return true;
+        });
     }
 
     /**
@@ -126,26 +124,23 @@ namespace fty::messagebus::utils
      * \param fn Callable of the job to do.
      * \param args Future arguments to apply to the callable.
      */
-    template <
-      typename Function,
-      typename Args>
+    template <typename Function, typename Args>
     auto scheduleWithApply(Function&& fn, std::shared_future<Args> args) -> void
     {
-      /**
+        /**
          * Add a self-rescheduling job that yields if the future isn't ready.
          * Once the future is ready, execute the job and don't reschedule.
          */
-      addJob([fn = std::forward<decltype(fn)>(fn), args = std::move(args)]() -> bool {
-        if (args.wait_for(std::chrono::milliseconds(50)) == std::future_status::ready)
-        {
-          std::apply(fn, args.get());
-          return false;
-        }
-        return true;
-      });
+        addJob([fn = std::forward<decltype(fn)>(fn), args = std::move(args)]() -> bool {
+            if (args.wait_for(std::chrono::milliseconds(50)) == std::future_status::ready) {
+                std::apply(fn, args.get());
+                return false;
+            }
+            return true;
+        });
     }
 
-  private:
+private:
     /// @brief Unit of scheduled job for pool worker.
     using Job = std::function<bool()>;
 
@@ -155,12 +150,12 @@ namespace fty::messagebus::utils
      */
     void addJob(Job&& Job);
 
-    std::atomic_bool m_terminated;
+    std::atomic_bool         m_terminated;
     std::vector<std::thread> m_workers;
 
-    std::mutex m_mutex;
-    std::queue<Job> m_jobs;
+    std::mutex              m_mutex;
+    std::queue<Job>         m_jobs;
     std::condition_variable m_cv;
-  };
+};
 
 } // namespace fty::messagebus::utils
