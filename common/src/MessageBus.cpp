@@ -17,10 +17,33 @@
     =========================================================================
 */
 
-// This tells Catch to provide a main() - only do this in one cpp file
-#define CATCH_CONFIG_MAIN
-
-#include <catch2/catch.hpp>
-#include <fty/messagebus/Message.h>
 #include <fty/messagebus/MessageBus.h>
-#include <fty/messagebus/Promise.h>
+
+namespace fty::messagebus {
+
+fty::Expected<PromisePtr, DeliveryState> MessageBus::requestAsync(const Message & msg) noexcept {
+    PromisePtr myPromise(new Promise(*this));
+
+    //Try to bind the function to the reply queue
+    fty::Expected<void, DeliveryState> retReceive =  receive(
+        msg.replyTo(),
+        std::bind(&Promise::onReceive, myPromise.get(), std::placeholders::_1), //do not give the sharedPtr to the call back, otherwise we will never unreceive
+        msg.correlationId()
+        );
+
+    if(!retReceive) {
+        return fty::unexpected(retReceive.error());
+    }
+
+    //Binding is ok, save the queue to unreceive in case of issue
+    myPromise->m_queue = msg.replyTo();
+
+    //Try to send the message
+    fty::Expected<void, DeliveryState> retSend = send(msg);
+    if(!retSend) {
+        return fty::unexpected(retSend.error());
+    }
+
+    return myPromise;
+}
+} // namespace fty::messagebus

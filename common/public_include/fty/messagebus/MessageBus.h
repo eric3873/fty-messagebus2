@@ -20,6 +20,7 @@
 #pragma once
 
 #include "fty/messagebus/Message.h"
+#include "fty/messagebus/Promise.h"
 #include "fty/messagebus/MessageBusStatus.h"
 #include <fty/expected.h>
 #include <functional>
@@ -89,6 +90,17 @@ public:
     /// @return Response message or Delivery error
     [[nodiscard]] virtual fty::Expected<Message, DeliveryState> request(const Message& msg, int timeOut) noexcept = 0;
 
+    /// Sends message to the queue and return a promise to receive response, easy to manage async request with reply
+    /// @example
+    ///     fty::Expected<PromisePtr, DeliveryState> ret = bus.requestAsync(msg);
+    ///     std::future<Message> & myFuture = ret.value()->getFuture();
+    ///     ... //do something else
+    ///     myFuture.wait();
+    ///     Message msg = myFuture.get();
+    /// @param msg the message to send
+    /// @return Promise for message or Delivery error
+    [[nodiscard]] virtual fty::Expected<PromisePtr, DeliveryState> requestAsync(const Message& msg) noexcept;
+
     /// Get the client name
     /// @return Client name
     [[nodiscard]] virtual const ClientName& clientName() const noexcept = 0;
@@ -96,6 +108,7 @@ public:
     /// Get MessageBus Identity
     /// @return MessageBus Identity
     [[nodiscard]] virtual const Identity& identity() const noexcept = 0;
+
 };
 
 } // namespace fty::messagebus

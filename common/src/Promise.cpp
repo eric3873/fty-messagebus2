@@ -16,11 +16,29 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
-
-// This tells Catch to provide a main() - only do this in one cpp file
-#define CATCH_CONFIG_MAIN
-
-#include <catch2/catch.hpp>
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/MessageBus.h>
 #include <fty/messagebus/Promise.h>
+#include <fty/messagebus/MessageBus.h>
+#include <iostream>
+
+namespace fty::messagebus {
+
+std::future<Message>& Promise::getFuture(){
+    return std::ref(m_future);
+}
+
+Promise::~Promise() {
+    if(!m_queue.empty()) {
+        m_messageBus.unreceive(m_queue);
+        m_queue = "";
+    }
+}
+
+Promise::Promise(MessageBus & messageBus) : m_messageBus(messageBus){
+    m_future = m_promise.get_future();
+}
+
+void Promise::onReceive(const Message & msg) {
+    m_promise.set_value(msg);
+}
+
+} //namespace fty::messagebus 

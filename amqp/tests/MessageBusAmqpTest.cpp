@@ -25,6 +25,7 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <future>
 
 #if defined(EXTERNAL_SERVER_FOR_TEST)
 static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
@@ -379,5 +380,82 @@ TEST_CASE("wrong", "[amqp][messageStatus]")
         auto msgBus        = amqp::MessageBusAmqp("WrongConnectionTestCase", "amqp://wrong.address.ip.com:5672");
         auto connectionRet = msgBus.connect();
         REQUIRE(connectionRet.error() == ComState::ConnectFailed);
+    }
+}
+
+TEST_CASE("use future", "[amqp][future]")
+{
+    SECTION("use future directly")
+    {
+        std::string requestTestQueue  = "queue://test.usefuture.request";
+        std::string replyTestQueue  = "queue://test.usefuture.reply";
+        
+        //We need an echo as listening to our messages
+        auto msgBusEcho = amqp::MessageBusAmqp("EchoTestFuture", AMQP_SERVER_URI);
+        REQUIRE(msgBusEcho.connect());
+        MsgReceived echoAgent;
+        REQUIRE(
+            msgBusEcho.receive(requestTestQueue, std::bind(&MsgReceived::replyerAddOK, std::ref(echoAgent), std::placeholders::_1))
+            );
+
+        //Create the request
+        // Build asynchronous request and set all receiver
+        Message myRequest =
+            Message::buildRequest("RequestTestFuture", requestTestQueue, "TEST", replyTestQueue, QUERY);
+
+
+        auto msgBusRequester = amqp::MessageBusAmqp("RequesterTestFuture", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequester.connect());
+
+        //Create the promise and future
+        std::future<Message> myFuture;
+        std::promise<Message> myPromise;
+
+
+        REQUIRE(msgBusRequester.receive(
+                replyTestQueue,
+                [&myPromise, &msgBusRequester, &replyTestQueue](const Message & m) {
+                    myPromise.set_value(m);
+                    //msgBusRequester.unsubscribe(replyTestQueue);
+                },
+                myRequest.correlationId())
+            );
+        
+        myFuture = myPromise.get_future();
+        
+        REQUIRE(msgBusRequester.send(myRequest));
+        myFuture.wait();
+        REQUIRE(myFuture.get().userData() == QUERY_AND_OK);
+    }
+
+    SECTION("use requestAsync")
+    {
+        std::string requestTestQueue  = "queue://test.usePromise.request";
+        std::string replyTestQueue  = "queue://test.usePromise.reply";
+        
+        //We need an echo as listening to our messages
+        auto msgBusEcho = amqp::MessageBusAmqp("EchoTestFuture", AMQP_SERVER_URI);
+        REQUIRE(msgBusEcho.connect());
+        MsgReceived echoAgent;
+        REQUIRE(
+            msgBusEcho.receive(requestTestQueue, std::bind(&MsgReceived::replyerAddOK, std::ref(echoAgent), std::placeholders::_1))
+            );
+
+        //Create the request
+        // Build asynchronous request and set all receiver
+        Message myRequest =
+            Message::buildRequest("RequestTestFuture", requestTestQueue, "TEST", replyTestQueue, QUERY);
+
+
+        auto msgBusRequester = amqp::MessageBusAmqp("RequesterTestFuture", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequester.connect());
+
+        fty::Expected<PromisePtr, DeliveryState> retPromise = msgBusRequester.requestAsync(myRequest);
+        REQUIRE(retPromise);
+        
+        auto & myFuture = retPromise.value()->getFuture();
+
+        myFuture.wait();
+        REQUIRE(myFuture.get().userData() == QUERY_AND_OK);
     }
 }
