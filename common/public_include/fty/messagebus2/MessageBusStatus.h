@@ -22,7 +22,7 @@
 #include <fmt/format.h>
 #include <string>
 
-namespace fty::messagebus {
+namespace fty::messagebus2 {
 
 enum class ComState
 {
@@ -146,40 +146,40 @@ inline DeliveryState from_deliveryState(const std::string& deliveryState)
     }
 }
 
-} // namespace fty::messagebus
+} // namespace fty::messagebus2
 
-inline std::ostream& operator<<(std::ostream& ss, fty::messagebus::ComState value)
+inline std::ostream& operator<<(std::ostream& ss, fty::messagebus2::ComState value)
 {
-    ss << fty::messagebus::to_string(value);
+    ss << fty::messagebus2::to_string(value);
     return ss;
 }
 
-inline std::ostream& operator<<(std::ostream& ss, fty::messagebus::DeliveryState value)
+inline std::ostream& operator<<(std::ostream& ss, fty::messagebus2::DeliveryState value)
 {
-    ss << fty::messagebus::to_string(value);
+    ss << fty::messagebus2::to_string(value);
     return ss;
 }
 
-inline std::istream& operator>>(std::istream& ss, fty::messagebus::ComState& value)
+inline std::istream& operator>>(std::istream& ss, fty::messagebus2::ComState& value)
 {
     std::string strval;
     ss >> strval;
-    value = fty::messagebus::from_com_state(strval);
+    value = fty::messagebus2::from_com_state(strval);
     return ss;
 }
 
-inline std::istream& operator>>(std::istream& ss, fty::messagebus::DeliveryState& value)
+inline std::istream& operator>>(std::istream& ss, fty::messagebus2::DeliveryState& value)
 {
     std::string strval;
     ss >> strval;
-    value = fty::messagebus::from_deliveryState(strval);
+    value = fty::messagebus2::from_deliveryState(strval);
     return ss;
 }
 
 /// Helper to format enums enity to fmt
 template <typename T>
 struct fmt::
-    formatter<T, std::enable_if_t<std::is_same_v<fty::messagebus::ComState, T> || std::is_same_v<fty::messagebus::DeliveryState, T>, char>>
+    formatter<T, std::enable_if_t<std::is_same_v<fty::messagebus2::ComState, T> || std::is_same_v<fty::messagebus2::DeliveryState, T>, char>>
 {
     template <typename ParseContext>
     constexpr auto parse(ParseContext& ctx)
@@ -190,6 +190,6 @@ struct fmt::
     template <typename FormatContext>
     auto format(const T& attr, FormatContext& ctx)
     {
-        return fmt::format_to(ctx.out(), "{}", fty::messagebus::to_string(attr));
+        return fmt::format_to(ctx.out(), "{}", fty::messagebus2::to_string(attr));
     }
 };

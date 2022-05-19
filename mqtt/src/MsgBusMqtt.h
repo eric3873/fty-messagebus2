@@ -21,7 +21,7 @@
 
 #include "CallBack.h"
 
-namespace fty::messagebus::mqtt {
+namespace fty::messagebus2::mqtt {
 
 class MsgBusMqtt
 {
@@ -67,4 +67,4 @@ private:
     // Call back
     CallBack m_cb;
 };
-} // namespace fty::messagebus::mqtt
+} // namespace fty::messagebus2::mqtt

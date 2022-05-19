@@ -17,11 +17,11 @@
     =========================================================================
 */
 
-#include "fty/messagebus/mqtt/MessageBusMqtt.h"
+#include "fty/messagebus2/mqtt/MessageBusMqtt.h"
 #include "CallBack.h"
 #include "MsgBusMqtt.h"
 #include <fty/expected.h>
-#include <fty/messagebus/MessageBusStatus.h>
+#include <fty/messagebus2/MessageBusStatus.h>
 #include <fty_log.h>
 #include <memory>
 #include <mqtt/async_client.h>
@@ -29,7 +29,7 @@
 #include <mqtt/message.h>
 #include <mqtt/properties.h>
 
-namespace fty::messagebus::mqtt {
+namespace fty::messagebus2::mqtt {
 
 MessageBusMqtt::MessageBusMqtt(const ClientName& clientName, const Endpoint& endpoint, const Message& will)
     : MessageBus()
@@ -84,4 +84,4 @@ const std::string& MessageBusMqtt::identity() const noexcept
     return g_identity;
 }
 
-} // namespace fty::messagebus::mqtt
+} // namespace fty::messagebus2::mqtt

@@ -1,4 +1,4 @@
-project(fty-common-messagebus2
+project(fty-messagebus2
         VERSION ${PROJECT_VERSION}
         DESCRIPTION "fty messagebus 2 common interface"
 )
@@ -7,7 +7,7 @@ project(fty-common-messagebus2
 find_package(fty-cmake PATHS ${CMAKE_BINARY_DIR}/fty-cmake REQUIRED)
 ##############################################################################################################
 
-etn_target(shared fty-common-messagebus2
+etn_target(shared fty-messagebus2
     SOURCES
         src/*.cpp
     PUBLIC_INCLUDE_DIR
@@ -20,7 +20,7 @@ etn_target(shared fty-common-messagebus2
         uuid
 )
 
-set_target_properties(fty-common-messagebus2 PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
+set_target_properties(fty-messagebus2 PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})
 
 ## Tests
 etn_test_target(${PROJECT_NAME}

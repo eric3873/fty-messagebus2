@@ -17,14 +17,14 @@
     =========================================================================
 */
 
-#include "fty/messagebus/amqp/MessageBusAmqp.h"
+#include "fty/messagebus2/amqp/MessageBusAmqp.h"
 #include "MsgBusAmqp.h"
 #include <fty/expected.h>
-#include <fty/messagebus/MessageBusStatus.h>
+#include <fty/messagebus2/MessageBusStatus.h>
 #include <fty_log.h>
 #include <memory>
 
-namespace fty::messagebus::amqp {
+namespace fty::messagebus2::amqp {
 
 MessageBusAmqp::MessageBusAmqp(const ClientName& clientName, const Endpoint& endpoint)
     : MessageBus()
@@ -82,4 +82,4 @@ const std::string& MessageBusAmqp::identity() const noexcept
     return g_identity;
 }
 
-} // namespace fty::messagebus::amqp
+} // namespace fty::messagebus2::amqp

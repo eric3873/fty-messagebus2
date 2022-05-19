@@ -13,6 +13,6 @@ etn_target(exe ${PROJECT_NAME} PRIVATE
   SOURCES
     *.cpp
   USES_PRIVATE
-    fty-common-messagebus2-mqtt
+    fty-messagebus2-mqtt
     fty_common_logging
 )

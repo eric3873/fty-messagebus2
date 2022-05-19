@@ -23,7 +23,7 @@
 #include <string>
 #include <uuid/uuid.h>
 
-namespace fty::messagebus::utils {
+namespace fty::messagebus2::utils {
 
 const std::string generateUuid()
 {
@@ -50,4 +50,4 @@ const std::string getClientId(const std::string& prefix)
     return clientId;
 }
 
-} // namespace fty::messagebus::utils
+} // namespace fty::messagebus2::utils

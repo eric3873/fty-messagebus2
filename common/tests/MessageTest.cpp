@@ -1,12 +1,12 @@
 #include <catch2/catch.hpp>
-#include <fty/messagebus/Message.h>
+#include <fty/messagebus2/Message.h>
 #include <iostream>
 
 namespace {
 //----------------------------------------------------------------------
 // Test case
 //----------------------------------------------------------------------
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 
 TEST_CASE("Build message", "[Message]")
 {

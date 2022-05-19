@@ -1,5 +1,5 @@
-fty-common-messagebus-evol (1.0.0) UNRELEASED; urgency=low
+fty-messagebus2 (1.0.0) UNRELEASED; urgency=low
 
   * Initial packaging.
 
- -- fty-common-messagebus-evol Developers <eatonipcopensource@eaton.com>  Thru, 10 Jun 2021 00:00:00 +0000
+ -- fty-messagebus2 Developers <eatonipcopensource@eaton.com>  Thru, 10 Jun 2021 00:00:00 +0000

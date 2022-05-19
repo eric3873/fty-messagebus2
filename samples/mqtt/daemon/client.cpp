@@ -17,11 +17,11 @@
     =========================================================================
 */
 
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/mqtt/MessageBusMqtt.h>
 #include <iostream>
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 
 int main(int argc, char** argv)
 {

@@ -1,5 +1,5 @@
 
-project(fty-common-messagebus2-amqp
+project(fty-messagebus2-amqp
   VERSION 1.0.0
   DESCRIPTION "fty messagebus2 amqp library"
 )
@@ -15,11 +15,11 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
   PUBLIC_INCLUDE_DIR
     public_include
   PUBLIC_HEADERS
-    fty/messagebus/amqp/MessageBusAmqp.h
+    fty/messagebus2/amqp/MessageBusAmqp.h
   USES_PUBLIC
-    fty-common-messagebus2
+    fty-messagebus2
   USES_PRIVATE
-    fty-common-messagebus-utils
+    fty-messagebus2-utils
     fty_common_logging
     Proton::cpp
   FLAGS

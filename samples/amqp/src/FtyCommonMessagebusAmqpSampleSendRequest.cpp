@@ -18,7 +18,7 @@
 */
 
 #include <csignal>
-#include <fty/messagebus/amqp/MessageBusAmqp.h>
+#include <fty/messagebus2/amqp/MessageBusAmqp.h>
 #include <fty/sample/dto/FtyCommonMathDto.h>
 #include <fty_log.h>
 #include <iostream>
@@ -26,7 +26,7 @@
 
 namespace {
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 using namespace fty::sample::dto;
 
 static bool _continue                      = true;

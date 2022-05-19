@@ -18,7 +18,7 @@
 */
 
 #include <csignal>
-#include <fty/messagebus/amqp/MessageBusAmqp.h>
+#include <fty/messagebus2/amqp/MessageBusAmqp.h>
 #include <fty/sample/dto/FtyCommonFooBarDto.h>
 #include <fty_log.h>
 #include <future>
@@ -26,7 +26,7 @@
 
 namespace {
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 using namespace fty::sample::dto;
 
 static auto constexpr SAMPLE_TOPIC = "topic://etn.t.samples.pubsub";

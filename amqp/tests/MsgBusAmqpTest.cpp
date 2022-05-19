@@ -19,8 +19,8 @@
 
 #include "src/MsgBusAmqp.h"
 #include <catch2/catch.hpp>
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/MessageBusStatus.h>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/MessageBusStatus.h>
 #include <iostream>
 #include <thread>
 
@@ -32,7 +32,7 @@ static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
 static constexpr auto AMQP_SERVER_URI{"amqp://127.0.0.1:5672"};
 #endif
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 
 } // namespace
 

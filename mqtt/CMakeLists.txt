@@ -1,5 +1,5 @@
 
-project(fty-common-messagebus2-mqtt
+project(fty-messagebus2-mqtt
   VERSION 1.0.0
   DESCRIPTION "fty messagebus2 mqtt library"
 )
@@ -15,11 +15,11 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
   PUBLIC_INCLUDE_DIR
     public_include
   PUBLIC_HEADERS
-    fty/messagebus/mqtt/MessageBusMqtt.h
+    fty/messagebus2/mqtt/MessageBusMqtt.h
   USES_PUBLIC
-    fty-common-messagebus2
+    fty-messagebus2
   USES_PRIVATE
-    fty-common-messagebus-utils
+    fty-messagebus2-utils
     fty_common_logging
     paho-mqttpp3
     paho-mqtt3as
