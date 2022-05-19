@@ -1,4 +1,4 @@
-# fty-common-messagebus2
+# fty-messagebus2
 
 ## Description
 
@@ -30,8 +30,8 @@ If you need someone to reply to your message, you have to add few fields:
 * REPLY_TO (which queue/topic to reply)
 * CORRELATION_ID (unique id to identify the exchange)
 
-The message definiton is available the [header](common/public_include/fty/messagebus/Message.h)
-The interfaces is documentation is available in the [header](common/public_include/fty/messagebus/MessageBus.h)
+The message definiton is available the [header](common/public_include/fty/messagebus2/Message.h)
+The interfaces is documentation is available in the [header](common/public_include/fty/messagebus2/MessageBus.h)
 
 ## Dependencies
 
@@ -45,7 +45,7 @@ The interfaces is documentation is available in the [header](common/public_inclu
 
 ## How to build
 
-To build fty-common-messagebus2 project run:
+To build fty-messagebus2 project run:
 
 ```cmake
 cmake -B build -DBUILD_ALL=ON
@@ -84,7 +84,7 @@ etn_target(${PROJECT_NAME}
     .....
   USES
     .....
-    fty-common-messagebus2-<amqp|mqtt>
+    fty-messagebus2-<amqp|mqtt>
     .....
 )
 ```

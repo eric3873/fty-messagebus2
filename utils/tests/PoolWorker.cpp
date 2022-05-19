@@ -20,12 +20,12 @@
 */
 
 #include <catch2/catch.hpp>
-#include <fty/messagebus/utils/MsgBusPoolWorker.hpp>
+#include <fty/messagebus2/utils/MsgBusPoolWorker.hpp>
 #include <iostream>
 #include <numeric>
 #include <set>
 
-using namespace fty::messagebus::utils;
+using namespace fty::messagebus2::utils;
 
 uint64_t collatz(uint64_t i)
 {

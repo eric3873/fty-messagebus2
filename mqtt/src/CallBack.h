@@ -21,20 +21,20 @@
 
 #pragma once
 
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/MessageBus.h>
-#include <fty/messagebus/utils/MsgBusPoolWorker.hpp>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/MessageBus.h>
+#include <fty/messagebus2/utils/MsgBusPoolWorker.hpp>
 #include <map>
 #include <mqtt/async_client.h>
 #include <mqtt/client.h>
 #include <string>
 #include <thread>
 
-namespace fty::messagebus::mqtt {
+namespace fty::messagebus2::mqtt {
 
 using AsynClientPointer    = std::shared_ptr<::mqtt::async_client>;
 using SynClientPointer     = std::shared_ptr<::mqtt::client>;
-using MessageListener      = fty::messagebus::MessageListener;
+using MessageListener      = fty::messagebus2::MessageListener;
 using SubScriptionListener = std::map<std::string, MessageListener>;
 
 using PoolWorkerPointer = std::shared_ptr<utils::PoolWorker>;
@@ -57,4 +57,4 @@ private:
     PoolWorkerPointer    m_poolWorkers;
 };
 
-} // namespace fty::messagebus::mqtt
+} // namespace fty::messagebus2::mqtt

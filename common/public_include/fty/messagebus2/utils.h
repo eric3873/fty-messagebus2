@@ -21,7 +21,7 @@
 
 #include <string>
 
-namespace fty::messagebus::utils {
+namespace fty::messagebus2::utils {
 /// Generate an unique UUID
 /// @return Uuid built
 const std::string generateUuid();
@@ -34,4 +34,4 @@ const std::string generateId();
 /// @return Client id built
 const std::string getClientId(const std::string& prefix);
 
-} // namespace fty::messagebus::utils
+} // namespace fty::messagebus2::utils

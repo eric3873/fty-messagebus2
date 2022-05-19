@@ -22,7 +22,7 @@
 #include <functional>
 #include <map>
 
-namespace fty::messagebus::utils {
+namespace fty::messagebus2::utils {
 
 /**
  * @brief Callable dispatcher based on std::map.
@@ -76,4 +76,4 @@ private:
     MissingFunctionType m_defaultHandler;
 };
 
-} // namespace fty::messagebus::utils
+} // namespace fty::messagebus2::utils

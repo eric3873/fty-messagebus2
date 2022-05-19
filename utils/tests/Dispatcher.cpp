@@ -18,7 +18,7 @@
 */
 
 #include <catch2/catch.hpp>
-#include <fty/messagebus/utils/MsgBusDispatcher.hpp>
+#include <fty/messagebus2/utils/MsgBusDispatcher.hpp>
 #include <iostream>
 #include <set>
 
@@ -26,7 +26,7 @@ TEST_CASE("Dispatcher")
 {
     std::cerr << " * fty_common_messagebus_dispatcher: " << std::endl;
 
-    using namespace fty::messagebus::utils;
+    using namespace fty::messagebus2::utils;
     {
         // Four-function calculator test.
         std::cerr << "  - calculator: ";

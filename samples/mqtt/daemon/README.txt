@@ -1,6 +1,6 @@
 # mqtt-daemon-basic-sample
 
-This is a sample of daemon / client on mqtt bus using fty-common-messagebus2 interfaces.
+This is a sample of daemon / client on mqtt bus using fty-messagebus2 interfaces.
 
 ## daemon
 The deamon `mqtt-daemon-basic-sample` is listening to the queue "/etn/samples/daemon-basic/mailbox" for new messages.

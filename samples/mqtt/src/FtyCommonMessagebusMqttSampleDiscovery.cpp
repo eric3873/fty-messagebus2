@@ -20,14 +20,14 @@
 */
 
 #include <csignal>
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
+#include <fty/messagebus2/mqtt/MessageBusMqtt.h>
 #include <fty_log.h>
 #include <iostream>
 #include <thread>
 
 namespace {
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 
 static bool _continue = true;
 

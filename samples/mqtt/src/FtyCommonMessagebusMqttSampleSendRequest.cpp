@@ -21,16 +21,16 @@
 
 #include "fty/sample/dto/FtyCommonMathDto.h"
 #include <csignal>
-#include <fty/messagebus/MessageBus.h>
-#include <fty/messagebus/MessageBusStatus.h>
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
+#include <fty/messagebus2/MessageBus.h>
+#include <fty/messagebus2/MessageBusStatus.h>
+#include <fty/messagebus2/mqtt/MessageBusMqtt.h>
 #include <fty_log.h>
 #include <iostream>
 #include <thread>
 
 namespace {
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 using namespace fty::sample::dto;
 
 static bool _continue                            = true;

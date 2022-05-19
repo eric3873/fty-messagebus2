@@ -19,13 +19,13 @@
 
 #include "MsgBusAmqp.h"
 #include "MsgBusAmqpUtils.h"
-#include <fty/messagebus/MessageBusStatus.h>
-#include <fty/messagebus/utils.h>
+#include <fty/messagebus2/MessageBusStatus.h>
+#include <fty/messagebus2/utils.h>
 #include <fty_log.h>
 
-namespace fty::messagebus::amqp {
+namespace fty::messagebus2::amqp {
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 using proton::receiver_options;
 using proton::source_options;
 
@@ -201,4 +201,4 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
     }
 }
 
-} // namespace fty::messagebus::amqp
+} // namespace fty::messagebus2::amqp

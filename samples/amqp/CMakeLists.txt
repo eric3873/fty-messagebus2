@@ -12,7 +12,7 @@ etn_target(exe ${PROJECT_NAME}-pub-sub PRIVATE
   SOURCES
     src/*PubSub.cpp
   USES_PRIVATE
-    fty-common-messagebus2-amqp
+    fty-messagebus2-amqp
     fty_common_logging
     ${SAMPLE_DTO_LIB_NAME}
   FLAGS
@@ -24,7 +24,7 @@ etn_target(exe ${PROJECT_NAME}-async-reply PRIVATE
   SOURCES
     src/*SampleAsyncReply.cpp
   USES_PUBLIC
-    fty-common-messagebus2-amqp
+    fty-messagebus2-amqp
     fty_common_logging
     ${SAMPLE_DTO_LIB_NAME}
   FLAGS
@@ -36,7 +36,7 @@ etn_target(exe ${PROJECT_NAME}-send-request PRIVATE
   SOURCES
     src/*SampleSendRequest.cpp
   USES_PUBLIC
-    fty-common-messagebus2-amqp
+    fty-messagebus2-amqp
     fty_common_logging
     ${SAMPLE_DTO_LIB_NAME}
   FLAGS

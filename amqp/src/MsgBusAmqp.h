@@ -25,7 +25,7 @@
 #include <proton/container.hpp>
 #include <proton/listen_handler.hpp>
 
-namespace fty::messagebus::amqp {
+namespace fty::messagebus2::amqp {
 
 using AmqpClientPointer = std::shared_ptr<AmqpClient>;
 using AmqpClientHandler = std::map<Endpoint, AmqpClientPointer>;
@@ -75,4 +75,4 @@ private:
     void setHandler(const Endpoint& endPoint, const AmqpClientPointer& amqpClient);
 };
 
-} // namespace fty::messagebus::amqp
+} // namespace fty::messagebus2::amqp

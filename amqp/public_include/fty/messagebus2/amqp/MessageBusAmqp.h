@@ -19,11 +19,11 @@
 
 #pragma once
 
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/MessageBus.h>
-#include <fty/messagebus/utils.h>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/MessageBus.h>
+#include <fty/messagebus2/utils.h>
 
-namespace fty::messagebus::amqp {
+namespace fty::messagebus2::amqp {
 
 // Default amqp end point
 static auto constexpr DEFAULT_ENDPOINT{"amqp://127.0.0.1:5672"};
@@ -61,4 +61,4 @@ private:
     std::shared_ptr<MsgBusAmqp> m_busAmqp;
 };
 
-} // namespace fty::messagebus::amqp
+} // namespace fty::messagebus2::amqp

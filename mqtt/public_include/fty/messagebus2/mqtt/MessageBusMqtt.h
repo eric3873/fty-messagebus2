@@ -21,11 +21,11 @@
 
 #pragma once
 
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/MessageBus.h>
-#include <fty/messagebus/utils.h>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/MessageBus.h>
+#include <fty/messagebus2/utils.h>
 
-namespace fty::messagebus::mqtt {
+namespace fty::messagebus2::mqtt {
 
 // Default mqtt end point
 static auto constexpr DEFAULT_ENDPOINT{"tcp://localhost:1883"};
@@ -36,7 +36,7 @@ static auto constexpr RETAIN{"RETAIN"};
 
 class MsgBusMqtt;
 
-class MessageBusMqtt final : public fty::messagebus::MessageBus
+class MessageBusMqtt final : public fty::messagebus2::MessageBus
 {
 public:
     MessageBusMqtt(
@@ -61,4 +61,4 @@ private:
     std::shared_ptr<MsgBusMqtt> m_busMqtt;
 };
 
-} // namespace fty::messagebus::mqtt
+} // namespace fty::messagebus2::mqtt

@@ -1,12 +1,12 @@
 #include <catch2/catch.hpp>
-#include <fty/messagebus/utils.h>
+#include <fty/messagebus2/utils.h>
 #include <fty/string-utils.h>
 #include <iostream>
 
 //----------------------------------------------------------------------
 // Test case
 //----------------------------------------------------------------------
-using namespace fty::messagebus::utils;
+using namespace fty::messagebus2::utils;
 
 TEST_CASE("Utils Uuid", "[utils]")
 {

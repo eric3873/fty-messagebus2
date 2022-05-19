@@ -21,6 +21,6 @@
 #define CATCH_CONFIG_MAIN
 
 #include <catch2/catch.hpp>
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/MessageBus.h>
-#include <fty/messagebus/Promise.h>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/MessageBus.h>
+#include <fty/messagebus2/Promise.h>

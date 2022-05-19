@@ -19,13 +19,13 @@
 
 #pragma once
 
-#include "fty/messagebus/Message.h"
+#include "fty/messagebus2/Message.h"
 #include <proton/message.hpp>
 #include <proton/message_id.hpp>
 #include <proton/scalar_base.hpp>
 #include <proton/types.hpp>
 
-namespace fty::messagebus::amqp {
+namespace fty::messagebus2::amqp {
 
 using property_map = std::map<std::string, proton::scalar>;
 
@@ -93,4 +93,4 @@ inline const proton::message getAmqpMessage(const Message& message)
     return protonMsg;
 }
 
-} // namespace fty::messagebus::amqp
+} // namespace fty::messagebus2::amqp

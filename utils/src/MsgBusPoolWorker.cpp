@@ -17,9 +17,9 @@
     =========================================================================
 */
 
-#include "fty/messagebus/utils/MsgBusPoolWorker.hpp"
+#include "fty/messagebus2/utils/MsgBusPoolWorker.hpp"
 
-namespace fty::messagebus::utils {
+namespace fty::messagebus2::utils {
 
 PoolWorker::PoolWorker(size_t workers)
     : m_terminated(false)
@@ -86,4 +86,4 @@ void PoolWorker::addJob(Job&& work)
     }
 }
 
-} // namespace fty::messagebus::utils
+} // namespace fty::messagebus2::utils

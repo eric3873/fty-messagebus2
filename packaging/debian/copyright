@@ -1,9 +1,9 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: fty-common-messagebus2
+Upstream-Name: fty-messagebus2
 
 Files: *
-Copyright: 2021- fty-common-messagebus2 Developers <eatonipcopensource@eaton.com>
-License: fty-common-messagebus-evol_license
+Copyright: 2021- ftycom-mon-messagebus2 Developers <eatonipcopensource@eaton.com>
+License: fty-messagebus2_license
  Copyright (C) 2014 - 2021 Eaton
  .
  This program is free software; you can redistribute it and/or modify

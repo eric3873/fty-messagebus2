@@ -16,10 +16,10 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/utils.h>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/utils.h>
 
-namespace fty::messagebus {
+namespace fty::messagebus2 {
 
 Message::Message(const MetaData& metaData, const UserData& userData)
     : m_metadata(metaData)
@@ -259,4 +259,4 @@ Message& Message::operator=(const Message& other)
     return *this;
 }
 
-} // namespace fty::messagebus
+} // namespace fty::messagebus2

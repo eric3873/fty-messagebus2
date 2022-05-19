@@ -1,4 +1,4 @@
-project(fty-common-messagebus-utils
+project(fty-messagebus2-utils
         VERSION ${PROJECT_VERSION}
         DESCRIPTION "fty messagebus utilitary static library"
 )

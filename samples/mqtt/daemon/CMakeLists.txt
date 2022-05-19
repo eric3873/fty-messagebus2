@@ -13,7 +13,7 @@ etn_target(exe ${PROJECT_NAME} PRIVATE
   SOURCES
     daemon.cpp
   USES_PRIVATE
-    fty-common-messagebus2-mqtt
+    fty-messagebus2-mqtt
     fty_common_logging
 )
 
@@ -22,5 +22,5 @@ etn_target(exe ${PROJECT_NAME}-cli PRIVATE
   SOURCES
     client.cpp
   USES_PRIVATE
-    fty-common-messagebus2-mqtt
+    fty-messagebus2-mqtt
 )

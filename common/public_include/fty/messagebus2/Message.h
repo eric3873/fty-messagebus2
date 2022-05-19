@@ -23,7 +23,7 @@
 #include <map>
 #include <string>
 
-namespace fty::messagebus {
+namespace fty::messagebus2 {
 
 using UserData = std::string;
 using MetaData = std::map<std::string, std::string>;
@@ -107,4 +107,4 @@ protected:
     UserData m_data;
 };
 
-} // namespace fty::messagebus
+} // namespace fty::messagebus2

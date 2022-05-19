@@ -19,16 +19,16 @@
 
 #pragma once
 
-#include "fty/messagebus/Message.h"
-#include "fty/messagebus/Promise.h"
-#include "fty/messagebus/MessageBusStatus.h"
+#include "fty/messagebus2/Message.h"
+#include "fty/messagebus2/MessageBusStatus.h"
+#include "fty/messagebus2/Promise.h"
 #include <fty/expected.h>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 
-namespace fty::messagebus {
+namespace fty::messagebus2 {
 
 using ClientName = std::string;
 using Endpoint   = std::string;
@@ -111,4 +111,4 @@ public:
 
 };
 
-} // namespace fty::messagebus
+} // namespace fty::messagebus2

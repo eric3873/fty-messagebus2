@@ -16,11 +16,11 @@
     51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
     =========================================================================
 */
-#include <fty/messagebus/Promise.h>
-#include <fty/messagebus/MessageBus.h>
+#include <fty/messagebus2/Promise.h>
+#include <fty/messagebus2/MessageBus.h>
 #include <iostream>
 
-namespace fty::messagebus {
+namespace fty::messagebus2 {
 
 std::future<Message>& Promise::getFuture(){
     return std::ref(m_future);
@@ -41,4 +41,4 @@ void Promise::onReceive(const Message & msg) {
     m_promise.set_value(msg);
 }
 
-} //namespace fty::messagebus 
+} //namespace fty::messagebus2

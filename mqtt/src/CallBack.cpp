@@ -27,14 +27,14 @@
 */
 
 #include "CallBack.h"
-#include <fty/messagebus/Message.h>
+#include <fty/messagebus2/Message.h>
 #include <fty_log.h>
 #include <mqtt/async_client.h>
 #include <mqtt/properties.h>
 
 namespace {
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 
 static auto getMetaDataFromMqttProperties(const ::mqtt::properties& props) -> const MetaData
 {
@@ -65,7 +65,7 @@ static auto getMetaDataFromMqttProperties(const ::mqtt::properties& props) -> co
 
 } // namespace
 
-namespace fty::messagebus::mqtt {
+namespace fty::messagebus2::mqtt {
 size_t NB_WORKERS = 16;
 
 CallBack::CallBack()
@@ -149,4 +149,4 @@ void CallBack::onMessageArrived(::mqtt::const_message_ptr msg, AsynClientPointer
     }
 }
 
-} // namespace fty::messagebus::mqtt
+} // namespace fty::messagebus2::mqtt

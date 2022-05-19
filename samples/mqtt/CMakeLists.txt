@@ -12,7 +12,7 @@ etn_target(exe ${PROJECT_NAME}-async-reply PRIVATE
  SOURCES
    src/*SampleAsyncReply.cpp
   USES_PRIVATE
-   fty-common-messagebus2-mqtt
+   fty-messagebus2-mqtt
    ${SAMPLE_DTO_LIB_NAME}
    fty_common_logging
  FLAGS
@@ -24,7 +24,7 @@ etn_target(exe ${PROJECT_NAME}-send-request PRIVATE
  SOURCES
    src/*SampleSendRequest.cpp
  USES_PRIVATE
-   fty-common-messagebus2-mqtt
+   fty-messagebus2-mqtt
    ${SAMPLE_DTO_LIB_NAME}
    fty_common_logging
  FLAGS
@@ -36,7 +36,7 @@ etn_target(exe ${PROJECT_NAME}-discovery PRIVATE
  SOURCES
    src/*SampleDiscovery.cpp
  USES_PRIVATE
-   fty-common-messagebus2-mqtt
+   fty-messagebus2-mqtt
    fty_common_logging
  FLAGS
    "-fmax-errors=1"

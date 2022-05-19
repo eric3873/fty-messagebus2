@@ -17,9 +17,9 @@
     =========================================================================
 */
 
-#include <fty/messagebus/MessageBus.h>
+#include <fty/messagebus2/MessageBus.h>
 
-namespace fty::messagebus {
+namespace fty::messagebus2 {
 
 fty::Expected<PromisePtr, DeliveryState> MessageBus::requestAsync(const Message & msg) noexcept {
     PromisePtr myPromise(new Promise(*this));
@@ -46,4 +46,4 @@ fty::Expected<PromisePtr, DeliveryState> MessageBus::requestAsync(const Message 
 
     return myPromise;
 }
-} // namespace fty::messagebus
+} // namespace fty::messagebus2

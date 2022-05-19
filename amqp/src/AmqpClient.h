@@ -20,8 +20,8 @@
 #pragma once
 
 #include "MsgBusAmqpUtils.h"
-#include <fty/messagebus/MessageBus.h>
-#include <fty/messagebus/MessageBusStatus.h>
+#include <fty/messagebus2/MessageBus.h>
+#include <fty/messagebus2/MessageBusStatus.h>
 #include <future>
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
@@ -34,9 +34,9 @@
 #include <proton/transport.hpp>
 #include <proton/work_queue.hpp>
 
-namespace fty::messagebus::amqp {
+namespace fty::messagebus2::amqp {
 
-using MessageListener      = fty::messagebus::MessageListener;
+using MessageListener      = fty::messagebus2::MessageListener;
 using SubScriptionListener = std::pair<Address, MessageListener>;
 
 class AmqpClient : public proton::messaging_handler
@@ -55,17 +55,17 @@ public:
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
 
-    fty::messagebus::ComState      connected();
-    fty::messagebus::DeliveryState receive(const Address& address, const std::string& filter = {}, MessageListener messageListener = {});
-    fty::messagebus::DeliveryState unreceive();
-    fty::messagebus::DeliveryState send(const proton::message& msg);
+    fty::messagebus2::ComState      connected();
+    fty::messagebus2::DeliveryState receive(const Address& address, const std::string& filter = {}, MessageListener messageListener = {});
+    fty::messagebus2::DeliveryState unreceive();
+    fty::messagebus2::DeliveryState send(const proton::message& msg);
     void                           close();
 
 private:
     Endpoint             m_url;
     SubScriptionListener m_subscriptions;
     // Default communication state
-    fty::messagebus::ComState m_communicationState = fty::messagebus::ComState::Unknown;
+    fty::messagebus2::ComState m_communicationState = fty::messagebus2::ComState::Unknown;
     // Proton object
     proton::connection m_connection;
     proton::receiver   m_receiver;
@@ -73,7 +73,7 @@ private:
     // Mutex
     std::mutex m_lock;
     // Set of promise for synchronization
-    std::promise<fty::messagebus::ComState> m_connectPromise;
+    std::promise<fty::messagebus2::ComState> m_connectPromise;
     std::promise<void>                      m_promiseSender;
     std::promise<void>                      m_promiseReceiver;
 
@@ -81,4 +81,4 @@ private:
     void resetPromise();
 };
 
-} // namespace fty::messagebus::amqp
+} // namespace fty::messagebus2::amqp

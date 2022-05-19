@@ -18,13 +18,13 @@
 */
 
 #include <csignal>
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/mqtt/MessageBusMqtt.h>
 #include <fty_log.h>
 #include <future>
 #include <iostream>
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 
 // Use promise to exit
 static std::promise<void> g_exit;

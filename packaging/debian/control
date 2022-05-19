@@ -1,5 +1,5 @@
 #
-#    fty-common-messagebus-evol - Provides message bus for agents
+#    fty-messagebus2 - Provides message bus for agents
 #
 #    Copyright (C) 2014 - 2021 Eaton
 #
@@ -17,10 +17,10 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-Source:         fty-common-messagebus2
+Source:         fty-messagebus2
 Section:        net
 Priority:       optional
-Maintainer:     fty-common-messagebus2 Developers <eatonipcopensource@eaton.com>
+Maintainer:     fty-messagebus2 Developers <eatonipcopensource@eaton.com>
 Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
     cmake (>=3.0),
@@ -41,12 +41,12 @@ Build-Depends: debhelper (>= 9),
     asciidoc-base | asciidoc, xmlto,
     dh-autoreconf
 
-Package: libfty-common-messagebus2
+Package: libfty-messagebus2
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: fty-common-messagebus2 shared library
+Description: fty-messagebus2 shared library
 
-Package: libfty-common-messagebus2-dev
+Package: libfty-messagebus2-dev
 Architecture: any
 Section: libdevel
 Depends:
@@ -60,5 +60,5 @@ Depends:
     libczmq-dev (>= 3.0.2),
     libmlm-dev (>= 1.0.0),
     libfty-common-logging-dev,
-    libfty-common-messagebus2 (= ${binary:Version})
-Description: fty-common-messagebus2 development tools
+    libfty-messagebus2 (= ${binary:Version})
+Description: fty-messagebus2 development tools

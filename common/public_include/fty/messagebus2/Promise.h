@@ -19,14 +19,14 @@
 
 #pragma once
 
-#include "fty/messagebus/Message.h"
-#include "fty/messagebus/MessageBusStatus.h"
+#include "fty/messagebus2/Message.h"
+#include "fty/messagebus2/MessageBusStatus.h"
 #include <map>
 #include <string>
 #include <future>
 #include <thread>
 
-namespace fty::messagebus {
+namespace fty::messagebus2 {
 
 class MessageBus;
 
@@ -67,4 +67,4 @@ private:
 
 };
 
-} // namespace fty::messagebus
+} // namespace fty::messagebus2

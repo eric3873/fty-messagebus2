@@ -18,10 +18,10 @@
 */
 
 #include <catch2/catch.hpp>
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/MessageBusStatus.h>
-#include <fty/messagebus/amqp/MessageBusAmqp.h>
-#include <fty/messagebus/utils.h>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/MessageBusStatus.h>
+#include <fty/messagebus2/amqp/MessageBusAmqp.h>
+#include <fty/messagebus2/utils.h>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -33,8 +33,8 @@ static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
 static constexpr auto AMQP_SERVER_URI{"amqp://127.0.0.1:5672"};
 #endif
 
-using namespace fty::messagebus;
-using namespace fty::messagebus::utils;
+using namespace fty::messagebus2;
+using namespace fty::messagebus2::utils;
 
 auto constexpr ONE_SECOND  =  std::chrono::seconds(1);
 auto constexpr TWO_SECONDS = std::chrono::seconds(2);

@@ -45,9 +45,9 @@ namespace {
 
 } // namespace
 
-namespace fty::messagebus::amqp {
-using namespace fty::messagebus;
-using MessageListener = fty::messagebus::MessageListener;
+namespace fty::messagebus2::amqp {
+using namespace fty::messagebus2;
+using MessageListener = fty::messagebus2::MessageListener;
 
 static auto constexpr TIMEOUT = std::chrono::seconds(2);
 
@@ -121,7 +121,7 @@ void AmqpClient::resetPromise()
 {
     std::lock_guard<std::mutex> lock(m_lock);
     logDebug("Reset all promise");
-    m_connectPromise  = std::promise<fty::messagebus::ComState>();
+    m_connectPromise  = std::promise<fty::messagebus2::ComState>();
     m_promiseSender   = std::promise<void>();
     m_promiseReceiver = std::promise<void>();
 }
@@ -248,4 +248,4 @@ void AmqpClient::close()
     }
 }
 
-} // namespace fty::messagebus::amqp
+} // namespace fty::messagebus2::amqp

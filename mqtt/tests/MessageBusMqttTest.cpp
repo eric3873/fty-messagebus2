@@ -18,9 +18,9 @@
 */
 
 #include <catch2/catch.hpp>
-#include <fty/messagebus/Message.h>
-#include <fty/messagebus/MessageBusStatus.h>
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
+#include <fty/messagebus2/Message.h>
+#include <fty/messagebus2/MessageBusStatus.h>
+#include <fty/messagebus2/mqtt/MessageBusMqtt.h>
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -34,7 +34,7 @@ static constexpr auto MQTT_SERVER_URI{"tcp://mqtt.eclipse.org:1883"};
 static constexpr auto MQTT_SERVER_URI{"tcp://localhost:1883"};
 #endif
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 
 auto constexpr TIMEOUT                = std::chrono::seconds(2);
 static const std::string QUERY        = "query";

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.13)
 cmake_policy(VERSION 3.13)
 
-project(fty-common-messagebus2
+project(fty-messagebus2
     VERSION 1.0.0
     DESCRIPTION "fty common messagebus2"
 )
@@ -42,6 +42,6 @@ endif()
 
 # Samples
 if(BUILD_SAMPLES)
-  set(SAMPLE_DTO_LIB_NAME fty-common-messagebus2-sample-dto)
+  set(SAMPLE_DTO_LIB_NAME fty-messagebus2-sample-dto)
   add_subdirectory(samples)
 endif()

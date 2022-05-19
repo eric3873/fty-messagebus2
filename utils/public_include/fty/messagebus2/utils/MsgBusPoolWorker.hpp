@@ -29,7 +29,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace fty::messagebus::utils {
+namespace fty::messagebus2::utils {
 /**
  * @brief Pool of worker threads.
  */
@@ -158,4 +158,4 @@ private:
     std::condition_variable m_cv;
 };
 
-} // namespace fty::messagebus::utils
+} // namespace fty::messagebus2::utils

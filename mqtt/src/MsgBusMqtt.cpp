@@ -18,18 +18,18 @@
 */
 
 #include "MsgBusMqtt.h"
-#include <fty/messagebus/MessageBusStatus.h>
-#include <fty/messagebus/mqtt/MessageBusMqtt.h>
-#include <fty/messagebus/utils.h>
+#include <fty/messagebus2/MessageBusStatus.h>
+#include <fty/messagebus2/mqtt/MessageBusMqtt.h>
+#include <fty/messagebus2/utils.h>
 #include <fty_log.h>
 #include <mqtt/async_client.h>
 #include <mqtt/client.h>
 #include <mqtt/message.h>
 #include <mqtt/properties.h>
 
-namespace fty::messagebus::mqtt {
+namespace fty::messagebus2::mqtt {
 
-using namespace fty::messagebus;
+using namespace fty::messagebus2;
 using duration = int64_t;
 
 duration KEEP_ALIVE           = 20;
@@ -273,4 +273,4 @@ bool MsgBusMqtt::isServiceAvailable()
     return m_asynClient && m_asynClient->is_connected();
 }
 
-} // namespace fty::messagebus::mqtt
+} // namespace fty::messagebus2::mqtt
