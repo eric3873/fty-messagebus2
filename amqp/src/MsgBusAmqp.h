@@ -28,14 +28,14 @@
 namespace fty::messagebus2::amqp {
 
 using AmqpClientPointer = std::shared_ptr<AmqpClient>;
-using AmqpClientHandler = std::map<Endpoint, AmqpClientPointer>;
 
 class MsgBusAmqp
 {
 public:
     MsgBusAmqp(const std::string& clientName, const Endpoint& endpoint)
-        : m_clientName(clientName)
-        , m_endpoint(endpoint){};
+        : m_clientName(clientName),
+          m_endpoint  (endpoint),
+          m_clientPtr (std::make_shared<AmqpClient>(endpoint, clientName)) {};
 
     MsgBusAmqp() = delete;
     ~MsgBusAmqp();
@@ -67,12 +67,11 @@ private:
     std::string m_clientName{};
     // Amqp endpoint
     Endpoint    m_endpoint{};
-    // AmqpClient's handler
-    AmqpClientHandler m_clientHandler;
+    // AmqpClient instance
+    AmqpClientPointer m_clientPtr;
+
     // Mutex
     std::mutex m_lock;
-    // Set all handlers
-    void setHandler(const Endpoint& endPoint, const AmqpClientPointer& amqpClient);
 };
 
 } // namespace fty::messagebus2::amqp

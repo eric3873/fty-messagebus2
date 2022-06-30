@@ -34,50 +34,66 @@
 #include <proton/transport.hpp>
 #include <proton/work_queue.hpp>
 
+#include "fty/messagebus2/utils/MsgBusPoolWorker.hpp"
+
 namespace fty::messagebus2::amqp {
 
 using MessageListener      = fty::messagebus2::MessageListener;
-using SubScriptionListener = std::pair<Address, MessageListener>;
+using SubScriptionListener = std::map<Address, MessageListener>;
 
 class AmqpClient : public proton::messaging_handler
 {
 public:
-    AmqpClient(const Endpoint& url);
+    // TODO: REMOVE clientName (just for test)
+    AmqpClient(const Endpoint& url, const std::string& clientName);
     ~AmqpClient();
 
     // proton::messaging_handler Callback
     void on_container_start(proton::container& container) override;
     void on_connection_open(proton::connection& connection) override;
+    void on_connection_close(proton::connection& connexion) override;
     void on_sender_open(proton::sender& sender) override;
+    void on_sendable(proton::sender& sender) override;
+    void on_sender_close(proton::sender& sender) override;
     void on_receiver_open(proton::receiver& receiver) override;
-    void on_receiver_close(proton::receiver&) override;
+    void on_receiver_close(proton::receiver& receiver) override;
     void on_message(proton::delivery& delivery, proton::message& msg) override;
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
 
     fty::messagebus2::ComState      connected();
+    // TODO: PUT filter in the end (as MsgBusAmqp)
     fty::messagebus2::DeliveryState receive(const Address& address, const std::string& filter = {}, MessageListener messageListener = {});
-    fty::messagebus2::DeliveryState unreceive();
+    fty::messagebus2::DeliveryState unreceive(const Address& address);
     fty::messagebus2::DeliveryState send(const proton::message& msg);
-    void                           close();
+    void                            close();
 
 private:
+    std::string          m_clientName{};  // TODO: TO REMOVE
     Endpoint             m_url;
     SubScriptionListener m_subscriptions;
     // Default communication state
     fty::messagebus2::ComState m_communicationState = fty::messagebus2::ComState::Unknown;
     // Proton object
-    proton::connection m_connection;
-    proton::receiver   m_receiver;
-    proton::message    m_message;
+    proton::connection   m_connection;
+    proton::message      m_message;
+    // TODO: To remove (don't work !!!)
+    //proton::work_queue   m_workQueue;
+    std::shared_ptr<fty::messagebus2::utils::PoolWorker> m_pool;
+
     // Mutex
     std::mutex m_lock;
+    // TODO: To remame + Refactoring mutex mgt in application ...
+    std::mutex m_lock2;
     // Set of promise for synchronization
     std::promise<fty::messagebus2::ComState> m_connectPromise;
-    std::promise<void>                      m_promiseSender;
-    std::promise<void>                      m_promiseReceiver;
+    std::promise<void>                       m_deconnectPromise;
+    std::promise<void>                       m_promiseSender;
+    std::promise<void>                       m_promiseReceiver;
+    std::promise<void>                       m_promiseSenderClose;
 
     void setSubscriptions(const Address& address, MessageListener messageListener);
+    void unsetSubscriptions(const Address& address);
     void resetPromise();
 };
 
