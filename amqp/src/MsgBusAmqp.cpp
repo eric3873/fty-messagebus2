@@ -43,7 +43,6 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
         });
         thrdSender.detach();
 
-        auto res = m_clientPtr->connected();
         if (m_clientPtr->connected() != ComState::Connected) {
             return fty::unexpected(m_clientPtr->connected());
         }
