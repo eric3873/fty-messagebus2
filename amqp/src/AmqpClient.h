@@ -61,7 +61,8 @@ public:
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
 
-    fty::messagebus2::ComState      connected();
+    fty::messagebus2::ComState connected();
+    bool isConnected();
     // TODO: PUT filter in the end (as MsgBusAmqp)
     fty::messagebus2::DeliveryState receive(const Address& address, const std::string& filter = {}, MessageListener messageListener = {});
     fty::messagebus2::DeliveryState unreceive(const Address& address);

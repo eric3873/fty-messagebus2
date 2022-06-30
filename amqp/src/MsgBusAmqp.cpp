@@ -43,8 +43,9 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
         });
         thrdSender.detach();
 
-        if (m_clientPtr->connected() != ComState::Connected) {
-            return fty::unexpected(m_clientPtr->connected());
+        auto connection = m_clientPtr->connected();
+        if (connection != ComState::Connected) {
+            return fty::unexpected(connection);
         }
     } catch (const std::exception& e) {
         logError("Unexpected error: {}", e.what());
@@ -55,7 +56,7 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
 
 bool MsgBusAmqp::isServiceAvailable()
 {
-    return (m_clientPtr->connected() == ComState::Connected);
+    return (m_clientPtr->isConnected());
 }
 
 fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, MessageListener messageListener, const std::string& filter)

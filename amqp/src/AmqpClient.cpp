@@ -113,6 +113,7 @@ void AmqpClient::on_sender_open(proton::sender& sender)
 void AmqpClient::on_sendable(proton::sender& sender)
 {
     logDebug("Sending message ...");
+    // TODO: DON'T WORK !!!!
     //sender.work_queue().add([&]() {
         sender.send(m_message);
         sender.close();
@@ -146,6 +147,8 @@ void AmqpClient::on_error(const proton::error_condition& error)
 void AmqpClient::on_transport_error(proton::transport& transport)
 {
     logError("Transport error: {}", transport.error().what());
+    // TODO: Reset m_connectPromise in case of send or receive arrived before on_connection_open
+    m_connectPromise = std::promise<fty::messagebus2::ComState>();
     m_communicationState = ComState::Lost;
 }
 
@@ -157,15 +160,17 @@ void AmqpClient::resetPromise()
     m_deconnectPromise = std::promise<void>();
     m_promiseSender    = std::promise<void>();
     m_promiseReceiver  = std::promise<void>();
-    //m_promiseSenderClose = std::promise<void>();
+}
+
+bool AmqpClient::isConnected() {
+    // Wait communication was restored
+    return (connected() == ComState::Connected);
 }
 
 ComState AmqpClient::connected()
 {
 //logInfo("AmqpClient::connected DEBUT m_communicationState={}", m_communicationState);
-    //if ((m_communicationState == ComState::Unknown) || (m_communicationState == ComState::Lost)) {
     if (m_communicationState != ComState::Connected) {
-        m_connectPromise = std::promise<fty::messagebus2::ComState>();
         auto connectFuture = m_connectPromise.get_future();
         if (connectFuture.wait_for(TIMEOUT) != std::future_status::timeout) {
             try {
@@ -177,26 +182,24 @@ ComState AmqpClient::connected()
             m_communicationState = ComState::ConnectFailed;
         }
     }
-//logInfo("AmqpClient::connected FIN");
+//logInfo("AmqpClient::connected FIN m_communicationState={}", m_communicationState);
     return m_communicationState;
 }
 
 DeliveryState AmqpClient::send(const proton::message& msg)
 {
     auto deliveryState = DeliveryState::Rejected;
-    if (connected() == ComState::Connected) {
+    if (isConnected()) {
         std::lock_guard<std::mutex> lock(m_lock2);
         m_promiseSender = std::promise<void>();
         logDebug("Sending message to {} ...", msg.to());
         m_message.clear();
         m_message = msg;
-logDebug("AmqpClient::send #1");
         m_connection.work_queue().add([=]() {
             logDebug("AmqpClient::send #2");
             m_connection.open_sender(msg.to());
             logDebug("AmqpClient::send #3 OK");
         });
-logDebug("AmqpClient::send #4");
         // Wait to know if the message has been sent or not
         if (m_promiseSender.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
             deliveryState = DeliveryState::Accepted;
@@ -209,7 +212,7 @@ logDebug("AmqpClient::send #4");
 DeliveryState AmqpClient::receive(const Address& address, const std::string& filter, MessageListener messageListener)
 {
     auto deliveryState = DeliveryState::Rejected;
-    if (connected() == ComState::Connected) {
+    if (isConnected()) {
         std::lock_guard<std::mutex> lock(m_lock2);
         logDebug("Set receiver to wait message(s) from {} ...", address);
         m_promiseReceiver = std::promise<void>();
