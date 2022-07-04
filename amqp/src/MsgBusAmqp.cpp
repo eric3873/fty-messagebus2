@@ -37,7 +37,6 @@ fty::Expected<void, ComState> MsgBusAmqp::connect()
 {
     logDebug("Connecting for {} to {} ...", m_clientName, m_endpoint);
     try {
-        log_debug("MsgBusAmqp::connect DEBUT %p", m_clientPtr);
         std::thread thrdSender([=]() {
             proton::container(*m_clientPtr).run();
         });
@@ -67,7 +66,7 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, M
     }
 
     if (!m_clientPtr) {
-        logError("Client not initialised for endpoint");
+        logError("Client not initialized for endpoint");
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
@@ -127,13 +126,21 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
 
         logDebug("Synchronous request and checking answer until {} second(s)...", timeoutInSeconds);
         proton::message msgToSend = getAmqpMessage(message);
+
         // Promise and future to check if the answer arrive constraint by timeout.
         auto promiseSyncRequest = std::promise<Message>();
 
         Message reply;
         bool msgArrived = false;
         MessageListener syncMessageListener = [&](const Message& replyMessage) {
-            promiseSyncRequest.set_value(replyMessage);
+            // TODO: To rework with common promise class (protection against promise already satisfied)
+            // CAUTION: When Receive several messages, try to set a future already used
+            try {
+                promiseSyncRequest.set_value(replyMessage);
+            }
+            catch (const std::exception& e) {
+               logWarn("promiseSyncRequest error: {}", e.what());
+            }
         };
 
         auto msgReceived = receive(msgToSend.reply_to(), syncMessageListener, proton::to_string(msgToSend.correlation_id()));
@@ -160,13 +167,20 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
             logWarn("Issue on unreceive");
         }
 
+        // TODO: To rework with common promise
+        // Unreceive filter
+        auto unreceivedFilter = m_clientPtr->unreceiveFilter(proton::to_string(msgToSend.correlation_id()));
+        if (unreceivedFilter != DeliveryState::Accepted) {
+            logWarn("Issue on unreceive filter");
+        }
+
         if (!msgArrived) {
             logError("No message arrived within {} seconds!", timeoutInSeconds);
             return fty::unexpected(DeliveryState::Timeout);
         }
 
         return futureSynRequest.get();
-    } catch (std::exception& e) {
+    } catch (const std::exception& e) {
         logError("Exception in synchronous request: {}", e.what());
         return fty::unexpected(DeliveryState::Aborted);
     }

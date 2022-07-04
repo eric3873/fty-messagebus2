@@ -77,7 +77,7 @@ void AmqpClient::on_connection_open(proton::connection& connection)
 
     if (connection.reconnected()) {
         logDebug("Reconnected on url: {}", m_url);
-        resetPromise();
+        resetPromises();
     } else {
         logDebug("Connected on url: {}", m_url);
     }
@@ -87,7 +87,13 @@ void AmqpClient::on_connection_open(proton::connection& connection)
 void AmqpClient::on_connection_close(proton::connection&)
 {
     logDebug("Close connection ...");
-    m_deconnectPromise.set_value();
+    // TODO: To rework with common promise class (protection against promise already satisfied)
+    try {
+        m_deconnectPromise.set_value();
+    }
+    catch (const std::exception& e) {
+       logWarn("m_deconnectPromise error: {}", e.what());
+    }
 }
 
 void AmqpClient::on_sender_open(proton::sender&)
@@ -100,10 +106,16 @@ void AmqpClient::on_sendable(proton::sender& sender)
     logDebug("Sending message ...");
     // TODO: DON'T WORK !!!!
     //sender.work_queue().add([&]() {
-        sender.send(m_message);
-        sender.close();
-        m_promiseSender.set_value();
-        logDebug("Message sent");
+        try {
+            sender.send(m_message);
+            sender.close();
+            // TODO: To rework with common promise class (protection against promise already satisfied)
+            m_promiseSender.set_value();
+            logDebug("Message sent");
+        }
+        catch (const std::exception& e) {
+           logWarn("on_sendable error: {}", e.what());
+        }
     //});
 }
 
@@ -115,14 +127,26 @@ void AmqpClient::on_sender_close(proton::sender&)
 void AmqpClient::on_receiver_open(proton::receiver& receiver)
 {
     logDebug("Waiting any message on target address: {}", receiver.source().address());
-    m_promiseReceiver.set_value();
+    // TODO: To rework with common promise class (protection against promise already satisfied)
+    try {
+        m_promiseReceiver.set_value();
+    }
+    catch (const std::exception& e) {
+       logWarn("m_promiseReceiver error: {}", e.what());
+    }
 }
 
 void AmqpClient::on_receiver_close(proton::receiver&)
 {
     logDebug("Close receiver ...");
-    // TODO: Wait stop receiver dosn't work: exception !!!!
-    //m_promiseReceiver.set_value();
+    // TODO: Wait stop receiver doesn't work as expected: exception !!!!
+    //try {
+        // TODO: To rework with common promise class (protection against promise already satisfied)
+        //m_promiseReceiver.set_value();
+    //}
+    //catch (const std::exception& e) {
+    //   logWarn("m_promiseReceiver error: {}", e.what());
+    //}
 }
 
 void AmqpClient::on_error(const proton::error_condition& error)
@@ -138,10 +162,10 @@ void AmqpClient::on_transport_error(proton::transport& transport)
     m_communicationState = ComState::Lost;
 }
 
-void AmqpClient::resetPromise()
+void AmqpClient::resetPromises()
 {
     std::lock_guard<std::mutex> lock(m_lock);
-    logDebug("Reset all promise");
+    logDebug("Reset all promises");
     m_connectPromise   = std::promise<fty::messagebus2::ComState>();
     m_deconnectPromise = std::promise<void>();
     m_promiseSender    = std::promise<void>();
@@ -150,7 +174,7 @@ void AmqpClient::resetPromise()
 
 bool AmqpClient::isConnected() {
     // Wait communication was restored
-    return (connected() == ComState::Connected);
+    return (m_connection && m_connection.active() && connected() == ComState::Connected);
 }
 
 ComState AmqpClient::connected()
@@ -277,37 +301,52 @@ void AmqpClient::unsetSubscriptions(const Address& address)
     }
 }
 
-DeliveryState AmqpClient::unreceive(const std::string& address)
+DeliveryState AmqpClient::unreceive(const Address& address)
 {
     auto deliveryState = DeliveryState::Unavailable;
-    std::lock_guard<std::mutex> lock(m_lockMain);
+    if (isConnected()) {
+        std::lock_guard<std::mutex> lock(m_lockMain);
 
-    // TODO: Remove filter doesn't work !!!
-    // Remove first address in subscriptions list
-    unsetSubscriptions(address);
+        // TODO: Remove filter doesn't work !!!
+        // Remove first address in subscriptions list
+        unsetSubscriptions(address);
 
-    // Then find recever with input address and close it
-    bool isFound = false;
-    auto receivers = m_connection.receivers();
-    for (auto receiver : receivers) {
-        if (receiver.source().address() == address) {
-            isFound = true;
-            receiver.close();
-            deliveryState = DeliveryState::Accepted;
-            // TODO: Wait stop receiver dosn't work: exception !!!!
-            //m_connection.work_queue().add([&]() { receiver.close(); });
-            /*m_promiseReceiver = std::promise<void>();
-            m_connection.work_queue().add([&]() { receiver.close(); });
-            if (m_promiseReceiver.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
-                logDebug("Receiver closed for {}", address);
+        // Then find recever with input address and close it
+        bool isFound = false;
+        auto receivers = m_connection.receivers();
+        for (auto receiver : receivers) {
+            if (receiver.source().address() == address) {
+                isFound = true;
+                receiver.close();
                 deliveryState = DeliveryState::Accepted;
-            } else {
-                logError("Error on unreceive for {}, timeout reached", address);
-            } */
+                // TODO: Wait stop receiver dosn't work: exception !!!!
+                //m_connection.work_queue().add([&]() { receiver.close(); });
+                /*m_promiseReceiver = std::promise<void>();
+                m_connection.work_queue().add([&]() { receiver.close(); });
+                if (m_promiseReceiver.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
+                    logDebug("Receiver closed for {}", address);
+                    deliveryState = DeliveryState::Accepted;
+                } else {
+                    logError("Error on unreceive for {}, timeout reached", address);
+                } */
+            }
+        }
+        if (!isFound)  {
+            logWarn("Unable to unreceive address {}: not present", address);
         }
     }
-    if (!isFound)  {
-        logWarn("Unable to unreceive address {}: not present", address);
+    return deliveryState;
+}
+
+DeliveryState AmqpClient::unreceiveFilter(const std::string& filter)
+{
+    auto deliveryState = DeliveryState::Unavailable;
+    if (isConnected()) {
+        std::lock_guard<std::mutex> lock(m_lockMain);
+
+        // Remove filter in subscriptions list
+        unsetSubscriptions(filter);
+        deliveryState = DeliveryState::Accepted;
     }
     return deliveryState;
 }
@@ -321,7 +360,7 @@ void AmqpClient::close()
 
         auto deconnectFuture = m_deconnectPromise.get_future();
         if (deconnectFuture.wait_for(TIMEOUT) == std::future_status::timeout) {
-            logError("*** AmqpClient::close De-connection timeout reached");
+            logError("AmqpClient::close De-connection timeout reached");
         }
     }
 }

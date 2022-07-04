@@ -64,6 +64,7 @@ public:
     bool isConnected();
     fty::messagebus2::DeliveryState receive(const Address& address, MessageListener messageListener = {}, const std::string& filter = {});
     fty::messagebus2::DeliveryState unreceive(const Address& address);
+    fty::messagebus2::DeliveryState unreceiveFilter(const std::string& filter);
     fty::messagebus2::DeliveryState send(const proton::message& msg);
     void                            close();
 
@@ -95,7 +96,7 @@ private:
 
     void setSubscriptions(const Address& address, MessageListener messageListener);
     void unsetSubscriptions(const Address& address);
-    void resetPromise();
+    void resetPromises();
 };
 
 } // namespace fty::messagebus2::amqp
