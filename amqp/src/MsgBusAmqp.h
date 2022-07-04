@@ -35,7 +35,7 @@ public:
     MsgBusAmqp(const std::string& clientName, const Endpoint& endpoint)
         : m_clientName(clientName),
           m_endpoint  (endpoint),
-          m_clientPtr (std::make_shared<AmqpClient>(endpoint, clientName)) {};
+          m_clientPtr (std::make_shared<AmqpClient>(endpoint)) {};
 
     MsgBusAmqp() = delete;
     ~MsgBusAmqp();

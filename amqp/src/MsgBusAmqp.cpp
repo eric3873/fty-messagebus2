@@ -71,7 +71,7 @@ fty::Expected<void, DeliveryState> MsgBusAmqp::receive(const Address& address, M
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
-    auto received = m_clientPtr->receive(address, filter, messageListener);
+    auto received = m_clientPtr->receive(address, messageListener, filter);
     if (received != DeliveryState::Accepted) {
         logError("Message receive (Rejected)");
         return fty::unexpected(DeliveryState::Rejected);
