@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     Message request = Message::buildRequest(
         argv[0], "/etn/samples/daemon-basic/mailbox", "TO_UPPER", "/etn/samples/daemon-basic/reply/" + utils::generateId(), argv[1]);
 
-    // Subscrib to the bus
+    // Subscribe to the bus
     auto reply = bus.request(request, 1);
     if (!reply) {
         std::cerr << "Error while requesting " << reply.error() << std::endl;
