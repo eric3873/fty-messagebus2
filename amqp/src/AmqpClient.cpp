@@ -26,22 +26,22 @@
 
 namespace {
 
-  proton::reconnect_options reconnectOpts()
-  {
-      proton::reconnect_options reconnectOption;
-      reconnectOption.delay(proton::duration::SECOND);
-      reconnectOption.max_delay(proton::duration::MINUTE);
-      reconnectOption.max_attempts(10);
-      reconnectOption.delay_multiplier(5);
-      return reconnectOption;
-  }
+    proton::reconnect_options reconnectOpts()
+    {
+        proton::reconnect_options reconnectOption;
+        reconnectOption.delay(proton::duration::SECOND);
+        reconnectOption.delay_multiplier(5);
+        reconnectOption.max_delay(proton::duration::FOREVER);
+        reconnectOption.max_attempts(0);
+        return reconnectOption;
+    }
 
-  proton::connection_options connectOpts()
-  {
-      proton::connection_options opts;
-      opts.idle_timeout(proton::duration(2000));
-      return opts;
-  }
+    proton::connection_options connectOpts()
+    {
+        proton::connection_options opts;
+        opts.idle_timeout(proton::duration(2000));
+        return opts;
+    }
 
 } // namespace
 
