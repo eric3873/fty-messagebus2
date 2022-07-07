@@ -53,6 +53,8 @@ public:
     [[nodiscard]] fty::Expected<void, DeliveryState>    unreceive(const Address& address) noexcept override;
     [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& msg, int timeOut) noexcept override;
 
+    void setConnectionErrorListener(ConnectionErrorListener errorListener);
+
     [[nodiscard]] const ClientName& clientName() const noexcept override;
     [[nodiscard]] const Identity&   identity() const noexcept override;
 

@@ -49,9 +49,11 @@ public:
 
     // proton::messaging_handler Callback
     void on_container_start(proton::container& container) override;
+    void on_container_stop(proton::container&) override;
     void on_connection_open(proton::connection& connection) override;
-    void on_connection_close(proton::connection&) override;
+    void on_connection_close(proton::connection& connection) override;
     void on_connection_error(proton::connection& connection) override;
+    //void on_connection_wake(proton::connection&) override;
     void on_sender_open(proton::sender&) override;
     void on_sendable(proton::sender& sender) override;
     void on_sender_close(proton::sender&) override;
@@ -60,18 +62,22 @@ public:
     void on_message(proton::delivery& delivery, proton::message& msg) override;
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
+    void on_transport_close(proton::transport&) override;
 
     fty::messagebus2::ComState connected();
     bool isConnected();
-    fty::messagebus2::DeliveryState receive(const Address& address, MessageListener messageListener = {}, const std::string& filter = {});
+    void setConnectionErrorListener(ConnectionErrorListener errorListener = {});
+    fty::messagebus2::DeliveryState receive(
+        const Address& address, MessageListener messageListener = {}, const std::string& filter = {});
     fty::messagebus2::DeliveryState unreceive(const Address& address);
     fty::messagebus2::DeliveryState unreceiveFilter(const std::string& filter);
     fty::messagebus2::DeliveryState send(const proton::message& msg);
-    void                            close();
+    void close();
 
 private:
-    Endpoint             m_url;
-    SubScriptionListener m_subscriptions;
+    Endpoint                m_url;
+    SubScriptionListener    m_subscriptions;
+    ConnectionErrorListener m_errorListener;
 
     // Default communication state
     fty::messagebus2::ComState m_communicationState = fty::messagebus2::ComState::Unknown;

@@ -186,4 +186,9 @@ fty::Expected<Message, DeliveryState> MsgBusAmqp::request(const Message& message
     }
 }
 
+void MsgBusAmqp::setConnectionErrorListener(ConnectionErrorListener errorListener)
+{
+    m_clientPtr->setConnectionErrorListener(errorListener);
+}
+
 } // namespace fty::messagebus2::amqp

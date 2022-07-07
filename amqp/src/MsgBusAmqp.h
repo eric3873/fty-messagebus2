@@ -55,6 +55,8 @@ public:
     // Sync request with timeout
     [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& message, int timeoutInSeconds);
 
+    void setConnectionErrorListener(ConnectionErrorListener errorListener = {});
+
     const std::string& clientName() const
     {
         return m_clientName;

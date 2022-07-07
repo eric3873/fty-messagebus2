@@ -40,6 +40,7 @@ namespace {
     {
         proton::connection_options opts;
         opts.idle_timeout(proton::duration(2000));
+        //opts.idle_timeout(proton::duration(proton::duration::FOREVER));
         return opts;
     }
 
@@ -71,6 +72,11 @@ void AmqpClient::on_container_start(proton::container& container)
     }
 }
 
+void AmqpClient::on_container_stop(proton::container&)
+{
+    logInfo("Close container ...");
+}
+
 void AmqpClient::on_connection_open(proton::connection& connection)
 {
     m_connection = connection;
@@ -84,11 +90,6 @@ void AmqpClient::on_connection_open(proton::connection& connection)
     m_connectPromise.set_value(ComState::Connected);
 }
 
-void AmqpClient::on_connection_error(proton::connection& connection)
-{
-    logError("Error connection {}", connection.error().what());
-}
-
 void AmqpClient::on_connection_close(proton::connection&)
 {
     logDebug("Close connection ...");
@@ -100,6 +101,27 @@ void AmqpClient::on_connection_close(proton::connection&)
        logWarn("m_deconnectPromise error: {}", e.what());
     }
 }
+
+void AmqpClient::on_connection_error(proton::connection& connection)
+{
+    logError("Error connection {}", connection.error().what());
+    // HOT_FIX: On connection error, the container is closed and the communication is definitively
+    // closed. In this particular case, the library never retry to reconnect the communication with
+    // reconnection option parameters.
+    // The idea is to propose a callback to execute when a communication error occurred to allow the
+    // client to restart the communication properly.
+    if (m_errorListener) {
+        resetPromises();
+        logInfo("Execute communication error callback");
+        // Execute callback treatment
+        m_pool->offload(std::bind(m_errorListener));
+    }
+}
+
+//void AmqpClient::on_connection_wake(proton::connection&)
+//{
+//    logDebug("Wake connection ...");
+//}
 
 void AmqpClient::on_sender_open(proton::sender&)
 {
@@ -167,6 +189,11 @@ void AmqpClient::on_transport_error(proton::transport& transport)
     m_communicationState = ComState::Lost;
 }
 
+void AmqpClient::on_transport_close(proton::transport&)
+{
+    logDebug("Transport close ...");
+}
+
 void AmqpClient::resetPromises()
 {
     std::lock_guard<std::mutex> lock(m_lock);
@@ -199,6 +226,11 @@ ComState AmqpClient::connected()
     }
     //logTrace("AmqpClient::connected m_communicationState={}", m_communicationState);
     return m_communicationState;
+}
+
+void AmqpClient::setConnectionErrorListener(ConnectionErrorListener errorListener)
+{
+    m_errorListener = errorListener;
 }
 
 DeliveryState AmqpClient::send(const proton::message& msg)
