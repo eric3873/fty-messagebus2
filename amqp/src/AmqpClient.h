@@ -51,6 +51,7 @@ public:
     void on_container_start(proton::container& container) override;
     void on_connection_open(proton::connection& connection) override;
     void on_connection_close(proton::connection&) override;
+    void on_connection_error(proton::connection& connection) override;
     void on_sender_open(proton::sender&) override;
     void on_sendable(proton::sender& sender) override;
     void on_sender_close(proton::sender&) override;

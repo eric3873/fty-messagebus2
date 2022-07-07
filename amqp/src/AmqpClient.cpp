@@ -84,6 +84,11 @@ void AmqpClient::on_connection_open(proton::connection& connection)
     m_connectPromise.set_value(ComState::Connected);
 }
 
+void AmqpClient::on_connection_error(proton::connection& connection)
+{
+    logError("Error connection {}", connection.error().what());
+}
+
 void AmqpClient::on_connection_close(proton::connection&)
 {
     logDebug("Close connection ...");
