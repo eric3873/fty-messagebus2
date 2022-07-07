@@ -34,6 +34,7 @@ using Endpoint   = std::string;
 using Identity   = std::string;
 
 using MessageListener = std::function<void(const Message&)>;
+using ConnectionErrorListener = std::function<fty::Expected<std::string>()>;
 
 class MessageBus
 {
