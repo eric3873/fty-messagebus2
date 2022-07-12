@@ -230,7 +230,7 @@ fty::Expected<void, DeliveryState> MsgBusMqtt::send(const Message& message)
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
-    logDebug("Sending message {}", message.toString());
+    //logDebug("Sending message {}", message.toString());
 
     auto msgToSend = buildMessageForMqtt(message);
 
@@ -239,7 +239,7 @@ fty::Expected<void, DeliveryState> MsgBusMqtt::send(const Message& message)
         return fty::unexpected(DeliveryState::Rejected);
     }
 
-    logDebug("Message sent (Accepted)");
+    //logDebug("Message sent (Accepted)");
     return {};
 }
 
