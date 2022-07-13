@@ -50,7 +50,7 @@ namespace fty::messagebus2::amqp {
 using namespace fty::messagebus2;
 using MessageListener = fty::messagebus2::MessageListener;
 
-static auto constexpr TIMEOUT = std::chrono::seconds(5);
+static auto constexpr TIMEOUT_MS = 5000;
 
 AmqpClient::AmqpClient(const Endpoint& url)
     : m_url(url), m_pool(std::make_shared<fty::messagebus2::utils::PoolWorker>(10))
@@ -68,7 +68,7 @@ void AmqpClient::on_container_start(proton::container& container)
         container.connect(m_url, connectOpts().reconnect(reconnectOpts()));
     } catch (const std::exception& e) {
         logError("Exception {}", e.what());
-        m_connectPromise.set_value(ComState::ConnectFailed);
+        m_connectPromise.setValue(ComState::ConnectFailed);
     }
 }
 
@@ -87,19 +87,13 @@ void AmqpClient::on_connection_open(proton::connection& connection)
     } else {
         logDebug("Connected on url: {}", m_url);
     }
-    m_connectPromise.set_value(ComState::Connected);
+    m_connectPromise.setValue(ComState::Connected);
 }
 
 void AmqpClient::on_connection_close(proton::connection&)
 {
     logDebug("Close connection ...");
-    // TODO: To rework with common promise class (protection against promise already satisfied)
-    try {
-        m_deconnectPromise.set_value();
-    }
-    catch (const std::exception& e) {
-       logWarn("m_deconnectPromise error: {}", e.what());
-    }
+    m_deconnectPromise.setValue();
 }
 
 void AmqpClient::on_connection_error(proton::connection& connection)
@@ -137,7 +131,7 @@ void AmqpClient::on_sendable(proton::sender& sender)
             sender.send(m_message);
             sender.close();
             // TODO: To rework with common promise class (protection against promise already satisfied)
-            m_promiseSender.set_value();
+            m_promiseSender.setValue();
             logDebug("Message sent");
         }
         catch (const std::exception& e) {
@@ -154,26 +148,14 @@ void AmqpClient::on_sender_close(proton::sender&)
 void AmqpClient::on_receiver_open(proton::receiver& receiver)
 {
     logDebug("Waiting any message on target address: {}", receiver.source().address());
-    // TODO: To rework with common promise class (protection against promise already satisfied)
-    try {
-        m_promiseReceiver.set_value();
-    }
-    catch (const std::exception& e) {
-       logWarn("m_promiseReceiver error: {}", e.what());
-    }
+    m_promiseReceiver.setValue();
 }
 
 void AmqpClient::on_receiver_close(proton::receiver&)
 {
     logDebug("Close receiver ...");
     // TODO: Wait stop receiver doesn't work as expected: exception !!!!
-    //try {
-        // TODO: To rework with common promise class (protection against promise already satisfied)
-        //m_promiseReceiver.set_value();
-    //}
-    //catch (const std::exception& e) {
-    //   logWarn("m_promiseReceiver error: {}", e.what());
-    //}
+    //m_promiseReceiver.setValue();
 }
 
 void AmqpClient::on_error(const proton::error_condition& error)
@@ -185,7 +167,7 @@ void AmqpClient::on_transport_error(proton::transport& transport)
 {
     logError("Transport error: {}", transport.error().what());
     // Reset connect promise in case of send or receive arrived before connection open
-    m_connectPromise = std::promise<fty::messagebus2::ComState>();
+    m_connectPromise.reset();
     m_communicationState = ComState::Lost;
 }
 
@@ -198,27 +180,25 @@ void AmqpClient::resetPromises()
 {
     std::lock_guard<std::mutex> lock(m_lock);
     logDebug("Reset all promises");
-    m_connectPromise   = std::promise<fty::messagebus2::ComState>();
-    m_deconnectPromise = std::promise<void>();
-    m_promiseSender    = std::promise<void>();
-    m_promiseReceiver  = std::promise<void>();
+    m_connectPromise.reset();
+    m_deconnectPromise.reset();
+    m_promiseSender.reset();
+    m_promiseReceiver.reset();
 }
 
 bool AmqpClient::isConnected() {
-    // Wait communication was restored
+    // test if connected
     return (m_connection && m_connection.active() && connected() == ComState::Connected);
 }
 
 ComState AmqpClient::connected()
 {
    //logTrace("AmqpClient::connected m_communicationState={}", m_communicationState);
+    // Wait communication was restored
     if (m_communicationState != ComState::Connected) {
-        auto connectFuture = m_connectPromise.get_future();
-        if (connectFuture.wait_for(TIMEOUT) != std::future_status::timeout) {
-            try {
-                m_communicationState = connectFuture.get();
-            } catch (const std::future_error& e) {
-                logError("Caught future error {}", e.what());
+        if (m_connectPromise.waitFor(TIMEOUT_MS)) {
+            if (auto value = m_connectPromise.getValue(); value) {
+                m_communicationState = *value;
             }
         } else {
             m_communicationState = ComState::ConnectFailed;
@@ -238,7 +218,7 @@ DeliveryState AmqpClient::send(const proton::message& msg)
     auto deliveryState = DeliveryState::Rejected;
     if (isConnected()) {
         std::lock_guard<std::mutex> lock(m_lockMain);
-        m_promiseSender = std::promise<void>();
+        m_promiseSender.reset();
         logDebug("Sending message to {} ...", msg.to());
         m_message.clear();
         m_message = msg;
@@ -246,7 +226,7 @@ DeliveryState AmqpClient::send(const proton::message& msg)
             m_connection.open_sender(msg.to());
         });
         // Wait to know if the message has been sent or not
-        if (m_promiseSender.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
+        if (m_promiseSender.waitFor(TIMEOUT_MS)) {
             deliveryState = DeliveryState::Accepted;
         }
     }
@@ -259,7 +239,7 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
     if (isConnected()) {
         std::lock_guard<std::mutex> lock(m_lockMain);
         logDebug("Set receiver to wait message(s) from {} ...", address);
-        m_promiseReceiver = std::promise<void>();
+        m_promiseReceiver.reset();
 
         (!filter.empty()) ? setSubscriptions(filter, messageListener) : setSubscriptions(address, messageListener);
 
@@ -267,7 +247,7 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
             m_connection.open_receiver(address, proton::receiver_options().auto_accept(true));
         });
 
-        if (m_promiseReceiver.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
+        if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
             deliveryState = DeliveryState::Accepted;
         }
     }
@@ -356,11 +336,11 @@ DeliveryState AmqpClient::unreceive(const Address& address)
                 isFound = true;
                 receiver.close();
                 deliveryState = DeliveryState::Accepted;
-                // TODO: Wait stop receiver dosn't work: exception !!!!
+                // TODO: Wait stop receiver doesn't work: exception !!!!
                 //m_connection.work_queue().add([&]() { receiver.close(); });
-                /*m_promiseReceiver = std::promise<void>();
+                /*m_promiseReceiver.reset();
                 m_connection.work_queue().add([&]() { receiver.close(); });
-                if (m_promiseReceiver.get_future().wait_for(TIMEOUT) != std::future_status::timeout) {
+                if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
                     logDebug("Receiver closed for {}", address);
                     deliveryState = DeliveryState::Accepted;
                 } else {
@@ -391,12 +371,11 @@ DeliveryState AmqpClient::unreceiveFilter(const std::string& filter)
 void AmqpClient::close()
 {
     std::lock_guard<std::mutex> lock(m_lock);
-    m_deconnectPromise = std::promise<void>();
+    m_deconnectPromise.reset();
     if (m_connection && m_connection.active()) {
         m_connection.work_queue().add([=]() { m_connection.close(); });
 
-        auto deconnectFuture = m_deconnectPromise.get_future();
-        if (deconnectFuture.wait_for(TIMEOUT) == std::future_status::timeout) {
+        if (!m_deconnectPromise.waitFor(TIMEOUT_MS)) {
             logError("AmqpClient::close De-connection timeout reached");
         }
     }

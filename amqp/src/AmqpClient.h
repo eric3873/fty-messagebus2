@@ -22,7 +22,7 @@
 #include "MsgBusAmqpUtils.h"
 #include <fty/messagebus2/MessageBus.h>
 #include <fty/messagebus2/MessageBusStatus.h>
-#include <future>
+#include <fty/messagebus2/Promise.h>
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
 #include <proton/delivery.hpp>
@@ -95,11 +95,11 @@ private:
     std::mutex m_lockMain;
 
     // Set of promise for synchronization
-    std::promise<fty::messagebus2::ComState> m_connectPromise;
-    std::promise<void>                       m_deconnectPromise;
-    std::promise<void>                       m_promiseSender;
-    std::promise<void>                       m_promiseReceiver;
-    std::promise<void>                       m_promiseSenderClose;
+    Promise<fty::messagebus2::ComState> m_connectPromise;
+    Promise<void>                       m_deconnectPromise;
+    Promise<void>                       m_promiseSender;
+    Promise<void>                       m_promiseReceiver;
+    Promise<void>                       m_promiseSenderClose;
 
     void setSubscriptions(const Address& address, MessageListener messageListener);
     void unsetSubscriptions(const Address& address);
