@@ -39,6 +39,8 @@ namespace fty::messagebus2::amqp {
 
 using MessageListener      = fty::messagebus2::MessageListener;
 using SubScriptionListener = std::map<Address, MessageListener>;
+class AmqpClient;
+using AmqpClientPointer = std::shared_ptr<AmqpClient>;
 
 class AmqpClient : public proton::messaging_handler
 {
