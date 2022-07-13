@@ -166,9 +166,9 @@ fty::Expected<void, ComState> MsgBusMqtt::connect()
 
         // Callback(s)
         m_asynClient->set_callback(m_cb);
-        logInfo("{} => connect status: async client: {}", m_clientName.c_str(), m_asynClient->is_connected() ? "true" : "false");
+        logInfo("{} => connect status: async client: {}", m_clientName, m_asynClient->is_connected() ? "true" : "false");
     } catch (const ::mqtt::exception& e) {
-        logError("Error to connect with the Mqtt server, reason: {}", e.get_message().c_str());
+        logError("Error to connect with the Mqtt server, reason: {}", e.get_message());
         return fty::unexpected(ComState::ConnectFailed);
     } catch (const std::exception& e) {
         logError("unexpected error: {}", e.what());
