@@ -19,74 +19,32 @@
 
 #pragma once
 
-#include <fty/messagebus2/Message.h>
-#include <fty/messagebus2/MessageBus.h>
+#include "../../../../src/AmqpClient.h"
+#include <fty/messagebus2/MessageBusStatus.h>
 #include <fty/messagebus2/utils.h>
 
-
-//#include "AmqpClient.h"
-//#include <fty/expected.h>
-#include <proton/connection_options.hpp>
-#include <proton/container.hpp>
-#include <proton/listen_handler.hpp>
-#include <mutex>
-
+#include <string>
+#include <memory>
 
 namespace fty::messagebus2::amqp {
 
 // Default amqp end point
 static auto constexpr DEFAULT_ENDPOINT{"amqp://127.0.0.1:5672"};
-
 static auto constexpr BUS_IDENTITY{"AMQP"};
-static const std::string TOPIC_PREFIX = "topic://";
-static const std::string QUEUE_PREFIX = "queue://";
 
-//class MsgBusAmqp;
-
-/*class MessageBusAmqp final : public MessageBus
-{
-public:
-    MessageBusAmqp(const ClientName& clientName = utils::getClientId("MessageBusAmqp"), const Endpoint& endpoint = DEFAULT_ENDPOINT);
-
-    ~MessageBusAmqp() = default;
-
-    MessageBusAmqp(MessageBusAmqp&&) = delete;
-    MessageBusAmqp& operator=(MessageBusAmqp&&) = delete;
-    MessageBusAmqp(const MessageBusAmqp&)       = delete;
-    MessageBusAmqp& operator=(const MessageBusAmqp&) = delete;
-
-    [[nodiscard]] fty::Expected<void, ComState>      connect() noexcept override;
-    [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& msg) noexcept override;
-    [[nodiscard]] fty::Expected<void, DeliveryState> receive(
-        const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept override;
-    [[nodiscard]] fty::Expected<void, DeliveryState>    unreceive(const Address& address) noexcept override;
-    [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& msg, int timeOut) noexcept override;
-
-    void setConnectionErrorListener(ConnectionErrorListener errorListener);
-
-    [[nodiscard]] const ClientName& clientName() const noexcept override;
-    [[nodiscard]] const Identity&   identity() const noexcept override;
-
-    using MessageBus::receive;
-private:
-    std::shared_ptr<MsgBusAmqp> m_busAmqp;
-};*/
-
-
-class AmqpClient;    
 using AmqpClientPointer = std::shared_ptr<AmqpClient>;
 
 class MessageBusAmqp final : public MessageBus
 {
 public:
-    MessageBusAmqp(const std::string& clientName = utils::getClientId("MessageBusAmqp"), const Endpoint& endpoint = DEFAULT_ENDPOINT);        
+    MessageBusAmqp(const std::string& clientName = utils::getClientId("MessageBusAmqp"), const Endpoint& endpoint = DEFAULT_ENDPOINT);
     ~MessageBusAmqp() = default;
 
     MessageBusAmqp(MessageBusAmqp&&) = delete;
     MessageBusAmqp& operator = (MessageBusAmqp&&) = delete;
     MessageBusAmqp(const MessageBusAmqp&) = delete;
     MessageBusAmqp& operator = (const MessageBusAmqp&) = delete;
-    
+
     [[nodiscard]] fty::Expected<void, ComState>      connect() noexcept override;
     [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& msg) noexcept override;
     [[nodiscard]] fty::Expected<void, DeliveryState> receive(
@@ -101,16 +59,13 @@ public:
 private:
     // Test if the service is available or not
     bool isServiceAvailable();
-    
+
     // Client name
     std::string m_clientName{};
     // Amqp endpoint
     Endpoint    m_endpoint{};
     // AmqpClient instance
     AmqpClientPointer m_clientPtr;
-
-    // Mutex
-    //std::mutex m_lock;
 };
 
 } // namespace fty::messagebus2::amqp

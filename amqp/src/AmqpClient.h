@@ -20,6 +20,7 @@
 #pragma once
 
 #include "MsgBusAmqpUtils.h"
+#include "../../utils/public_include/fty/messagebus2/utils/MsgBusPoolWorker.hpp"
 #include <fty/messagebus2/MessageBus.h>
 #include <fty/messagebus2/MessageBusStatus.h>
 #include <fty/messagebus2/Promise.h>
@@ -33,8 +34,6 @@
 #include <proton/tracker.hpp>
 #include <proton/transport.hpp>
 #include <proton/work_queue.hpp>
-
-#include "fty/messagebus2/utils/MsgBusPoolWorker.hpp"
 
 namespace fty::messagebus2::amqp {
 
