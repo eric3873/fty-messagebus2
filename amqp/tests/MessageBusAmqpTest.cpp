@@ -107,7 +107,7 @@ public:
     void messageListener(const Message& message)
     {
         incReceiver();
-        //std::cout << "messageListener: Message arrived " << message.toString() << std::endl;
+        std::cout << "messageListener: Message arrived " << message.toString() << std::endl;
     }
 
     void replyerAddOK(const Message& message)
@@ -126,7 +126,7 @@ public:
             FAIL(to_string(msgSent.error()));
         }
         else {
-           std::cout << "replyerAddOK num=" << num << " Send OK " << replyer << std::endl;
+           std::cout << "replyerAddOK Send OK " << replyer << std::endl;
         }
     }
 };
@@ -366,7 +366,7 @@ TEST_CASE("multi asynch", "[amqp][multi][asynch]")
            std::cout << "TEST " << i ++ << std::endl;
            t.join();
         }
-        msgBusReplyer.unreceive(testMultiQueue + "request");
+        REQUIRE(msgBusReplyer.unreceive(testMultiQueue + "request"));
     }
     catch(std::exception& e) {
         std::cout << "EXECPTION TEST: " << e.what() << std::endl;
@@ -438,11 +438,11 @@ TEST_CASE("doublequeueAsynch", "[amqp][request]")
         request2.correlationId()));
 
     std::thread sender1([&]() {
-        msgBusRequesterAsync.send(request1);
+        REQUIRE(msgBusRequesterAsync.send(request1));
     });
 
     std::thread sender2([&]() {
-        msgBusRequesterAsync.send(request2);
+        REQUIRE(msgBusRequesterAsync.send(request2));
     });
     sender1.join();
     sender2.join();
@@ -575,7 +575,7 @@ TEST_CASE("topic", "[amqp][pub]")
 
         REQUIRE(msgBus.send(msg));
         std::this_thread::sleep_for(ONE_SECOND);
-        CHECK(msgReceived.isRecieved(1));        
+        CHECK(msgReceived.isRecieved(1));
     }
 }
 
