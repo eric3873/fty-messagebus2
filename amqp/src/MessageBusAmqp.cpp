@@ -18,10 +18,10 @@
 */
 #include "fty/messagebus2/amqp/MessageBusAmqp.h"
 #include "AmqpClient.h"
+#include <fty/messagebus2/Promise.h>
 #include <fty/expected.h>
 #include <fty/messagebus2/MessageBusStatus.h>
 #include <fty_log.h>
-#include <memory>
 
 namespace fty::messagebus2::amqp {
 
@@ -29,10 +29,10 @@ using namespace fty::messagebus2;
 using proton::receiver_options;
 using proton::source_options;
 
-MessageBusAmqp::MessageBusAmqp(const ClientName& clientName, const Endpoint& endpoint) : MessageBus(), 
+MessageBusAmqp::MessageBusAmqp(const ClientName& clientName, const Endpoint& endpoint) : MessageBus(),
     m_clientName(clientName),
     m_endpoint  (endpoint),
-    m_clientPtr (std::make_shared<AmqpClient>(endpoint)) 
+    m_clientPtr (std::make_shared<AmqpClient>(endpoint))
 {
 }
 
@@ -56,7 +56,7 @@ fty::Expected<void, ComState> MessageBusAmqp::connect() noexcept
     return {};
 }
 
-bool MessageBusAmqp::isServiceAvailable() 
+bool MessageBusAmqp::isServiceAvailable()
 {
     return (m_clientPtr->isConnected());
 }
@@ -127,7 +127,7 @@ fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& mes
             logDebug("Service not available");
             return fty::unexpected(DeliveryState::Unavailable);
         }
-        
+
         // Sanity check
         if (!message.isValidMessage()) {
             return fty::unexpected(DeliveryState::Rejected);
@@ -140,46 +140,29 @@ fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& mes
         proton::message msgToSend = getAmqpMessage(message);
 
         // Promise and future to check if the answer arrive constraint by timeout.
-        auto promiseSyncRequest = std::promise<Message>();
+        Promise<Message> promiseSyncRequest(*this, msgToSend.reply_to());
 
-        Message reply;
         bool msgArrived = false;
-        MessageListener&& syncMessageListener = [&](const Message& replyMessage) {
-            // TODO: To rework with common promise class (protection against promise already satisfied)
-            // CAUTION: When Receive several messages, try to set a future already used
-            try {
-                promiseSyncRequest.set_value(replyMessage);
-            }
-            catch (const std::exception& e) {
-               logWarn("promiseSyncRequest error: {}", e.what());
-            }
-        };
 
-        auto msgReceived = receive(msgToSend.reply_to(), std::move(syncMessageListener), proton::to_string(msgToSend.correlation_id()));
+        auto msgReceived = receive(
+            msgToSend.reply_to(),
+            std::move(std::bind(&Promise<Message>::setValue, &promiseSyncRequest, std::placeholders::_1)),
+            proton::to_string(msgToSend.correlation_id()));
         if (!msgReceived) {
             return fty::unexpected(DeliveryState::Aborted);
         }
 
+        // Send message
         auto msgSent = send(message);
         if (!msgSent) {
-            auto unreceived = unreceive(msgToSend.reply_to());
-            if (!unreceived) {
-                logWarn("Issue on unreceive");
-            }
             return fty::unexpected(DeliveryState::Aborted);
         }
 
-        auto futureSynRequest = promiseSyncRequest.get_future();
-        if (futureSynRequest.wait_for(std::chrono::seconds(timeoutInSeconds)) != std::future_status::timeout) {
+        // Wait response
+        if (promiseSyncRequest.waitFor(timeoutInSeconds * 1000)) {
             msgArrived = true;
         }
-        // Unreceive in any case, to not let any ghost receiver.
-        auto unreceived = unreceive(msgToSend.reply_to());
-        if (!unreceived) {
-            logWarn("Issue on unreceive");
-        }
 
-        // TODO: To rework with common promise
         // Unreceive filter
         auto unreceivedFilter = m_clientPtr->unreceiveFilter(proton::to_string(msgToSend.correlation_id()));
         if (unreceivedFilter != DeliveryState::Accepted) {
@@ -191,7 +174,11 @@ fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& mes
             return fty::unexpected(DeliveryState::Timeout);
         }
 
-        return futureSynRequest.get();
+        auto value = promiseSyncRequest.getValue();
+        if (value) {
+            return *value;
+        }
+        return fty::unexpected(DeliveryState::Aborted);
     } catch (const std::exception& e) {
         logError("Exception in synchronous request: {}", e.what());
         return fty::unexpected(DeliveryState::Aborted);
