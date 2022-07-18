@@ -193,7 +193,6 @@ bool AmqpClient::isConnected() {
 
 ComState AmqpClient::connected()
 {
-   //logTrace("AmqpClient::connected m_communicationState={}", m_communicationState);
     // Wait communication was restored
     if (m_communicationState != ComState::Connected) {
         if (m_connectPromise.waitFor(TIMEOUT_MS)) {
@@ -204,7 +203,6 @@ ComState AmqpClient::connected()
             m_communicationState = ComState::ConnectFailed;
         }
     }
-    //logTrace("AmqpClient::connected m_communicationState={}", m_communicationState);
     return m_communicationState;
 }
 

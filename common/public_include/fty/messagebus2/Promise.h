@@ -29,7 +29,7 @@ namespace fty::messagebus2 {
 class Message;
 class MessageBus;
 
-// This class is a wrapper on secure Promise in order to ensure we unreceive when the object 
+// This class is a wrapper on secure Promise in order to ensure we unreceive when the object
 // is destroyed.
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -38,7 +38,7 @@ class MessageBus;
 template <typename T>
 class PromiseBase
 {
-public:        
+public:
     PromiseBase();
     ~PromiseBase();
 
@@ -54,7 +54,7 @@ public:
 
     std::future<T>& getFuture();
     bool isReady();
-    void reset();    
+    void reset();
     bool waitFor(const int& timeout_ms);
 
 public:
@@ -79,7 +79,7 @@ public:
     // Remove the move constructors
     Promise& operator = (Promise&& other) noexcept = delete;
     Promise(Promise&& other) noexcept = delete;
-    
+
     fty::Expected<T> getValue();
     fty::Expected<void> setValue(const T& t);
 };
@@ -91,17 +91,17 @@ template<>
 class Promise<Message> : public PromiseBase<Message> {
 public:
     friend class MessageBus;
-    
-    Promise(MessageBus& messageBus, const std::string& queue = "");
+
+    Promise(MessageBus& messageBus, const std::string& address = "");
     ~Promise();
 
-    fty::Expected<Message> getValue();        
+    fty::Expected<Message> getValue();
     // TBD: caution message bus receive need void function
     //fty::Expected<void> setValue(const Message& m);
     void setValue(const Message& m);
 
     MessageBus& m_messageBus; // message bus instance
-    std::string m_queue;      // queue where the reply should arrive
+    std::string m_address;    // address where the reply should arrive
 };
 
 using FunctionMessage = std::function<void(Message&)>;

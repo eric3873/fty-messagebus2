@@ -43,13 +43,7 @@ std::future<T>& PromiseBase<T>::getFuture() {
 
 template <typename T>
 bool PromiseBase<T>::isReady() {
-    bool res = false;
-    if (m_future.valid()) {
-        //auto r = m_future.wait_for(std::chrono::seconds(0));
-        //res = (r == std::future_status::ready || r == std::future_status::timeout);
-        res = true;
-    }
-    return res;
+    return m_future.valid();
 }
 
 template <typename T>
@@ -90,15 +84,15 @@ fty::Expected<void> Promise<T>::setValue(const T& t) {
 ////////////////////////////////////////////////////////////////////////////////
 /// Promise<Message> implementation
 
-Promise<Message>::Promise(MessageBus& messageBus, const std::string& queue) :
+Promise<Message>::Promise(MessageBus& messageBus, const std::string& address) :
     m_messageBus(messageBus),
-    m_queue(queue) {
+    m_address(address) {
 }
 
 Promise<Message>::~Promise() {
-    if(!m_queue.empty()) {
-        m_messageBus.unreceive(m_queue);
-        m_queue = "";
+    if(!m_address.empty()) {
+        m_messageBus.unreceive(m_address);
+        m_address = "";
     }
 }
 

@@ -19,11 +19,10 @@
 
 #pragma once
 
+#include "fty/messagebus2/amqp/MessageBusAmqp.h"
 #include "MsgBusAmqpUtils.h"
-#include "../../utils/public_include/fty/messagebus2/utils/MsgBusPoolWorker.hpp"
-#include <fty/messagebus2/MessageBus.h>
-#include <fty/messagebus2/MessageBusStatus.h>
-#include <fty/messagebus2/Promise.h>
+#include "fty/messagebus2/utils/MsgBusPoolWorker.hpp"
+#include "fty/messagebus2/Promise.h"
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
 #include <proton/delivery.hpp>
