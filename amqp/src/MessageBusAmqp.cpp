@@ -38,6 +38,11 @@ MessageBusAmqp::MessageBusAmqp(const ClientName& clientName, const Endpoint& end
 
 fty::Expected<void, ComState> MessageBusAmqp::connect() noexcept
 {
+    if (!m_clientPtr) {
+        logError("Client not initialized for endpoint");
+        return fty::unexpected(ComState::ConnectFailed);
+    }
+
     logDebug("Connecting for {} to {} ...", m_clientName, m_endpoint);
     try {
         std::thread thrdSender([=]() {
@@ -58,7 +63,7 @@ fty::Expected<void, ComState> MessageBusAmqp::connect() noexcept
 
 bool MessageBusAmqp::isServiceAvailable()
 {
-    return (m_clientPtr->isConnected());
+    return (m_clientPtr && m_clientPtr->isConnected());
 }
 
 fty::Expected<void, DeliveryState> MessageBusAmqp::receive(
@@ -66,11 +71,6 @@ fty::Expected<void, DeliveryState> MessageBusAmqp::receive(
 {
     if (!isServiceAvailable()) {
         logDebug("Service not available");
-        return fty::unexpected(DeliveryState::Unavailable);
-    }
-
-    if (!m_clientPtr) {
-        logError("Client not initialized for endpoint");
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
@@ -104,11 +104,6 @@ fty::Expected<void, DeliveryState> MessageBusAmqp::send(const Message& message) 
 
     logDebug("Sending message ...");
     proton::message msgToSend = getAmqpMessage(message);
-
-    if (!m_clientPtr) {
-        logError("Client not initialised for endpoint");
-        return fty::unexpected(DeliveryState::Unavailable);
-    }
 
     auto msgSent = m_clientPtr->send(msgToSend);
     if (msgSent != DeliveryState::Accepted) {
@@ -187,7 +182,9 @@ fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& mes
 
 void MessageBusAmqp::setConnectionErrorListener(ConnectionErrorListener errorListener)
 {
-    m_clientPtr->setConnectionErrorListener(errorListener);
+    if (m_clientPtr) {
+        m_clientPtr->setConnectionErrorListener(errorListener);
+    }
 }
 
 const std::string& MessageBusAmqp::clientName() const noexcept
