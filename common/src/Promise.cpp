@@ -19,6 +19,7 @@
 
 #include <fty/messagebus2/Promise.h>
 #include <fty/messagebus2/MessageBus.h>
+#include <fty_log.h>
 
 #include <iostream>
 
@@ -66,18 +67,22 @@ void PromiseBase<T>::reset() {
 
 template <typename T>
 fty::Expected<T> Promise<T>::getValue() {
-    if (this->isReady()) {
-        return this->m_future.get();
-    }
+    try {
+        if (this->isReady()) {
+            return this->m_future.get();
+        }
+    } catch (const std::future_error& e) {}
     return fty::unexpected("Not ready");
 }
 
 template <typename T>
 fty::Expected<void> Promise<T>::setValue(const T& t) {
-    if (this->isReady()) {
-        this->m_promise.set_value(t);
-        return {};
-    }
+    try {
+        if (this->isReady()) {
+            this->m_promise.set_value(t);
+            return {};
+        }
+    } catch (const std::future_error& e) {}
     return fty::unexpected("Not ready");
 }
 

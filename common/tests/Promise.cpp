@@ -16,6 +16,8 @@ TEST_CASE("Promise with void", "[Promise]")
     REQUIRE(myPromise.isReady());
     REQUIRE(!myPromise.waitFor(100));
     REQUIRE(myPromise.setValue());
+    // Promise already satisfied
+    REQUIRE(!myPromise.setValue());
     REQUIRE(myPromise.isReady());
     REQUIRE(myPromise.waitFor(100));
     REQUIRE(myPromise.getValue());
@@ -27,6 +29,8 @@ TEST_CASE("Promise with void", "[Promise]")
     REQUIRE(myPromise.isReady());
     REQUIRE(!myPromise.waitFor(100));
     REQUIRE(myPromise.setValue());
+    // Promise already satisfied
+    REQUIRE(!myPromise.setValue());
     REQUIRE(myPromise.isReady());
     REQUIRE(myPromise.waitFor(100));
     REQUIRE(myPromise.getValue());
@@ -42,6 +46,8 @@ TEST_CASE("Promise with ComState", "[Promise]")
     REQUIRE(myPromise.isReady());
     REQUIRE(!myPromise.waitFor(100));
     REQUIRE(myPromise.setValue(state));
+    // Promise already satisfied
+    REQUIRE(!myPromise.setValue(state));
     REQUIRE(myPromise.isReady());
     REQUIRE(myPromise.waitFor(100));
     REQUIRE(*(myPromise.getValue()) == state);
@@ -53,6 +59,8 @@ TEST_CASE("Promise with ComState", "[Promise]")
     REQUIRE(myPromise.isReady());
     REQUIRE(!myPromise.waitFor(100));
     REQUIRE(myPromise.setValue(state));
+    // Promise already satisfied
+    REQUIRE(!myPromise.setValue(state));
     REQUIRE(myPromise.waitFor(100));
     REQUIRE(myPromise.isReady());
     REQUIRE(*(myPromise.getValue()) == state);
