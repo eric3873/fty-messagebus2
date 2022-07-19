@@ -102,18 +102,22 @@ Promise<Message>::~Promise() {
 }
 
 fty::Expected<Message> Promise<Message>::getValue() {
-    if (this->isReady()) {
-        return this->m_future.get();
-    }
+    try {
+        if (this->isReady()) {
+            return this->m_future.get();
+        }
+    } catch (const std::future_error& e) {}
     return fty::unexpected("Not ready");
 }
 
 //fty::Expected<void> Promise<Message>::setValue(Message& m) {
 void Promise<Message>::setValue(const Message& m) {
-    if (this->isReady()) {
-        this->m_promise.set_value(m);
-        //return {};
-    }
+    try {
+        if (this->isReady()) {
+            this->m_promise.set_value(m);
+            //return {};
+        }
+    } catch (const std::future_error& e) {}
     //return fty::unexpected("Not ready");
 }
 
@@ -121,18 +125,22 @@ void Promise<Message>::setValue(const Message& m) {
 /// Promise<void> implementation
 
 fty::Expected<void> Promise<void>::getValue() {
-    if (this->isReady()) {
-        this->m_future.get();
-        return {};
-    }
+    try {
+        if (this->isReady()) {
+            this->m_future.get();
+            return {};
+        }
+    } catch (const std::future_error& e) {}
     return fty::unexpected("Not ready");
 }
 
 fty::Expected<void> Promise<void>::setValue() {
-    if (isReady()) {
-        m_promise.set_value();
-        return {};
-    }
+    try {
+        if (isReady()) {
+            m_promise.set_value();
+            return {};
+        }
+    } catch (const std::future_error& e) {}
     return fty::unexpected("Not ready");
 }
 
