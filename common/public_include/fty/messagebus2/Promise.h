@@ -57,7 +57,7 @@ public:
     void reset();
     bool waitFor(const int& timeout_ms);
 
-public:
+protected:
     std::promise<T> m_promise;
     std::future<T>  m_future;
 };
@@ -100,6 +100,7 @@ public:
     //fty::Expected<void> setValue(const Message& m);
     void setValue(const Message& m);
 
+protected:
     MessageBus& m_messageBus; // message bus instance
     std::string m_address;    // address where the reply should arrive
 };
@@ -119,6 +120,5 @@ public:
 
 template <typename T>
 using PromisePtr = std::shared_ptr<Promise<T>>;
-
 
 } // namespace fty::messagebus2
