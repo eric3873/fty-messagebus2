@@ -41,7 +41,8 @@ using namespace std::chrono_literals;
 auto constexpr ONE_SECOND  =  std::chrono::seconds(1);
 auto constexpr TWO_SECONDS = std::chrono::seconds(2);
 auto constexpr SYNC_REQUEST_TIMEOUT = 10; // in second
-auto constexpr NB_THREAD_MULTI      = 10; // nb of threads for multi tests
+// TBD: Test not passing CI with 100 threads (Random unexpected exception)
+auto constexpr NB_THREAD_MULTI      = 50; // nb of threads for multi tests
 
 static const std::string QUERY        = "query";
 static const std::string QUERY_2      = "query2";
