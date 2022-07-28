@@ -231,8 +231,7 @@ TEST_CASE("queue", "[amqp][request]")
         auto msgBusSender = amqp::MessageBusAmqp("MessageSenderSendTestCase", AMQP_SERVER_URI);
         REQUIRE(msgBusSender.connect());
 
-        REQUIRE(
-            msgBusSender.receive(sendTestQueue, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
+        REQUIRE(msgBusSender.receive(sendTestQueue, std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1)));
 
         // Send message on queue
         Message msg = Message::buildMessage("MqttMessageTestCase", sendTestQueue, "TEST", QUERY);

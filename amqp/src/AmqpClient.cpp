@@ -130,7 +130,6 @@ void AmqpClient::on_sendable(proton::sender& sender)
         try {
             sender.send(m_message);
             sender.close();
-            // TODO: To rework with common promise class (protection against promise already satisfied)
             m_promiseSender.setValue();
             logDebug("Message sent");
         }
@@ -155,7 +154,7 @@ void AmqpClient::on_receiver_close(proton::receiver&)
 {
     logDebug("Close receiver ...");
     // TODO: Wait stop receiver doesn't work as expected: exception !!!!
-    //m_promiseReceiver.setValue();
+    m_promiseReceiver.setValue();
 }
 
 void AmqpClient::on_error(const proton::error_condition& error)
@@ -221,7 +220,7 @@ DeliveryState AmqpClient::send(const proton::message& msg)
         m_message.clear();
         m_message = msg;
         m_connection.work_queue().add([=]() {
-            m_connection.open_sender(msg.to());
+            m_connection.default_session().open_sender(msg.to());
         });
         // Wait to know if the message has been sent or not
         if (m_promiseSender.waitFor(TIMEOUT_MS)) {
@@ -242,11 +241,14 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
         (!filter.empty()) ? setSubscriptions(filter, messageListener) : setSubscriptions(address, messageListener);
 
         m_connection.work_queue().add([=]() {
-            m_connection.open_receiver(address, proton::receiver_options().auto_accept(true));
+            m_connection.default_session().open_receiver(address, proton::receiver_options().auto_accept(true));
         });
 
         if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
             deliveryState = DeliveryState::Accepted;
+        }
+        else {
+            logError("Error on receive for {}, timeout reached", address);
         }
     }
     return deliveryState;
@@ -309,7 +311,7 @@ void AmqpClient::unsetSubscriptions(const Address& address)
             m_subscriptions.erase(it);
             logDebug("Subscriptions remove: {}", address);
         } else {
-            logWarn("unsetSubscriptions skipped, address not found: {}", address);
+            //logWarn("unsetSubscriptions skipped, address not found: {}", address);
         }
     } else {
         logWarn("unsetSubscriptions skipped, address empty");
@@ -328,22 +330,20 @@ DeliveryState AmqpClient::unreceive(const Address& address)
 
         // Then find recever with input address and close it
         bool isFound = false;
-        auto receivers = m_connection.receivers();
+        auto receivers = m_connection.default_session().receivers();
         for (auto receiver : receivers) {
-            if (receiver.source().address() == address) {
+            if (receiver.source().address() == address && !receiver.closed() && receiver.active()) {
                 isFound = true;
-                receiver.close();
-                deliveryState = DeliveryState::Accepted;
-                // TODO: Wait stop receiver doesn't work: exception !!!!
-                //m_connection.work_queue().add([&]() { receiver.close(); });
-                /*m_promiseReceiver.reset();
-                m_connection.work_queue().add([&]() { receiver.close(); });
+                m_promiseReceiver.reset();
+                m_connection.work_queue().add([&]() {
+                    receiver.close();
+                });
                 if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
                     logDebug("Receiver closed for {}", address);
                     deliveryState = DeliveryState::Accepted;
                 } else {
                     logError("Error on unreceive for {}, timeout reached", address);
-                } */
+                }
             }
         }
         if (!isFound)  {
