@@ -82,13 +82,13 @@ fty::Expected<void, DeliveryState> MessageBusAmqp::receive(
     return {};
 }
 
-fty::Expected<void, DeliveryState> MessageBusAmqp::unreceive(const Address& address) noexcept
+fty::Expected<void, DeliveryState> MessageBusAmqp::unreceive(const Address& address, const std::string& filter) noexcept
 {
     if (!isServiceAvailable()) {
         logDebug("Service not available");
         return fty::unexpected(DeliveryState::Unavailable);
     }
-    auto res = m_clientPtr->unreceive(address);
+    auto res = m_clientPtr->unreceive(address, filter);
     if (res != DeliveryState::Accepted) {
         return fty::unexpected(DeliveryState::Rejected);
     }
@@ -135,7 +135,7 @@ fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& mes
         proton::message msgToSend = getAmqpMessage(message);
 
         // Promise and future to check if the answer arrive constraint by timeout.
-        Promise<Message> promiseSyncRequest(*this, msgToSend.reply_to());
+        Promise<Message> promiseSyncRequest(*this, msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
 
         bool msgArrived = false;
 
@@ -156,12 +156,6 @@ fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& mes
         // Wait response
         if (promiseSyncRequest.waitFor(timeoutInSeconds * 1000)) {
             msgArrived = true;
-        }
-
-        // Unreceive filter
-        auto unreceivedFilter = m_clientPtr->unreceiveFilter(proton::to_string(msgToSend.correlation_id()));
-        if (unreceivedFilter != DeliveryState::Accepted) {
-            logWarn("Issue on unreceive filter");
         }
 
         if (!msgArrived) {

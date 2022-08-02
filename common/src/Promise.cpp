@@ -89,15 +89,17 @@ fty::Expected<void> Promise<T>::setValue(const T& t) {
 ////////////////////////////////////////////////////////////////////////////////
 /// Promise<Message> implementation
 
-Promise<Message>::Promise(MessageBus& messageBus, const std::string& address) :
+Promise<Message>::Promise(MessageBus& messageBus, const std::string& address, const std::string& filter) :
     m_messageBus(messageBus),
-    m_address(address) {
+    m_address(address),
+    m_filter(filter) {
 }
 
 Promise<Message>::~Promise() {
-    if(!m_address.empty()) {
-        m_messageBus.unreceive(m_address);
+    if(!m_address.empty() && !m_filter.empty()) {
+        m_messageBus.unreceive(m_address, m_filter);
         m_address = "";
+        m_filter = "";
     }
 }
 

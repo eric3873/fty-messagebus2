@@ -69,10 +69,12 @@ public:
     void setConnectionErrorListener(ConnectionErrorListener errorListener = {});
     fty::messagebus2::DeliveryState receive(
         const Address& address, MessageListener messageListener = {}, const std::string& filter = {});
-    fty::messagebus2::DeliveryState unreceive(const Address& address);
-    fty::messagebus2::DeliveryState unreceiveFilter(const std::string& filter);
+    fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {});
     fty::messagebus2::DeliveryState send(const proton::message& msg);
     void close();
+
+    static std::string setAddressFilter(const Address& address, const std::string& filter = {});
+    static std::pair<std::string, std::string> getAddressFilter(const std::string& input);
 
 private:
     Endpoint                m_url;
