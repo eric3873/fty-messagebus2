@@ -139,7 +139,7 @@ public:
 
 TEST_CASE("AddressFilter", "[amqp][AddressFilter]")
 {
-    std::string res1 = "myAddress#myFilter";
+    std::string res1 = "myAddress|myFilter";
     std::string res2 = "myAddress";
     REQUIRE(fty::messagebus2::amqp::AmqpClient::setAddressFilter("myAddress", "myFilter") == res1);
     REQUIRE(fty::messagebus2::amqp::AmqpClient::setAddressFilter("myAddress") == res2);

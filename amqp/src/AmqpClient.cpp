@@ -186,13 +186,13 @@ void AmqpClient::resetPromises()
 
 std::string AmqpClient::setAddressFilter(const Address& address, const std::string& filter)
 {
-    return filter.empty() ? address : address + "#" + filter;
+    return filter.empty() ? address : address + "|" + filter;
 }
 
 std::pair<std::string, std::string> AmqpClient::getAddressFilter(const std::string& input)
 {
     std::pair<std::string, std::string> ret;
-    if (auto pos = input.find("#"); pos != std::string::npos) {
+    if (auto pos = input.find("|"); pos != std::string::npos) {
         ret.first = input.substr(0, pos);
         ret.second = input.substr(pos + 1);
     }
