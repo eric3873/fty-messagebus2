@@ -139,7 +139,7 @@ public:
 
 TEST_CASE("AddressFilter", "[amqp][AddressFilter]")
 {
-    std::string res1 = "myAddress/myFilter";
+    std::string res1 = "myAddress#myFilter";
     std::string res2 = "myAddress";
     REQUIRE(fty::messagebus2::amqp::AmqpClient::setAddressFilter("myAddress", "myFilter") == res1);
     REQUIRE(fty::messagebus2::amqp::AmqpClient::setAddressFilter("myAddress") == res2);
@@ -188,6 +188,8 @@ TEST_CASE("queue", "[amqp][request]")
         REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
         auto withReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
         REQUIRE(withReplyMsg.value().userData() == QUERY_AND_OK);
+
+        REQUIRE(msgBusReplyer.unreceive(request.to()));
     }
 
     SECTION("Send sync request")
@@ -206,6 +208,8 @@ TEST_CASE("queue", "[amqp][request]")
 
       auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
       REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
+
+      REQUIRE(msgBusReplyer.unreceive(request.to()));
     }
 
     std::this_thread::sleep_for(ONE_SECOND);
@@ -232,6 +236,9 @@ TEST_CASE("queue", "[amqp][request]")
             std::this_thread::sleep_for(ONE_SECOND);
             CHECK(msgReceived.assertValue(i + 1));
         }
+
+        REQUIRE(msgBusReplyer.unreceive(request.to()));
+        REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
     }
 
     SECTION("Send")
@@ -255,6 +262,8 @@ TEST_CASE("queue", "[amqp][request]")
             std::this_thread::sleep_for(ONE_SECOND);
             CHECK(msgReceived.isRecieved(i + 1));
         }
+
+        REQUIRE(msgBusSender.unreceive(sendTestQueue));
     }
 }
 
@@ -291,7 +300,6 @@ TEST_CASE("multi synch", "[amqp][multi][synch]")
                 std::cout << "EXECPTION THREAD " << num << ": " << e.what() << std::endl;
                 noThrow = false;
             }
-            std::this_thread::sleep_for(1000ms);
         };
 
         int nbThread = NB_THREAD_MULTI;
@@ -459,6 +467,9 @@ TEST_CASE("doublequeueAsynch", "[amqp][request]")
 
     std::this_thread::sleep_for(3s);
     CHECK(msgReceived.assertValue(2));
+
+    REQUIRE(msgBusRequesterAsync.unreceive(request1.replyTo(), request1.correlationId()));
+    REQUIRE(msgBusRequesterAsync.unreceive(request2.replyTo(), request2.correlationId()));
 }
 
 TEST_CASE("queueWithSameObject", "[amqp][request]")
