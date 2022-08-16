@@ -23,8 +23,6 @@
 #include <proton/reconnect_options.hpp>
 #include <proton/tracker.hpp>
 #include <proton/work_queue.hpp>
-//#include <proton/target_options.hpp>
-//#include <unistd.h>
 
 namespace {
 
