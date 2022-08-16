@@ -92,7 +92,7 @@ class Promise<Message> : public PromiseBase<Message> {
 public:
     friend class MessageBus;
 
-    Promise(MessageBus& messageBus, const std::string& address = "");
+    Promise(MessageBus& messageBus, const std::string& address = "", const std::string& filter = "");
     ~Promise();
 
     fty::Expected<Message> getValue();
@@ -103,6 +103,7 @@ public:
 protected:
     MessageBus& m_messageBus; // message bus instance
     std::string m_address;    // address where the reply should arrive
+    std::string m_filter;     // filter use by the reply
 };
 
 using FunctionMessage = std::function<void(Message&)>;

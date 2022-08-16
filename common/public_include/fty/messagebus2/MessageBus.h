@@ -66,8 +66,9 @@ public:
 
     /// Unsubscribe from a address
     /// @param address the address to unsubscribe
+    /// @param filter filter use by the receiver
     /// @return Success or error
-    [[nodiscard]] virtual fty::Expected<void, DeliveryState> unreceive(const Address& address) noexcept = 0;
+    [[nodiscard]] virtual fty::Expected<void, DeliveryState> unreceive(const Address& address, const std::string& filter = {}) noexcept = 0;
 
     /// Register a listener to a address using class
     /// @example

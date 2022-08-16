@@ -91,7 +91,7 @@ TEST_CASE("Promise with Message", "[Promise]")
             m_messageListener = messageListener;
             return {};
         };
-        fty::Expected<void, DeliveryState> unreceive(const Address&) noexcept override {
+        fty::Expected<void, DeliveryState> unreceive(const Address&, const std::string&) noexcept override {
             m_messageListener = nullptr;
             return {};
         };
@@ -109,8 +109,9 @@ TEST_CASE("Promise with Message", "[Promise]")
 
     MessageBusForTest myMessageBus;
     Message msg;
+    msg.correlationId("myCorrelationId");
     {
-        Promise<Message> myPromise(myMessageBus, "myQueue");
+        Promise<Message> myPromise(myMessageBus, "myQueue", msg.correlationId());
         REQUIRE(myPromise.isReady());
         REQUIRE(!myPromise.waitFor(100));
         myPromise.setValue(msg);

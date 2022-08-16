@@ -20,6 +20,7 @@
 #include <catch2/catch.hpp>
 #include <fty/messagebus2/Message.h>
 #include <fty/messagebus2/MessageBusStatus.h>
+#include "../src/AmqpClient.h"
 #include <fty/messagebus2/amqp/MessageBusAmqp.h>
 #include <fty/messagebus2/utils.h>
 #include <iostream>
@@ -130,11 +131,45 @@ public:
            std::cout << "replyerAddOK Send OK " << replyer << std::endl;
         }
     }
+
+    void replyerEcho(const Message& message)
+    {
+        incReplyer();
+        // Build the response
+        auto response = message.buildReply(message.userData());
+
+        if (!response) {
+            std::cerr << response.error() << std::endl;
+        }
+
+        // send the response
+        auto msgSent = m_msgBusReplyer->send(response.value());
+        if (!msgSent) {
+            FAIL(to_string(msgSent.error()));
+        }
+        else {
+           std::cout << "replyerAddEcho Send OK " << replyer << std::endl;
+        }
+    }
 };
 
 //----------------------------------------------------------------------
 // Test case
 //----------------------------------------------------------------------
+
+TEST_CASE("AddressFilter", "[amqp][AddressFilter]")
+{
+    std::string res1 = "myAddress|myFilter";
+    std::string res2 = "myAddress";
+    REQUIRE(fty::messagebus2::amqp::AmqpClient::setAddressFilter("myAddress", "myFilter") == res1);
+    REQUIRE(fty::messagebus2::amqp::AmqpClient::setAddressFilter("myAddress") == res2);
+    auto res = fty::messagebus2::amqp::AmqpClient::getAddressFilter(res1);
+    REQUIRE(res.first == "myAddress");
+    REQUIRE(res.second == "myFilter");
+    res = fty::messagebus2::amqp::AmqpClient::getAddressFilter(res2);
+    REQUIRE(res.first == "myAddress");
+    REQUIRE(res.second.empty());
+}
 
 TEST_CASE("Identity", "[amqp][identity]")
 {
@@ -149,15 +184,15 @@ TEST_CASE("queue", "[amqp][request]")
     {
         MsgReceived msgReceived;
         std::string syncTimeOutTestQueue = "queue://test.message.synctimeout.";
-        auto        msgBusRequesterSync  = amqp::MessageBusAmqp("SyncRequesterTimeOutTestCase", AMQP_SERVER_URI);
+        auto msgBusRequesterSync = amqp::MessageBusAmqp("SyncRequesterTimeOutTestCase", AMQP_SERVER_URI);
         REQUIRE(msgBusRequesterSync.connect());
 
-        auto        msgBusReplyer        = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+        auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
         REQUIRE(msgBusReplyer.connect());
 
         // Send synchronous request
-        Message request = Message::
-            buildRequest("SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", QUERY, {}, SYNC_REQUEST_TIMEOUT);
+        Message request = Message::buildRequest("SyncRequesterTimeOutTestCase",
+            syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", QUERY, {}, SYNC_REQUEST_TIMEOUT);
 
         REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
@@ -173,6 +208,8 @@ TEST_CASE("queue", "[amqp][request]")
         REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
         auto withReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
         REQUIRE(withReplyMsg.value().userData() == QUERY_AND_OK);
+
+        REQUIRE(msgBusReplyer.unreceive(request.to()));
     }
 
     SECTION("Send sync request")
@@ -191,6 +228,8 @@ TEST_CASE("queue", "[amqp][request]")
 
       auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
       REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
+
+      REQUIRE(msgBusReplyer.unreceive(request.to()));
     }
 
     std::this_thread::sleep_for(ONE_SECOND);
@@ -206,18 +245,20 @@ TEST_CASE("queue", "[amqp][request]")
         REQUIRE(msgBusReplyer.connect());
 
         // Build asynchronous request and set all receiver
-        Message request =
-            Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
+        Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
         REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
         REQUIRE(msgBusRequester.receive(
             request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
             request.correlationId()));
 
         for (int i = 0; i < 3; i++) {
-            REQUIRE(msgBusReplyer.send(request));
+            REQUIRE(msgBusRequester.send(request));
             std::this_thread::sleep_for(ONE_SECOND);
             CHECK(msgReceived.assertValue(i + 1));
         }
+
+        REQUIRE(msgBusReplyer.unreceive(request.to()));
+        REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
     }
 
     SECTION("Send")
@@ -241,8 +282,254 @@ TEST_CASE("queue", "[amqp][request]")
             std::this_thread::sleep_for(ONE_SECOND);
             CHECK(msgReceived.isRecieved(i + 1));
         }
+
+        REQUIRE(msgBusSender.unreceive(sendTestQueue));
     }
 }
+
+TEST_CASE("test send different message", "[amqp][test]")
+{
+    MsgReceived msgReceived;
+    std::string asyncTestQueue  = "queue://test.message.async.";
+    auto msgBusRequester = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusRequester.connect());
+
+    auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusReplyer.connect());
+
+    // Build asynchronous request and set all receiver
+    REQUIRE(msgBusReplyer.receive(asyncTestQueue + "request", std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+
+    for (int i = 0; i < 100; i++) {
+        Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
+        REQUIRE(msgBusRequester.receive(
+            request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
+            request.correlationId()));
+        REQUIRE(msgBusRequester.send(request));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        //std::this_thread::sleep_for(std::chrono::seconds(1));
+        CHECK(msgReceived.assertValue(i + 1));
+        REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
+    }
+    REQUIRE(msgBusReplyer.unreceive(asyncTestQueue + "request"));
+}
+
+TEST_CASE("test send same message", "[amqp][test]")
+{
+    MsgReceived msgReceived;
+    std::string asyncTestQueue  = "queue://test.message.async.";
+    auto msgBusRequester = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusRequester.connect());
+
+    auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusReplyer.connect());
+
+    // Build asynchronous request and set all receiver
+    REQUIRE(msgBusReplyer.receive(asyncTestQueue + "request", std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+
+    Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
+
+    for (int i = 0; i < 10; i++) {
+        REQUIRE(msgBusRequester.receive(
+            request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
+            request.correlationId()));
+        REQUIRE(msgBusRequester.send(request));
+        //std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        CHECK(msgReceived.assertValue(i + 1));
+        REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
+    }
+
+    REQUIRE(msgBusReplyer.unreceive(asyncTestQueue + "request"));
+}
+
+TEST_CASE("test filter with bad receiver", "[amqp][.filter]")
+{
+    MsgReceived msgReceived;
+    std::string testQueue1 = "queue://test.message.queue.1.";
+    std::string testQueue2 = "queue://test.message.queue.2.";
+    std::string badCorrelationId = "0123456789";
+
+    auto msgBusRequester = amqp::MessageBusAmqp("RequesteTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusRequester.connect());
+
+    auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+    REQUIRE(msgBusReplyer.connect());
+
+    // Build asynchronous request and set all receiver
+    Message request = Message::buildRequest("AsyncRequestTestCase", testQueue1 + "request", "TEST", testQueue1 + "reply", QUERY);
+    REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+    // Set bad receiver
+    REQUIRE(msgBusRequester.receive(
+        request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
+        badCorrelationId));
+
+    REQUIRE(msgBusRequester.send(request));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    CHECK(!msgReceived.assertValue(1));
+
+    REQUIRE(msgBusRequester.unreceive(request.replyTo(), badCorrelationId));
+
+    // Set good receiver
+    REQUIRE(msgBusRequester.receive(
+       request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
+       request.correlationId()));
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+
+
+    REQUIRE(msgBusReplyer.unreceive(request.to()));
+    REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
+
+    // Don't work: to be re-worked
+    //CHECK(msgReceived.assertValue(1));
+}
+
+TEST_CASE("multi synch filter test", "[amqp][multi][synch][filter]")
+{
+    bool noThrow = true;
+    try {
+        MsgReceived msgReceived;
+        std::string testMultiQueue = "queue://test.message.multi.";
+        std::string requestQueue = testMultiQueue + "request";
+        std::string replyQueue = testMultiQueue + "reply";
+
+        auto msgBusReplyer = amqp::MessageBusAmqp("ReplyerTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusReplyer.connect());
+        REQUIRE(msgBusReplyer.receive(requestQueue, std::bind(&MsgReceived::replyerEcho, std::ref(msgReceived), std::placeholders::_1)));
+
+        auto msgBusRequesterSync = amqp::MessageBusAmqp("SyncReceiverTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequesterSync.connect());
+
+        // Synchronous
+        auto sendSynch = [&](int num) {
+            try {
+                std::cout << "Debut thread " << num << std::endl;
+
+                // Build synchronous request and set all receiver
+                Message request = Message::buildRequest("RequestTestCase", requestQueue, "TEST", replyQueue, std::to_string(num), {}, SYNC_REQUEST_TIMEOUT);
+
+                auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+                REQUIRE(replyMsg);
+                REQUIRE(replyMsg.value().userData() == std::to_string(num));
+
+                std::cout << "Fin thread " << num << std::endl;
+            }
+            catch(std::exception& e) {
+                std::cout << "EXECPTION THREAD " << num << ": " << e.what() << std::endl;
+                noThrow = false;
+            }
+            //std::this_thread::sleep_for(1000ms);
+        };
+
+        int nbThread = NB_THREAD_MULTI;
+        std::vector<std::thread> myThreads;
+        // for odd version
+        for (int i = 1; i < nbThread; i += 2) {
+            // Synch version
+            myThreads.push_back(std::thread(sendSynch, i));
+        }
+
+        // for even version
+        for (int i = 0; i < nbThread; i += 2) {
+            // Synch version
+            myThreads.push_back(std::thread(sendSynch, i));
+        }
+
+        int i = 0;
+        for(auto &t : myThreads) {
+            std::cout << "TEST " << i ++ << std::endl;
+            t.join();
+        }
+        REQUIRE(msgBusReplyer.unreceive(testMultiQueue + "request"));
+    }
+    catch(std::exception& e) {
+        std::cout << "EXECPTION TEST: " << e.what() << std::endl;
+        noThrow = false;
+    }
+    REQUIRE(noThrow);
+}
+
+TEST_CASE("multi asynch filter test", "[amqp][multi][asynch][filter]")
+{
+    bool  noThrow = true;
+    try {
+        MsgReceived msgReceived;
+        std::string testMultiQueue = "queue://test.message.multi";
+        std::string requestQueue = testMultiQueue + "request";
+        std::string replyQueue = testMultiQueue + "reply";
+
+        auto msgBusReplyer = amqp::MessageBusAmqp("ReplyerTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusReplyer.connect());
+        REQUIRE(msgBusReplyer.receive(requestQueue, std::bind(&MsgReceived::replyerEcho, std::ref(msgReceived), std::placeholders::_1)));
+
+        auto msgBusRequester = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequester.connect());
+
+        // Asynchronous versions
+        auto sendAsynch = [&](int num) {
+            try {
+                std::cout << "Debut thread " << num << std::endl;
+
+                // Build asynchronous request and set all receiver
+                Message request = Message::buildRequest(msgBusRequester.clientName(), requestQueue, "TEST", replyQueue, std::to_string(num));
+
+                // Create the promise and future
+                std::future<Message>  myFuture;
+                std::promise<Message> myPromise;
+
+                REQUIRE(msgBusRequester.receive(
+                    request.replyTo(),
+                    [&myPromise](const Message & m) {
+                        myPromise.set_value(m);
+                    },
+                    request.correlationId())
+                );
+                myFuture = myPromise.get_future();
+
+                auto replyMsg = msgBusRequester.send(request);
+                REQUIRE(replyMsg);
+
+                myFuture.wait();
+                REQUIRE(myFuture.get().userData() == std::to_string(num));
+                REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
+
+                std::cout << "Fin thread " << num << std::endl;
+            }
+            catch(std::exception& e) {
+                std::cout << "EXECPTION: " << e.what() << std::endl;
+                noThrow = false;
+            }
+            return 0;
+        };
+
+        int nbThread = NB_THREAD_MULTI;
+        std::vector<std::thread> myThreads;
+        // for odd version
+        for (int i = 1; i < nbThread; i += 2) {
+            // Asynch version
+            myThreads.push_back(std::thread(sendAsynch, i));
+        }
+
+        // for even version
+        for (int i = 0; i < nbThread; i += 2) {
+            // Asynch version
+            myThreads.push_back(std::thread(sendAsynch, i));
+        }
+
+        int i = 0;
+        for(auto &t : myThreads) {
+           std::cout << "TEST " << i ++ << std::endl;
+           t.join();
+        }
+        REQUIRE(msgBusReplyer.unreceive(testMultiQueue + "request"));
+    }
+    catch(std::exception& e) {
+        std::cout << "EXECPTION TEST: " << e.what() << std::endl;
+        noThrow = false;
+    }
+    REQUIRE(noThrow);
+}
+
 
 TEST_CASE("multi synch", "[amqp][multi][synch]")
 {
@@ -277,7 +564,6 @@ TEST_CASE("multi synch", "[amqp][multi][synch]")
                 std::cout << "EXECPTION THREAD " << num << ": " << e.what() << std::endl;
                 noThrow = false;
             }
-            std::this_thread::sleep_for(1000ms);
         };
 
         int nbThread = NB_THREAD_MULTI;
@@ -388,11 +674,9 @@ TEST_CASE("doublequeueSynch", "[amqp][request]")
 
   // Build asynchronous request and set all receiver
   Message request1 = Message::buildRequest("RequestTestCase", asyncTestQueue + "request1", "TEST", asyncTestQueue + "reply1", QUERY);
-  std::cout << "*** request1=" << request1.correlationId() << std::endl;
   REQUIRE(msgBusReplyer.receive(request1.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
   Message request2 = Message::buildRequest("RequestTestCase", asyncTestQueue + "request2", "TEST", asyncTestQueue + "reply2", QUERY);
-  std::cout << "*** request2=" << request2.correlationId() << std::endl;
   REQUIRE(msgBusReplyer.receive(request2.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
   std::thread sender1([&]() {
@@ -422,7 +706,6 @@ TEST_CASE("doublequeueAsynch", "[amqp][request]")
 
     // Build asynchronous request and set all receiver
     Message request1 = Message::buildRequest("RequestTestCase", asyncTestQueue + "request1", "TEST", asyncTestQueue + "reply1", QUERY);
-    std::cout << "*** request1=" << request1.correlationId() << std::endl;
     REQUIRE(msgBusReplyer.receive(request1.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
     REQUIRE(msgBusRequesterAsync.receive(
@@ -430,7 +713,6 @@ TEST_CASE("doublequeueAsynch", "[amqp][request]")
         request1.correlationId()));
 
     Message request2 = Message::buildRequest("RequestTestCase", asyncTestQueue + "request2", "TEST", asyncTestQueue + "reply2", QUERY);
-    std::cout << "*** request2=" << request2.correlationId() << std::endl;
     REQUIRE(msgBusReplyer.receive(request2.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
     REQUIRE(msgBusRequesterAsync.receive(
@@ -449,6 +731,9 @@ TEST_CASE("doublequeueAsynch", "[amqp][request]")
 
     std::this_thread::sleep_for(3s);
     CHECK(msgReceived.assertValue(2));
+
+    REQUIRE(msgBusRequesterAsync.unreceive(request1.replyTo(), request1.correlationId()));
+    REQUIRE(msgBusRequesterAsync.unreceive(request2.replyTo(), request2.correlationId()));
 }
 
 TEST_CASE("queueWithSameObject", "[amqp][request]")

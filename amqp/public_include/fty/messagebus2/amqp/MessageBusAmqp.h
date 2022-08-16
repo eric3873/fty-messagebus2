@@ -46,8 +46,7 @@ public:
     [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& msg) noexcept override;
     [[nodiscard]] fty::Expected<void, DeliveryState> receive(
         const Address& address, MessageListener&& messageListener, const std::string& filter = {}) noexcept override;
-    [[nodiscard]] fty::Expected<void, DeliveryState> unreceive(const Address& address) noexcept override;
-    void setConnectionErrorListener(ConnectionErrorListener errorListener = {});
+    [[nodiscard]] fty::Expected<void, DeliveryState> unreceive(const Address& address, const std::string& filter = {}) noexcept override;
     // Sync request with timeout
     [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& message, int timeoutInSeconds) noexcept override;
     [[nodiscard]] const ClientName& clientName() const noexcept override;

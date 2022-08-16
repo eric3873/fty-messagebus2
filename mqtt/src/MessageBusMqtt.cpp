@@ -55,7 +55,7 @@ fty::Expected<void, DeliveryState> MessageBusMqtt::receive(const Address& addres
     return m_busMqtt->receive(address, func);
 }
 
-fty::Expected<void, DeliveryState> MessageBusMqtt::unreceive(const Address& address) noexcept
+fty::Expected<void, DeliveryState> MessageBusMqtt::unreceive(const Address& address, const std::string& /*filter*/) noexcept
 {
     return m_busMqtt->unreceive(address);
 }
