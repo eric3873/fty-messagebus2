@@ -23,6 +23,8 @@
 #include <proton/reconnect_options.hpp>
 #include <proton/tracker.hpp>
 #include <proton/work_queue.hpp>
+//#include <proton/target_options.hpp>
+//#include <unistd.h>
 
 namespace {
 
@@ -66,6 +68,7 @@ void AmqpClient::on_container_start(proton::container& container)
 {
     try {
         container.connect(m_url, connectOpts().reconnect(reconnectOpts()));
+        container.auto_stop(false);
     } catch (const std::exception& e) {
         logError("Exception {}", e.what());
         m_connectPromise.setValue(ComState::ConnectFailed);
@@ -80,7 +83,6 @@ void AmqpClient::on_container_stop(proton::container&)
 void AmqpClient::on_connection_open(proton::connection& connection)
 {
     m_connection = connection;
-
     if (connection.reconnected()) {
         logDebug("Reconnected on url: {}", m_url);
         resetPromises();
@@ -99,17 +101,15 @@ void AmqpClient::on_connection_close(proton::connection&)
 void AmqpClient::on_connection_error(proton::connection& connection)
 {
     logError("Error connection {}", connection.error().what());
-    // HOT_FIX: On connection error, the container is closed and the communication is definitively
+
+    // HOT_FIX: On connection error, the connection is closed and the communication is definitively
     // closed. In this particular case, the library never retry to reconnect the communication with
-    // reconnection option parameters.
-    // The idea is to propose a callback to execute when a communication error occurred to allow the
-    // client to restart the communication properly.
-    if (m_errorListener) {
-        resetPromises();
-        logInfo("Execute communication error callback");
-        // Execute callback treatment
-        m_pool->offload(std::bind(m_errorListener));
-    }
+    // reconnection option parameters. The idea is to try to re-open directly the connection.
+    // Note: The container must have the option auto_stop deactivated to not stop completely the container.
+    // Without that, the communication restoration will be more difficult.
+
+    m_connection = connection;
+    connection.work_queue().add([=]() { m_connection.open(); });
 }
 
 //void AmqpClient::on_connection_wake(proton::connection&)
@@ -169,6 +169,11 @@ void AmqpClient::on_transport_error(proton::transport& transport)
     m_communicationState = ComState::Lost;
 }
 
+void AmqpClient::on_transport_open(proton::transport&)
+{
+    logDebug("Open transport ...");
+}
+
 void AmqpClient::on_transport_close(proton::transport&)
 {
     logDebug("Transport close ...");
@@ -223,11 +228,6 @@ ComState AmqpClient::connected()
     return m_communicationState;
 }
 
-void AmqpClient::setConnectionErrorListener(ConnectionErrorListener errorListener)
-{
-    m_errorListener = errorListener;
-}
-
 DeliveryState AmqpClient::send(const proton::message& msg)
 {
     auto deliveryState = DeliveryState::Rejected;
@@ -260,7 +260,7 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
         setSubscriptions(name, messageListener);
 
         m_connection.work_queue().add([=]() {
-            m_connection.default_session().open_receiver(address, proton::receiver_options().name(name).auto_accept(true));
+            m_connection.default_session().open_receiver(address, proton::receiver_options().name(name).auto_accept(false));
         });
 
         if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
@@ -277,13 +277,13 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
 {
     std::lock_guard<std::mutex> lock(m_lock);
     logDebug("Message arrived: {}", proton::to_string(msg));
-    delivery.accept();
     Message amqpMsg(getMetaData(msg), msg.body().empty() ? std::string{} : proton::to_string(msg.body()));
 
-    if (m_connection) {
+    if (m_connection.active()) {
         std::string correlationId = msg.correlation_id().empty() || !msg.reply_to().empty() ? "" : proton::to_string(msg.correlation_id());
         std::string key = setAddressFilter(msg.address(), correlationId);
         if (auto it {m_subscriptions.find(key)}; it != m_subscriptions.end()) {
+            delivery.accept();
             // Message listener called by qpid-proton library
 
             // NOTE: Need to execute the callback in another pool of thread. The callback
@@ -291,14 +291,17 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
             // TODO: Don't work with another proton worker
             //m_workQueue.add(proton::make_work(it->second, amqpMsg));
             m_pool->offload(std::bind(it->second, amqpMsg));
+            return;
         }
         else {
             logWarn("No message listener checked in for: {}", key);
         }
     } else {
         // Connection not set
-        logError("Nothing to do, connection object not set");
+        logError("Nothing to do, connection object not active");
     }
+    logDebug("Message rejected: {}", proton::to_string(msg));
+    delivery.reject();
 }
 
 void AmqpClient::setSubscriptions(const Address& address, MessageListener messageListener)

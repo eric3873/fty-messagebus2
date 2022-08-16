@@ -174,13 +174,6 @@ fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& mes
     }
 }
 
-void MessageBusAmqp::setConnectionErrorListener(ConnectionErrorListener errorListener)
-{
-    if (m_clientPtr) {
-        m_clientPtr->setConnectionErrorListener(errorListener);
-    }
-}
-
 const std::string& MessageBusAmqp::clientName() const noexcept
 {
     return m_clientName;

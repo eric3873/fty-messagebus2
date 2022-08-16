@@ -63,10 +63,10 @@ public:
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
     void on_transport_close(proton::transport&) override;
+    void on_transport_open(proton::transport&) override;
 
     fty::messagebus2::ComState connected();
-    bool isConnected();
-    void setConnectionErrorListener(ConnectionErrorListener errorListener = {});
+    bool isConnected();    
     fty::messagebus2::DeliveryState receive(
         const Address& address, MessageListener messageListener = {}, const std::string& filter = {});
     fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {});
@@ -78,15 +78,14 @@ public:
 
 private:
     Endpoint                m_url;
-    SubScriptionListener    m_subscriptions;
-    ConnectionErrorListener m_errorListener;
+    SubScriptionListener    m_subscriptions;    
 
     // Default communication state
     fty::messagebus2::ComState m_communicationState = fty::messagebus2::ComState::Unknown;
 
     // Proton object
-    proton::connection   m_connection;
-    proton::message      m_message;
+    proton::connection    m_connection;
+    proton::message       m_message;
 
     // Pool thread
     std::shared_ptr<fty::messagebus2::utils::PoolWorker> m_pool;
@@ -95,7 +94,7 @@ private:
     // TODO: Refactoring mutex mgt in application ...
     std::mutex m_lock;
     std::mutex m_lockMain;
-
+    
     // Set of promise for synchronization
     Promise<fty::messagebus2::ComState> m_connectPromise;
     Promise<void>                       m_deconnectPromise;
