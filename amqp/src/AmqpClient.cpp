@@ -100,7 +100,7 @@ void AmqpClient::on_connection_error(proton::connection& connection)
 {
     logError("Error connection {}", connection.error().what());
 
-    // HOT_FIX: On connection error, the connection is closed and the communication is definitively
+    // On connection error, the connection is closed and the communication is definitively
     // closed. In this particular case, the library never retry to reconnect the communication with
     // reconnection option parameters. The idea is to try to re-open directly the connection.
     // Note: The container must have the option auto_stop deactivated to not stop completely the container.
