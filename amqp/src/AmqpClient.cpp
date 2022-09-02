@@ -105,20 +105,22 @@ DeliveryState AmqpClient::receive(const Address& addressIn, MessageListener mess
     auto address = sanitizeAddress(addressIn);
 
     // Then search if a receiver with this address exist
-    AmqpReceiver *receiver = nullptr;
+    AmqpReceiverPointer receiver = nullptr;
     std::lock_guard<std::mutex> lock(m_lock);
     for (auto it_receiver = m_receivers.begin(); it_receiver != m_receivers.end(); it_receiver ++) {
         if ((*it_receiver)->getAddress() == address) {
-           receiver = (*it_receiver).get();
+           receiver = *it_receiver;
            break;
         }
     }
     // If address not found, create a new receiver on this address
     if (!receiver) {
-        auto qpidReceiver = m_connection->getSession(DEFAULT_SESSION).createReceiver(address);
-        logDebug("receive: add new receiver (name:{}, address:{}, filter:{})", qpidReceiver.getName(), address, filter);
-        m_receivers.push_back(std::make_shared<AmqpReceiver>(this, qpidReceiver.getName(), address, filter, messageListener));
-        deliveryState = DeliveryState::Accepted;
+        receiver = std::make_shared<AmqpReceiver>(this, address);
+        if (receiver && receiver->init(filter, messageListener)) {
+            logDebug("receive: add new receiver (name:{}, address:{}, filter:{})", receiver->getName(), address, filter);
+            m_receivers.push_back(receiver);
+            deliveryState = DeliveryState::Accepted;
+        }
     }
     else {
         // Address is present, just add new filter (if not exist)

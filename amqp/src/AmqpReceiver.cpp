@@ -28,22 +28,11 @@
 
 namespace fty::messagebus2::amqp::msg {
 
-AmqpReceiver::AmqpReceiver(
-    amqp::msg::AmqpClient *client,
-    const std::string& name,
-    const std::string& address,
-    const std::string& filter,
-    const MessageListener& messageListener) :
+AmqpReceiver::AmqpReceiver(amqp::msg::AmqpClient *client, const std::string& address) :
     m_client(client),
-    m_name(name),
-    m_address(address)
+    m_address(address),
+    m_closed(false)
 {
-    m_closed = false;
-    // Create first subscription with input parameters
-    setSubscription(filter, messageListener);
-    // Create thread for receive message
-    std::thread thread(&AmqpReceiver::manageMessage, this);
-    thread.detach();
 }
 
 AmqpReceiver::~AmqpReceiver()
@@ -52,6 +41,30 @@ AmqpReceiver::~AmqpReceiver()
     if (!m_closed) {
         waitClose();
     }
+}
+
+bool AmqpReceiver::init(const std::string& filter, const MessageListener& messageListener)
+{
+    if (!m_client) {
+        logError("Receiver init error: client not defined");
+        return false;
+    }
+    auto connection = m_client->getConnection();
+    if (!connection) {
+        logError("Receiver init error: no connection");
+        return false;
+    }
+    auto qpidReceiver = connection->getSession(DEFAULT_SESSION).createReceiver(m_address);
+    m_name = qpidReceiver.getName();
+    // Create first subscription with input parameters
+    if (!setSubscription(filter, messageListener)) {
+        logError("Receiver init error: bad subscription");
+        return false;
+    }
+    // Create thread for receive message
+    std::thread thread(&AmqpReceiver::manageMessage, this);
+    thread.detach();
+    return true;
 }
 
 bool AmqpReceiver::waitClose()

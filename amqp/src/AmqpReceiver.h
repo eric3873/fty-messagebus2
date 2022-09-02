@@ -35,14 +35,10 @@ class AmqpClient;
 class AmqpReceiver
 {
 public:
-    AmqpReceiver(
-        fty::messagebus2::amqp::msg::AmqpClient *client,
-        const std::string& name,
-        const std::string& address,
-        const std::string& filter,
-        const MessageListener& messageListener);
+    AmqpReceiver(fty::messagebus2::amqp::msg::AmqpClient *client, const std::string& address);
     ~AmqpReceiver();
 
+    bool init(const std::string& filter, const MessageListener& messageListener);
     bool waitClose();
     const std::string getName() { return m_name; };
     const Address getAddress() { return m_address; };
