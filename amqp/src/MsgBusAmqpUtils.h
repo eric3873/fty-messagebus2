@@ -56,19 +56,6 @@ inline const std::string qpidMsgtoString(const qpid::messaging::Message& qpidMsg
     return data;
 }
 
-inline const MetaData getMetaData(const qpid::messaging::Message& qpidMsg)
-{
-    MetaData metadata;
-
-    // User properties
-    if (!qpidMsg.getProperties().empty()) {
-        for (const auto& [key, value] : qpidMsg.getProperties()) {
-            metadata.emplace(key, value);
-        }
-    }
-    return metadata;
-}
-
 inline const std::string getAddress(const qpid::messaging::Message& qpidMsg)
 {
     // Note: destination is not directly accessible in message.
@@ -85,8 +72,12 @@ inline const Message getMessage(const qpid::messaging::Message& qpidMsg)
 {
     Message message;
 
-    // Update meta data
-    message.metaData(getMetaData(qpidMsg));
+    // User properties
+    if (!qpidMsg.getProperties().empty()) {
+        for (const auto& [key, value] : qpidMsg.getProperties()) {
+            message.metaData().emplace(key, value);
+        }
+    }
 
     if (!qpidMsg.getUserId().empty()) {
         message.from(qpidMsg.getUserId());
