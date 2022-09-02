@@ -4,10 +4,6 @@ project(fty-messagebus2-amqp
   DESCRIPTION "fty messagebus2 amqp library"
 )
 
-##############################################################################################################
-find_package(ProtonCpp REQUIRED)
-##############################################################################################################
-
 etn_target(shared ${PROJECT_NAME} PUBLIC
   SOURCES
     src/*.cpp
