@@ -25,7 +25,7 @@
 #include <fty/messagebus2/MessageBusStatus.h>
 #include <fty_log.h>
 
-namespace fty::messagebus2::amqp::msg {
+namespace fty::messagebus2::amqp {
 
 using namespace fty::messagebus2;
 
@@ -189,5 +189,5 @@ const std::string& MessageBusAmqp::identity() const noexcept
     return g_identity;
 }
 
-} // namespace fty::messagebus2::amqp::msg
+} // namespace fty::messagebus2::amqp
 

@@ -26,7 +26,7 @@
 
 #include <iostream>
 
-namespace fty::messagebus2::amqp::msg {
+namespace fty::messagebus2::amqp {
 
 inline const std::string sanitizeAddress(const Address& addressIn)
 {
@@ -131,4 +131,4 @@ inline const qpid::messaging::Message getAmqpMessage(const Message& message)
     return qpidMsg;
 }
 
-} // namespace fty::messagebus2::amqp::msg
+} // namespace fty::messagebus2::amqp

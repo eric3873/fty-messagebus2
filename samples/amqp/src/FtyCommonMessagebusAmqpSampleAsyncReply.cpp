@@ -29,7 +29,7 @@ namespace {
 using namespace fty::messagebus2;
 using namespace fty::sample::dto;
 
-auto        bus       = amqp::msg::MessageBusAmqp();
+auto        bus       = amqp::MessageBusAmqp();
 static bool _continue = true;
 
 static void signalHandler(int signal)

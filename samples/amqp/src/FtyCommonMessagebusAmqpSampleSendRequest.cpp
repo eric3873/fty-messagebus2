@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
-    auto bus = amqp::msg::MessageBusAmqp(argv[0]);
+    auto bus = amqp::MessageBusAmqp(argv[0]);
 
     // Bus connection
     auto connectionRet = bus.connect();

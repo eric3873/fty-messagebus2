@@ -27,13 +27,13 @@
 #include <atomic>
 #include <mutex>
 
-namespace fty::messagebus2::amqp::msg {
+namespace fty::messagebus2::amqp {
 
 class AmqpClient;
 using AmqpClientPointer = std::shared_ptr<AmqpClient>;
 
 class AmqpReceiver;
-using AmqpReceiverPointer  = std::shared_ptr<fty::messagebus2::amqp::msg::AmqpReceiver>;
+using AmqpReceiverPointer  = std::shared_ptr<fty::messagebus2::amqp::AmqpReceiver>;
 
 static auto constexpr DEFAULT_SESSION {"default_session"};
 
@@ -65,10 +65,10 @@ private:
     std::shared_ptr<qpid::messaging::Connection> m_connection;
 
     // List of receivers
-    std::vector<fty::messagebus2::amqp::msg::AmqpReceiverPointer> m_receivers;
+    std::vector<fty::messagebus2::amqp::AmqpReceiverPointer> m_receivers;
 
     // Mutex for receivers list
     std::mutex m_lock;
 };
 
-} // namespace fty::messagebus2::amqp::msg
+} // namespace fty::messagebus2::amqp

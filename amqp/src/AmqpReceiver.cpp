@@ -26,9 +26,9 @@
 
 #include <fty_log.h>
 
-namespace fty::messagebus2::amqp::msg {
+namespace fty::messagebus2::amqp {
 
-AmqpReceiver::AmqpReceiver(amqp::msg::AmqpClient *client, const std::string& address) :
+AmqpReceiver::AmqpReceiver(amqp::AmqpClient *client, const std::string& address) :
     m_client(client),
     m_address(address),
     m_closed(false)
@@ -176,4 +176,4 @@ void AmqpReceiver::manageMessage()
     m_promiseClose.setValue();
 }
 
-} // namespace fty::messagebus2::amqp::msg
+} // namespace fty::messagebus2::amqp

@@ -22,7 +22,7 @@
 #include <fty/messagebus2/MessageBus.h>
 #include <fty/messagebus2/Promise.h>
 
-namespace fty::messagebus2::amqp::msg {
+namespace fty::messagebus2::amqp {
 
 using MessageListener      = fty::messagebus2::MessageListener;
 using SubScriptionListener = std::map<std::string, MessageListener>;
@@ -35,7 +35,7 @@ class AmqpClient;
 class AmqpReceiver
 {
 public:
-    AmqpReceiver(fty::messagebus2::amqp::msg::AmqpClient *client, const std::string& address);
+    AmqpReceiver(fty::messagebus2::amqp::AmqpClient *client, const std::string& address);
     ~AmqpReceiver();
 
     bool init(const std::string& filter, const MessageListener& messageListener);
@@ -73,4 +73,4 @@ private:
     fty::messagebus2::Promise<void> m_promiseClose;
 };
 
-} // namespace fty::messagebus2::amqp::msg
+} // namespace fty::messagebus2::amqp

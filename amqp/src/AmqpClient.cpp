@@ -28,7 +28,7 @@
 #include <qpid/messaging/Sender.h>
 #include <qpid/messaging/Session.h>
 
-namespace fty::messagebus2::amqp::msg {
+namespace fty::messagebus2::amqp {
 using namespace fty::messagebus2;
 using namespace qpid::messaging;
 

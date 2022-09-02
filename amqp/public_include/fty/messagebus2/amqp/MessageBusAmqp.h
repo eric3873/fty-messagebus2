@@ -23,7 +23,7 @@
 #include <fty/messagebus2/MessageBus.h>
 #include <fty/messagebus2/utils.h>
 
-namespace fty::messagebus2::amqp::msg {
+namespace fty::messagebus2::amqp {
 
 // Default amqp end point
 static auto constexpr DEFAULT_ENDPOINT {"amqp:tcp:127.0.0.1:5672"};
@@ -64,4 +64,4 @@ private:
     std::shared_ptr<AmqpClient> m_clientPtr;
 };
 
-} // namespace fty::messagebus2::amqp::msg
+} // namespace fty::messagebus2::amqp
