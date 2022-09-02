@@ -187,25 +187,6 @@ void AmqpClient::resetPromises()
     m_promiseReceiver.reset();
 }
 
-std::string AmqpClient::setAddressFilter(const Address& address, const std::string& filter)
-{
-    return filter.empty() ? address : address + "|" + filter;
-}
-
-std::pair<std::string, std::string> AmqpClient::getAddressFilter(const std::string& input)
-{
-    std::pair<std::string, std::string> ret;
-    if (auto pos = input.find("|"); pos != std::string::npos) {
-        ret.first = input.substr(0, pos);
-        ret.second = input.substr(pos + 1);
-    }
-    else {
-        ret.first = input;
-        ret.second = "";
-    }
-    return ret;
-}
-
 bool AmqpClient::isConnected() {
     // test if connected
     return (m_connection && m_connection.active() && connected() == ComState::Connected);

@@ -20,7 +20,7 @@
 #include <catch2/catch.hpp>
 #include <fty/messagebus2/Message.h>
 #include <fty/messagebus2/MessageBusStatus.h>
-#include "../src/AmqpClient.h"
+#include "../src/MsgBusAmqpUtils.h"
 #include <fty/messagebus2/amqp/MessageBusAmqp.h>
 #include <fty/messagebus2/utils.h>
 #include <iostream>
@@ -161,12 +161,12 @@ TEST_CASE("AddressFilter", "[amqp][AddressFilter]")
 {
     std::string res1 = "myAddress|myFilter";
     std::string res2 = "myAddress";
-    REQUIRE(fty::messagebus2::amqp::AmqpClient::setAddressFilter("myAddress", "myFilter") == res1);
-    REQUIRE(fty::messagebus2::amqp::AmqpClient::setAddressFilter("myAddress") == res2);
-    auto res = fty::messagebus2::amqp::AmqpClient::getAddressFilter(res1);
+    REQUIRE(fty::messagebus2::amqp::setAddressFilter("myAddress", "myFilter") == res1);
+    REQUIRE(fty::messagebus2::amqp::setAddressFilter("myAddress") == res2);
+    auto res = fty::messagebus2::amqp::getAddressFilter(res1);
     REQUIRE(res.first == "myAddress");
     REQUIRE(res.second == "myFilter");
-    res = fty::messagebus2::amqp::AmqpClient::getAddressFilter(res2);
+    res = fty::messagebus2::amqp::getAddressFilter(res2);
     REQUIRE(res.first == "myAddress");
     REQUIRE(res.second.empty());
 }

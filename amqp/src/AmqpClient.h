@@ -73,9 +73,6 @@ public:
     fty::messagebus2::DeliveryState send(const proton::message& msg);
     void close();
 
-    static std::string setAddressFilter(const Address& address, const std::string& filter = {});
-    static std::pair<std::string, std::string> getAddressFilter(const std::string& input);
-
 private:
     Endpoint                m_url;
     SubScriptionListener    m_subscriptions;    
