@@ -53,7 +53,7 @@ Depends:
     ${misc:Depends},
     libpaho-mqtt-dev,
     libpaho-mqttpp-dev,
-    libqpidmessaging2-dev,
+    libqpidmessaging-dev,
     nlohmann-json3-dev,
     libsodium-dev,
     libzmq3-dev,
