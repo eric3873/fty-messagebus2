@@ -18,6 +18,7 @@ etn_target(shared fty-messagebus2
         fty-utils
     USES_PRIVATE
         uuid
+        pthread
 )
 
 set_target_properties(fty-messagebus2 PROPERTIES SOVERSION ${PROJECT_VERSION_MAJOR})

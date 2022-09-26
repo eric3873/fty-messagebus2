@@ -50,7 +50,7 @@ public:
     [[nodiscard]] fty::Expected<void, DeliveryState> send(const Message& msg) noexcept override;
     [[nodiscard]] fty::Expected<void, DeliveryState> receive(
         const Address& address, MessageListener&& func, const std::string& filter = {}) noexcept override;
-    [[nodiscard]] fty::Expected<void, DeliveryState>    unreceive(const Address& address) noexcept override;
+    [[nodiscard]] fty::Expected<void, DeliveryState>    unreceive(const Address& address, const std::string& filter = {}) noexcept override;
     [[nodiscard]] fty::Expected<Message, DeliveryState> request(const Message& msg, int timeOut) noexcept override;
 
     [[nodiscard]] const ClientName& clientName() const noexcept override;

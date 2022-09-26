@@ -3,14 +3,14 @@
 ## Description
 
 This project aims to provide somme common methods to address communication over several message bus.
-It provide an high level interface to handle comunication of Message. The format of the Message also defined in this project.
+It provide an high level interface to handle communication of Message. The format of the Message also defined in this project.
 
 It comes today with 2 implementations:
 
 * MQTT
 * AMQP
 
-Those 2 implementations are implementing the fty-commom-messagebus2 interface and are carring Message.
+Those 2 implementations are implementing the fty-messagebus2 interface and are carrying Message.
 
 ## Interface & Message
 
