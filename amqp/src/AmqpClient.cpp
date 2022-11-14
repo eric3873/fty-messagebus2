@@ -23,6 +23,9 @@
 #include <proton/reconnect_options.hpp>
 #include <proton/tracker.hpp>
 #include <proton/work_queue.hpp>
+#include <proton/sender_options.hpp>
+
+#include <proton/target.hpp>
 
 namespace {
 
@@ -115,26 +118,19 @@ void AmqpClient::on_connection_error(proton::connection& connection)
 //    logDebug("Wake connection ...");
 //}
 
-void AmqpClient::on_sender_open(proton::sender&)
+void AmqpClient::on_sender_open(proton::sender& sender)
 {
     logDebug("Open sender ...");
-}
-
-void AmqpClient::on_sendable(proton::sender& sender)
-{
-    logDebug("Sending message ...");
-    // TODO: DON'T WORK !!!!
-    //sender.work_queue().add([&]() {
-        try {
-            sender.send(m_message);
-            sender.close();
-            m_promiseSender.setValue();
-            logDebug("Message sent");
-        }
-        catch (const std::exception& e) {
-           logWarn("on_sendable error: {}", e.what());
-        }
-    //});
+    try {
+        sender.send(m_message);
+        // Due to a limitation of the library, the sender in cache cannot be closed and reopened as needed (TBD).
+        //sender.close();
+        m_promiseSender.setValue();
+        logDebug("Message sent");
+    }
+    catch (const std::exception& e) {
+        logWarn("on_sender_open error: {}", e.what());
+    }
 }
 
 void AmqpClient::on_sender_close(proton::sender&)
@@ -216,12 +212,38 @@ DeliveryState AmqpClient::send(const proton::message& msg)
         logDebug("Sending message to {} ...", msg.to());
         m_message.clear();
         m_message = msg;
-        m_connection.work_queue().add([=]() {
-            m_connection.default_session().open_sender(msg.to());
-        });
-        // Wait to know if the message has been sent or not
-        if (m_promiseSender.waitFor(TIMEOUT_MS)) {
-            deliveryState = DeliveryState::Accepted;
+
+        // Try to find a sender which has been already opened for this message address (internal cache)
+        bool isFound = false;
+        auto senders = m_connection.default_session().senders();
+        logDebug("Try to find a sender open available for {}", msg.to());
+        for (auto sender : senders) {
+            logTrace("Test sender name={} closed={} active={}", sender.name(), sender.closed(), sender.active());
+            if (sender.name() == msg.to() && !sender.closed() && sender.active()) {
+                logDebug("Find sender {}", sender.name());
+                try {
+                    // Due to a limitation of the library, the sender in cache cannot be closed and reopened as needed (TBD).
+                    //sender.open();
+                    sender.send(msg);
+                    //sender.close();
+                    logDebug("Message sent");
+                    deliveryState = DeliveryState::Accepted;
+                    isFound = true;
+                }
+                catch (const std::exception& e) {
+                    logWarn("send error: {}", e.what());
+                }
+            }
+        }
+        if (!isFound)  {
+            logDebug("Unable to find a sender for {}, create a new one", msg.to());
+            m_connection.work_queue().add([=]() {
+                m_connection.default_session().open_sender(msg.to(), proton::sender_options().name(msg.to()));
+            });
+            // Wait to know if the message has been sent or not
+            if (m_promiseSender.waitFor(TIMEOUT_MS)) {
+                deliveryState = DeliveryState::Accepted;
+            }
         }
     }
     return deliveryState;
@@ -355,6 +377,20 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
 void AmqpClient::close()
 {
     std::lock_guard<std::mutex> lock(m_lock);
+
+    // First, make sure that all senders are closed.
+    // Note for memory leak issue: The senders which are closed are not removed from current session list and
+    // leak memory. Instead of create a sender for each message to send, create one in cache for each different queue.
+    // Workaround due to a limitation of the library, the sender in cache cannot be closed and reopened as needed (TBD).
+    // That's why we close all the senders in the current session when the connection is closed.
+    auto senders = m_connection.default_session().senders();
+    for (auto sender : senders) {
+        if (!sender.closed()) {
+            sender.close();
+        }
+    }
+
+    // Then wait end of connection (with timeout)
     m_deconnectPromise.reset();
     if (m_connection && m_connection.active()) {
         m_connection.work_queue().add([=]() { m_connection.close(); });

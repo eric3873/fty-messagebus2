@@ -54,8 +54,7 @@ public:
     void on_connection_close(proton::connection& connection) override;
     void on_connection_error(proton::connection& connection) override;
     //void on_connection_wake(proton::connection&) override;
-    void on_sender_open(proton::sender&) override;
-    void on_sendable(proton::sender& sender) override;
+    void on_sender_open(proton::sender& sender) override;
     void on_sender_close(proton::sender&) override;
     void on_receiver_open(proton::receiver& receiver) override;
     void on_receiver_close(proton::receiver&) override;
@@ -66,7 +65,7 @@ public:
     void on_transport_open(proton::transport&) override;
 
     fty::messagebus2::ComState connected();
-    bool isConnected();    
+    bool isConnected();
     fty::messagebus2::DeliveryState receive(
         const Address& address, MessageListener messageListener = {}, const std::string& filter = {});
     fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {});
@@ -75,7 +74,7 @@ public:
 
 private:
     Endpoint                m_url;
-    SubScriptionListener    m_subscriptions;    
+    SubScriptionListener    m_subscriptions;
 
     // Default communication state
     fty::messagebus2::ComState m_communicationState = fty::messagebus2::ComState::Unknown;
@@ -91,7 +90,7 @@ private:
     // TODO: Refactoring mutex mgt in application ...
     std::mutex m_lock;
     std::mutex m_lockMain;
-    
+
     // Set of promise for synchronization
     Promise<fty::messagebus2::ComState> m_connectPromise;
     Promise<void>                       m_deconnectPromise;
