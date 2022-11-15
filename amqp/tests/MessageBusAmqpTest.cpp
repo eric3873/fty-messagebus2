@@ -20,9 +20,10 @@
 #include <catch2/catch.hpp>
 #include <fty/messagebus2/Message.h>
 #include <fty/messagebus2/MessageBusStatus.h>
-#include "../src/MsgBusAmqpUtils.h"
 #include <fty/messagebus2/amqp/MessageBusAmqp.h>
 #include <fty/messagebus2/utils.h>
+#include "../src/MsgBusAmqpUtils.h"
+#include "../src/AmqpClient.h"
 #include <iostream>
 #include <mutex>
 #include <thread>
@@ -51,6 +52,23 @@ static const std::string OK           = ":OK";
 static const std::string QUERY_AND_OK = QUERY + OK;
 static const std::string RESPONSE_2   = QUERY_2 + OK;
 
+// Class used to test protected functions of AmqpClient
+class AmqpClientPrivateTest : public fty::messagebus2::amqp::AmqpClient {
+public:
+    AmqpClientPrivateTest() : fty::messagebus2::amqp::AmqpClient(AMQP_SERVER_URI) {}
+    ~AmqpClientPrivateTest() = default;
+
+    bool setSubscriptions(const std::string& key, MessageListener messageListener) {
+        return fty::messagebus2::amqp::AmqpClient::setSubscriptions(key, messageListener);
+    }
+    bool unsetSubscriptions(const std::string& key) {
+        return fty::messagebus2::amqp::AmqpClient::unsetSubscriptions(key);
+    }
+    bool isAddressInSubscriptions(const Address& address) {
+        return fty::messagebus2::amqp::AmqpClient::isAddressInSubscriptions(address);
+    }
+};
+// Class for test message receiption
 class MsgReceived
 {
 private:
@@ -169,6 +187,34 @@ TEST_CASE("AddressFilter", "[amqp][AddressFilter]")
     res = fty::messagebus2::amqp::getAddressFilterKey(res2);
     REQUIRE(res.first == "myAddress");
     REQUIRE(res.second.empty());
+}
+
+TEST_CASE("AmqpClient private", "[amqp][AmqpClient]")
+{
+    AmqpClientPrivateTest msgBusClient;
+    MessageListener myMessageListener = [](const Message&) {};
+
+    // Test bad inputs
+    REQUIRE(!msgBusClient.setSubscriptions("", nullptr));
+    REQUIRE(!msgBusClient.setSubscriptions("", myMessageListener));
+    REQUIRE(!msgBusClient.setSubscriptions("myKey", nullptr));
+    REQUIRE(!msgBusClient.unsetSubscriptions(""));
+    REQUIRE(!msgBusClient.isAddressInSubscriptions(""));
+
+    auto myAddress    = "myAddress";
+    auto myFilter     = "myFilter";
+    auto myBadAddress = "myBadAddress";
+    auto myKey    = fty::messagebus2::amqp::setAddressFilterKey(myAddress, myFilter);
+    auto myBadKey = fty::messagebus2::amqp::setAddressFilterKey(myBadAddress, myFilter);
+    REQUIRE(!msgBusClient.isAddressInSubscriptions(myAddress));  // No key
+    REQUIRE(msgBusClient.setSubscriptions(myKey, myMessageListener));
+    REQUIRE(!msgBusClient.setSubscriptions(myKey, myMessageListener));  // Key already present
+    REQUIRE(msgBusClient.isAddressInSubscriptions(myAddress));
+    REQUIRE(!msgBusClient.isAddressInSubscriptions(myBadAddress));
+    REQUIRE(!msgBusClient.unsetSubscriptions(myBadKey));  // Key not present
+    REQUIRE(msgBusClient.unsetSubscriptions(myKey));
+    REQUIRE(!msgBusClient.unsetSubscriptions(myKey));  // Key already removed
+    REQUIRE(!msgBusClient.isAddressInSubscriptions(myAddress));  // Key removed
 }
 
 TEST_CASE("Identity", "[amqp][identity]")

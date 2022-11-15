@@ -89,6 +89,7 @@ private:
     std::mutex m_lock;
     std::mutex m_lockMain;
 
+protected:
     // Set of promise for synchronization
     Promise<fty::messagebus2::ComState> m_connectPromise;
     Promise<void>                       m_deconnectPromise;
