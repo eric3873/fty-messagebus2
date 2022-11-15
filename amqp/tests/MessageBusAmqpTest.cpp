@@ -43,7 +43,7 @@ auto constexpr ONE_SECOND           = std::chrono::seconds(1);
 auto constexpr TWO_SECONDS          = std::chrono::seconds(2);
 auto constexpr SYNC_REQUEST_TIMEOUT = 10; // in second
 // TBD: Test not passing CI with 100 threads (Random unexpected exception)
-auto constexpr NB_THREAD_MULTI      = 50; // nb of threads for multi tests
+auto constexpr NB_THREAD_MULTI      = 20; // nb of threads for multi tests
 
 static const std::string QUERY        = "query";
 static const std::string QUERY_2      = "query2";
@@ -300,13 +300,13 @@ TEST_CASE("test send different message", "[amqp][test]")
     // Build asynchronous request and set all receiver
     REQUIRE(msgBusReplyer.receive(asyncTestQueue + "request", std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 10; i++) {
         Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
         REQUIRE(msgBusRequester.receive(
             request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
             request.correlationId()));
         REQUIRE(msgBusRequester.send(request));
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
         CHECK(msgReceived.assertValue(i + 1));
         REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
     }
