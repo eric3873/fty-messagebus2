@@ -351,6 +351,10 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
                     logWarn("Unable to unreceive address {}: not present", address);
                 }
             }
+            else {
+                logDebug("Receiver in use can't be closed for {}", address);
+                deliveryState = DeliveryState::Accepted;
+            }
         }
     }
     return deliveryState;
