@@ -29,20 +29,22 @@ namespace fty::messagebus2::amqp {
 
 using property_map = std::map<std::string, proton::scalar>;
 
-inline std::string setAddressFilter(const Address& address, const std::string& filter={})
+// Set unique key with address and filter
+inline std::string setAddressFilterKey(const Address& address, const std::string& filter ={})
 {
     return filter.empty() ? address : address + "|" + filter;
 }
 
-inline std::pair<std::string, std::string> getAddressFilter(const std::string& input)
+// Get address and filter from unique key
+inline std::pair<std::string, std::string> getAddressFilterKey(const std::string& key)
 {
     std::pair<std::string, std::string> ret;
-    if (auto pos = input.find("|"); pos != std::string::npos) {
-        ret.first = input.substr(0, pos);
-        ret.second = input.substr(pos + 1);
+    if (auto pos = key.find("|"); pos != std::string::npos) {
+        ret.first = key.substr(0, pos);
+        ret.second = key.substr(pos + 1);
     }
     else {
-        ret.first = input;
+        ret.first = key;
         ret.second = "";
     }
     return ret;

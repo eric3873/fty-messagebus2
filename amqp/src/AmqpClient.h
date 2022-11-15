@@ -53,23 +53,22 @@ public:
     void on_connection_open(proton::connection& connection) override;
     void on_connection_close(proton::connection& connection) override;
     void on_connection_error(proton::connection& connection) override;
-    //void on_connection_wake(proton::connection&) override;
     void on_sender_open(proton::sender& sender) override;
     void on_sender_close(proton::sender&) override;
     void on_receiver_open(proton::receiver& receiver) override;
     void on_receiver_close(proton::receiver&) override;
-    void on_message(proton::delivery& delivery, proton::message& msg) override;
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
-    void on_transport_close(proton::transport&) override;
     void on_transport_open(proton::transport&) override;
+    void on_transport_close(proton::transport&) override;
+    void on_message(proton::delivery& delivery, proton::message& msg) override;
 
-    fty::messagebus2::ComState connected();
     bool isConnected();
+    fty::messagebus2::ComState connected();
+    fty::messagebus2::DeliveryState send(const proton::message& msg);
     fty::messagebus2::DeliveryState receive(
         const Address& address, MessageListener messageListener = {}, const std::string& filter = {});
-    fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {});
-    fty::messagebus2::DeliveryState send(const proton::message& msg);
+    fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {}, bool forceClose = false);
     void close();
 
 private:
@@ -87,7 +86,6 @@ private:
     std::shared_ptr<fty::messagebus2::utils::PoolWorker> m_pool;
 
     // Mutex
-    // TODO: Refactoring mutex mgt in application ...
     std::mutex m_lock;
     std::mutex m_lockMain;
 
@@ -98,9 +96,10 @@ private:
     Promise<void>                       m_promiseReceiver;
     Promise<void>                       m_promiseSenderClose;
 
-    void setSubscriptions(const Address& address, MessageListener messageListener);
-    void unsetSubscriptions(const Address& address);
     void resetPromises();
+    bool setSubscriptions(const std::string& key, MessageListener messageListener);
+    bool unsetSubscriptions(const std::string& key);
+    bool isAddressInSubscriptions(const Address& address);
 };
 
 } // namespace fty::messagebus2::amqp
