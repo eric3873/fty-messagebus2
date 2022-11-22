@@ -248,7 +248,7 @@ DeliveryState AmqpClient::send(const proton::message& msg)
 
         m_promiseSession.reset();
         // Open a new temporary session for the transaction
-        m_connection.work_queue().add([=]() {
+        m_connection.work_queue().add([&]() {
             m_connection.open_session();
         });
         // Wait the session creation
@@ -259,7 +259,7 @@ DeliveryState AmqpClient::send(const proton::message& msg)
 
         // Create the sender in the session
         m_promiseSender.reset();
-        m_connection.work_queue().add([=]() {
+        m_connection.work_queue().add([&]() {
             m_session.open_sender(msg.to(), proton::sender_options().name(msg.to()));
         });
         // Wait to know if the message has been sent or not
