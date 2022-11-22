@@ -64,9 +64,6 @@ public:
     bool unsetSubscriptions(const std::string& key) {
         return fty::messagebus2::amqp::AmqpClient::unsetSubscriptions(key);
     }
-    bool isAddressInSubscriptions(const Address& address) {
-        return fty::messagebus2::amqp::AmqpClient::isAddressInSubscriptions(address);
-    }
 };
 // Class for test message receiption
 class MsgReceived
@@ -199,22 +196,17 @@ TEST_CASE("AmqpClient private", "[amqp][AmqpClient]")
     REQUIRE(!msgBusClient.setSubscriptions("", myMessageListener));
     REQUIRE(!msgBusClient.setSubscriptions("myKey", nullptr));
     REQUIRE(!msgBusClient.unsetSubscriptions(""));
-    REQUIRE(!msgBusClient.isAddressInSubscriptions(""));
 
     auto myAddress    = "myAddress";
     auto myFilter     = "myFilter";
     auto myBadAddress = "myBadAddress";
     auto myKey    = fty::messagebus2::amqp::setAddressFilterKey(myAddress, myFilter);
     auto myBadKey = fty::messagebus2::amqp::setAddressFilterKey(myBadAddress, myFilter);
-    REQUIRE(!msgBusClient.isAddressInSubscriptions(myAddress));  // No key
     REQUIRE(msgBusClient.setSubscriptions(myKey, myMessageListener));
     REQUIRE(!msgBusClient.setSubscriptions(myKey, myMessageListener));  // Key already present
-    REQUIRE(msgBusClient.isAddressInSubscriptions(myAddress));
-    REQUIRE(!msgBusClient.isAddressInSubscriptions(myBadAddress));
     REQUIRE(!msgBusClient.unsetSubscriptions(myBadKey));  // Key not present
     REQUIRE(msgBusClient.unsetSubscriptions(myKey));
     REQUIRE(!msgBusClient.unsetSubscriptions(myKey));  // Key already removed
-    REQUIRE(!msgBusClient.isAddressInSubscriptions(myAddress));  // Key removed
 }
 
 TEST_CASE("Identity", "[amqp][identity]")
@@ -395,8 +387,11 @@ TEST_CASE("test filter with bad receiver", "[amqp][.filter]")
     std::string testQueue2       = "queue://test.message.queue.2.";
     std::string badCorrelationId = "0123456789";
 
-    auto msgBusRequester = amqp::MessageBusAmqp("RequesteTestCase", AMQP_SERVER_URI);
-    REQUIRE(msgBusRequester.connect());
+    auto msgBusRequester1 = amqp::MessageBusAmqp("RequesteTestCase1", AMQP_SERVER_URI);
+    REQUIRE(msgBusRequester1.connect());
+
+    auto msgBusRequester2 = amqp::MessageBusAmqp("RequesteTestCase2", AMQP_SERVER_URI);
+    REQUIRE(msgBusRequester2.connect());
 
     auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
     REQUIRE(msgBusReplyer.connect());
@@ -405,27 +400,27 @@ TEST_CASE("test filter with bad receiver", "[amqp][.filter]")
     Message request = Message::buildRequest("AsyncRequestTestCase", testQueue1 + "request", "TEST", testQueue1 + "reply", QUERY);
     REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
     // Set bad receiver
-    REQUIRE(msgBusRequester.receive(
+    REQUIRE(msgBusRequester1.receive(
         request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), badCorrelationId));
 
-    REQUIRE(msgBusRequester.send(request));
+    REQUIRE(msgBusRequester1.send(request));
     std::this_thread::sleep_for(std::chrono::seconds(1));
     CHECK(!msgReceived.assertValue(1));
 
-    REQUIRE(msgBusRequester.unreceive(request.replyTo(), badCorrelationId));
+    REQUIRE(msgBusRequester1.unreceive(request.replyTo(), badCorrelationId));
 
     // Set good receiver
-    REQUIRE(msgBusRequester.receive(
+    REQUIRE(msgBusRequester2.receive(
         request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
         request.correlationId()));
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 
 
     REQUIRE(msgBusReplyer.unreceive(request.to()));
-    REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
+    REQUIRE(msgBusRequester2.unreceive(request.replyTo(), request.correlationId()));
 
     // Don't work: to be re-worked
-    // CHECK(msgReceived.assertValue(1));
+    //CHECK(msgReceived.assertValue(1));
 }
 
 TEST_CASE("multi synch filter test", "[amqp][multi][synch][filter]")

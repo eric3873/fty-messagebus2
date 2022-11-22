@@ -23,6 +23,7 @@
 #include <proton/reconnect_options.hpp>
 #include <proton/tracker.hpp>
 #include <proton/work_queue.hpp>
+#include <proton/session_options.hpp>
 #include <proton/sender_options.hpp>
 #include <proton/target.hpp>
 
@@ -67,15 +68,17 @@ void AmqpClient::on_container_start(proton::container& container)
     try {
         container.connect(m_url, connectOpts().reconnect(reconnectOpts()));
         container.auto_stop(false);
+        logDebug("Open container {} on url {}", container.id(), m_url);
     } catch (const std::exception& e) {
         logError("Exception {}", e.what());
         m_connectPromise.setValue(ComState::ConnectFailed);
     }
 }
 
-void AmqpClient::on_container_stop(proton::container&)
+void AmqpClient::on_container_stop(proton::container& container)
 {
-    logInfo("Close container ...");
+    logDebug("Close container {} ...", container.id());
+    m_containerStop.notify_all();
 }
 
 void AmqpClient::on_connection_open(proton::connection& connection)
@@ -110,13 +113,25 @@ void AmqpClient::on_connection_error(proton::connection& connection)
     connection.work_queue().add([=]() { m_connection.open(); });
 }
 
+void AmqpClient::on_session_open(proton::session& session)
+{
+    logDebug("Open session ...");
+    m_session = session;
+    m_promiseSession.setValue();
+}
+
+void AmqpClient::on_session_close(proton::session&)
+{
+    logDebug("Close session ...");
+    m_promiseSessionClose.setValue();
+}
+
 void AmqpClient::on_sender_open(proton::sender& sender)
 {
-    logDebug("Open sender ...");
+    logDebug("Open sender {} ...", sender.name());
     try {
         sender.send(m_message);
-        // Due to a limitation of the library, the sender in cache cannot be closed and reopened as needed (TBD).
-        //sender.close();
+        sender.close();
         m_promiseSender.setValue();
         logDebug("Message sent");
     }
@@ -125,9 +140,10 @@ void AmqpClient::on_sender_open(proton::sender& sender)
     }
 }
 
-void AmqpClient::on_sender_close(proton::sender&)
+void AmqpClient::on_sender_close(proton::sender& sender)
 {
-    logDebug("Close sender ...");
+    logDebug("Close sender {} ...", sender.name());
+    m_promiseSender.setValue();
 }
 
 void AmqpClient::on_receiver_open(proton::receiver& receiver)
@@ -136,9 +152,9 @@ void AmqpClient::on_receiver_open(proton::receiver& receiver)
     m_promiseReceiver.setValue();
 }
 
-void AmqpClient::on_receiver_close(proton::receiver&)
+void AmqpClient::on_receiver_close(proton::receiver& receiver)
 {
-    logDebug("Close receiver ...");
+    logDebug("Close receiver {}...", receiver.name());
     m_promiseReceiver.setValue();
 }
 
@@ -165,7 +181,7 @@ void AmqpClient::on_transport_close(proton::transport&)
     logDebug("Transport close ...");
 }
 
-void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
+void AmqpClient::on_message(proton::delivery&, proton::message& msg)
 {
     std::lock_guard<std::mutex> lock(m_lock);
     logDebug("Message arrived: {}", proton::to_string(msg));
@@ -175,7 +191,6 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
         std::string correlationId = msg.correlation_id().empty() || !msg.reply_to().empty() ? "" : proton::to_string(msg.correlation_id());
         std::string key = setAddressFilterKey(msg.address(), correlationId);
         if (auto it {m_subscriptions.find(key)}; it != m_subscriptions.end()) {
-            delivery.accept();
             // Message listener called by qpid-proton library
 
             // NOTE: Need to execute the callback in another pool of thread. The callback
@@ -192,8 +207,6 @@ void AmqpClient::on_message(proton::delivery& delivery, proton::message& msg)
         // Connection not set
         logError("Nothing to do, connection object not active");
     }
-    logDebug("Message rejected: {}", proton::to_string(msg));
-    delivery.reject();
 }
 
 // Test if connected. If not, wait for the connection to be established (with timeout)
@@ -224,43 +237,40 @@ DeliveryState AmqpClient::send(const proton::message& msg)
     auto deliveryState = DeliveryState::Rejected;
     if (isConnected()) {
         std::lock_guard<std::mutex> lock(m_lockMain);
-        m_promiseSender.reset();
+
         logDebug("Sending message to {} ...", msg.to());
         m_message.clear();
         m_message = msg;
 
-        // Try to find a sender which has been already opened for this message address (internal cache)
-        bool isFound = false;
-        auto senders = m_connection.default_session().senders();
-        logDebug("Try to find a sender open available for {}", msg.to());
-        for (auto sender : senders) {
-            logTrace("Test sender name={} closed={} active={}", sender.name(), sender.closed(), sender.active());
-            if (sender.name() == msg.to() && !sender.closed() && sender.active()) {
-                logDebug("Find sender {}", sender.name());
-                try {
-                    // Due to a limitation of the library, the sender in cache cannot be closed and reopened as needed (TBD).
-                    //sender.open();
-                    sender.send(msg);
-                    //sender.close();
-                    logDebug("Message sent");
-                    deliveryState = DeliveryState::Accepted;
-                    isFound = true;
-                }
-                catch (const std::exception& e) {
-                    logWarn("send error: {}", e.what());
-                }
-            }
+        // Note for memory leak issue: The senders and the receivers which are closed are not removed from current
+        // session list and leak memory. The solution is to open a new session for each new sender and close the
+        // session when the message is sent to close properly the sender.
+
+        m_promiseSession.reset();
+        // Open a new temporary session for the transaction
+        m_connection.work_queue().add([=]() {
+            m_connection.open_session();
+        });
+        // Wait the session creation
+        if (!m_promiseSession.waitFor(TIMEOUT_MS)) {
+            logError("Send error, unable to open a new session for {}", msg.to());
+            return deliveryState;
         }
-        if (!isFound)  {
-            logDebug("Unable to find a sender for {}, create a new one", msg.to());
-            m_connection.work_queue().add([=]() {
-                m_connection.default_session().open_sender(msg.to(), proton::sender_options().name(msg.to()));
-            });
-            // Wait to know if the message has been sent or not
-            if (m_promiseSender.waitFor(TIMEOUT_MS)) {
-                deliveryState = DeliveryState::Accepted;
-            }
+
+        // Create the sender in the session
+        m_promiseSender.reset();
+        m_connection.work_queue().add([=]() {
+            m_session.open_sender(msg.to(), proton::sender_options().name(msg.to()));
+        });
+        // Wait to know if the message has been sent or not
+        if (m_promiseSender.waitFor(TIMEOUT_MS)) {
+            deliveryState = DeliveryState::Accepted;
         }
+
+        // Close the temporary session
+        m_connection.work_queue().add([&]() {
+            m_session.close();
+        });
     }
     return deliveryState;
 }
@@ -279,38 +289,39 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
             return deliveryState;
         }
 
-        // Try to find a receiver which has been already opened for this address (internal cache)
-        bool isFound   = false;
-        auto receivers = m_connection.default_session().receivers();
-        logDebug("Try to find a receiver open available for {}", address);
-        for (auto receiver : receivers) {
-            logTrace("Test receiver name={} closed={} active={}", receiver.name(), receiver.closed(), receiver.active());
-            if (receiver.name() == address && !receiver.closed() && receiver.active()) {
-                logDebug("Find receiver {}", receiver.name());
-                deliveryState = DeliveryState::Accepted;
-                isFound = true;
-            }
-        }
-        if (!isFound)  {
-            logDebug("Unable to find a receiver for {}, create a new one", address);
-            m_connection.work_queue().add([=]() {
-                m_connection.default_session().open_receiver(address, proton::receiver_options().name(address).auto_accept(false));
-            });
+        // Note for memory leak issue: The senders and the receivers which are closed are not removed from current
+        // session list and leak memory. The solution is to open a new session for each new receiver and close the
+        // session when the message is received to close properly the receiver.
 
-            if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
-                deliveryState = DeliveryState::Accepted;
-            }
-            else {
-                logError("Error on receive for {}, timeout reached", address);
-            }
+        // Open a new temporary session for the transaction
+        m_promiseSession.reset();
+        m_connection.work_queue().add([&]() {
+            m_connection.open_session();
+        });
+        // Wait the session creation
+        if (!m_promiseSession.waitFor(TIMEOUT_MS)) {
+            logError("Send error, unable to open a new session for {}", key);
+            return deliveryState;
+        }
+
+        // Create receiver in the session
+        m_promiseReceiver.reset();
+        m_connection.work_queue().add([&]() {
+            m_session.open_receiver(address, proton::receiver_options().name(key).auto_accept(true));
+        });
+        // Wait to know if the receiver has been created
+        if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
+            deliveryState = DeliveryState::Accepted;
+        }
+        else {
+            logError("Error on receive for {}, timeout reached", address);
         }
     }
     return deliveryState;
 }
 
 // Unreceive an address with optional filter
-// CAUTION: If forceClose activated (deactivated by default), close definitely the receiver which cause memory leak
-DeliveryState AmqpClient::unreceive(const Address& address, const std::string& filter, bool forceClose/*=false*/)
+DeliveryState AmqpClient::unreceive(const Address& address, const std::string& filter)
 {
     auto deliveryState = DeliveryState::Unavailable;
     if (isConnected()) {
@@ -318,43 +329,35 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
 
         auto key = setAddressFilterKey(address, filter);
         // Remove key in subscriptions list
-        if (unsetSubscriptions(key) && !forceClose) {
-            deliveryState = DeliveryState::Accepted;
+        if (!unsetSubscriptions(key)) {
+            logError("Error on unreceive for {}: impossible to remove key in subscriptions list", key);
+            return deliveryState;
         }
 
-        // If forse option is actived, close definitely the receiver
-        // Caution: In this case, due to a limitation of the library, the internal receiver
-        // is not cleared and memory leak !!!
-        if (forceClose) {
-            // If address is no longer used in all receivers,
-            // then find receiver with this address and close it
-            if (!isAddressInSubscriptions(address)) {
-                bool isFound = false;
-                auto receivers = m_connection.default_session().receivers();
-                logDebug("unreceive: try to close {}", address);
-                for (auto receiver : receivers) {
-                    if (receiver.name() == address && !receiver.closed() && receiver.active()) {
-                        isFound = true;
-                        m_promiseReceiver.reset();
-                        m_connection.work_queue().add([&]() {
-                            receiver.close();
-                        });
-                        if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
-                            logDebug("Receiver closed for {}", address);
-                            deliveryState = DeliveryState::Accepted;
-                        } else {
-                            logError("Error on unreceive for {}, timeout reached", address);
-                        }
-                    }
+        // find receiver with this address and close it with the session
+        bool isFound = false;
+        auto receivers = m_connection.receivers();
+        logDebug("unreceive: try to close receiver {}", address);
+        for (auto receiver : receivers) {
+            if (receiver.name() == address && !receiver.closed() && receiver.active()) {
+                isFound = true;
+                auto session = receiver.session();
+                m_promiseReceiver.reset();
+                m_connection.work_queue().add([&]() {
+                    receiver.close();
+                });
+                if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
+                    logDebug("Receiver closed for {}", address);
+                    deliveryState = DeliveryState::Accepted;
+                } else {
+                    logError("Error on unreceive for {}, timeout reached", address);
                 }
-                if (!isFound)  {
-                    logWarn("Unable to unreceive address {}: not present", address);
-                }
+                session.close();
+                break;
             }
-            else {
-                logDebug("Receiver in use can't be closed for {}", address);
-                deliveryState = DeliveryState::Accepted;
-            }
+        }
+        if (!isFound)  {
+            logWarn("Unable to unreceive address {}: not present", address);
         }
     }
     return deliveryState;
@@ -367,34 +370,38 @@ void AmqpClient::close()
 
     if (m_connection && m_connection.active()) {
 
-        // Make sure that all senders and receivers are closed.
-        // Note for memory leak issue: The senders and the receivers which are closed are not removed from current session list and
-        // leak memory. Instead of create a sender or a receiver for each message to send, create one in cache for each different queue.
-        // Workaround due to a limitation of the library, the sender or the receiver in cache cannot be closed and reopened as needed (TBD).
-        // That's why we close all the senders and all the receivers in the current session when the connection is closed.
-
-        // First for senders
-        auto senders = m_connection.default_session().senders();
-        for (auto sender : senders) {
-            if (!sender.closed()) {
-                sender.close();
+        // First close sessions still opened
+        auto sessions = m_connection.sessions();
+        for (auto session : sessions) {
+            if (!session.closed()) {
+                m_promiseSessionClose.reset();
+                m_connection.work_queue().add([&]() {
+                    logDebug("Close session");
+                    session.close();
+                });
+                // Wait the session creation
+                if (!m_promiseSessionClose.waitFor(TIMEOUT_MS)) {
+                    logError("Unable to close session: timeout");
+                }
             }
         }
 
-        // Do the same with receivers
-        auto receivers = m_connection.default_session().receivers();
-        for (auto receiver : receivers) {
-            if (!receiver.closed()) {
-                receiver.close();
-            }
-        }
-
-        // Then wait end of connection (with timeout)
+        // Wait end of connection (with timeout)
         m_deconnectPromise.reset();
-        m_connection.work_queue().add([=]() { m_connection.close(); });
+        m_connection.work_queue().add([&]() { m_connection.close(); });
         if (!m_deconnectPromise.waitFor(TIMEOUT_MS)) {
             logError("AmqpClient::close De-connection timeout reached");
         }
+
+        // Close the container
+        logTrace("Start stop container");
+        m_connection.container().stop();
+        std::unique_lock<std::mutex> lockStop(m_lockStop);
+        auto status = m_containerStop.wait_for(lockStop, std::chrono::seconds(5));
+        if (status == std::cv_status::timeout) {
+            logWarn("End stop container with timeout");
+        }
+        logTrace("End stop container");
     }
 }
 
@@ -405,6 +412,8 @@ void AmqpClient::resetPromises()
     logDebug("Reset all promises");
     m_connectPromise.reset();
     m_deconnectPromise.reset();
+    m_promiseSession.reset();
+    m_promiseSessionClose.reset();
     m_promiseSender.reset();
     m_promiseReceiver.reset();
 }
@@ -446,25 +455,6 @@ bool AmqpClient::unsetSubscriptions(const std::string& key)
         }
     } else {
         logWarn("unsetSubscriptions skipped, key empty");
-    }
-    return false;
-}
-
-// Test if the input address is present in the subscription list
-bool AmqpClient::isAddressInSubscriptions(const Address& address)
-{
-    if (!address.empty()) {
-        // Search if address is present in a subscription
-        for (const auto& subscription : m_subscriptions) {
-            auto key = subscription.first;
-            auto addressFilter = getAddressFilterKey(key);
-            if (addressFilter.first == address) {
-                logDebug("isAddressInSubscriptions find: {}", address);
-                return true;
-            }
-        }
-    } else {
-        logWarn("isAddressInSubscriptions skipped, address empty");
     }
     return false;
 }

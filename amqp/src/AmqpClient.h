@@ -33,6 +33,7 @@
 #include <proton/tracker.hpp>
 #include <proton/transport.hpp>
 #include <proton/work_queue.hpp>
+#include <condition_variable>
 
 namespace fty::messagebus2::amqp {
 
@@ -49,26 +50,28 @@ public:
 
     // proton::messaging_handler Callback
     void on_container_start(proton::container& container) override;
-    void on_container_stop(proton::container&) override;
+    void on_container_stop(proton::container& container) override;
     void on_connection_open(proton::connection& connection) override;
     void on_connection_close(proton::connection& connection) override;
     void on_connection_error(proton::connection& connection) override;
+    void on_session_open(proton::session& session) override;
+    void on_session_close(proton::session&) override;
     void on_sender_open(proton::sender& sender) override;
-    void on_sender_close(proton::sender&) override;
+    void on_sender_close(proton::sender& sender) override;
     void on_receiver_open(proton::receiver& receiver) override;
-    void on_receiver_close(proton::receiver&) override;
+    void on_receiver_close(proton::receiver& receiver) override;
     void on_error(const proton::error_condition& error) override;
     void on_transport_error(proton::transport& t) override;
     void on_transport_open(proton::transport&) override;
     void on_transport_close(proton::transport&) override;
-    void on_message(proton::delivery& delivery, proton::message& msg) override;
+    void on_message(proton::delivery&, proton::message& msg) override;
 
     bool isConnected();
     fty::messagebus2::ComState connected();
     fty::messagebus2::DeliveryState send(const proton::message& msg);
     fty::messagebus2::DeliveryState receive(
         const Address& address, MessageListener messageListener = {}, const std::string& filter = {});
-    fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {}, bool forceClose = false);
+    fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {});
     void close();
 
 private:
@@ -80,6 +83,7 @@ private:
 
     // Proton object
     proton::connection    m_connection;
+    proton::session       m_session;
     proton::message       m_message;
 
     // Pool thread
@@ -89,18 +93,23 @@ private:
     std::mutex m_lock;
     std::mutex m_lockMain;
 
-protected:
     // Set of promise for synchronization
     Promise<fty::messagebus2::ComState> m_connectPromise;
     Promise<void>                       m_deconnectPromise;
+    Promise<void>                       m_promiseSession;
+    Promise<void>                       m_promiseSessionClose;
     Promise<void>                       m_promiseSender;
     Promise<void>                       m_promiseReceiver;
     Promise<void>                       m_promiseSenderClose;
 
+    // Container stop
+    std::condition_variable             m_containerStop;
+    std::mutex                          m_lockStop;
+
+protected:
     void resetPromises();
     bool setSubscriptions(const std::string& key, MessageListener messageListener);
     bool unsetSubscriptions(const std::string& key);
-    bool isAddressInSubscriptions(const Address& address);
 };
 
 } // namespace fty::messagebus2::amqp
