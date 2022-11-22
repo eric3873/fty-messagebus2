@@ -110,7 +110,7 @@ void AmqpClient::on_connection_error(proton::connection& connection)
     // Without that, the communication restoration will be more difficult.
 
     m_connection = connection;
-    connection.work_queue().add([=]() { m_connection.open(); });
+    connection.work_queue().add([&]() { m_connection.open(); });
 }
 
 void AmqpClient::on_session_open(proton::session& session)
