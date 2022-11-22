@@ -339,7 +339,7 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
         auto receivers = m_connection.receivers();
         logDebug("unreceive: try to close receiver {}", address);
         for (auto receiver : receivers) {
-            if (receiver.name() == address && !receiver.closed() && receiver.active()) {
+            if (receiver.name() == key && !receiver.closed() && receiver.active()) {
                 isFound = true;
                 auto session = receiver.session();
                 m_promiseReceiver.reset();
