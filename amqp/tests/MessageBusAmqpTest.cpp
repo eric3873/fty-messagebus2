@@ -380,7 +380,7 @@ TEST_CASE("test send same message", "[amqp][test]")
     REQUIRE(msgBusReplyer.unreceive(asyncTestQueue + "request"));
 }
 
-TEST_CASE("test filter with bad receiver", "[amqp][.filter]")
+TEST_CASE("test filter with bad receiver", "[amqp][filter]")
 {
     MsgReceived msgReceived;
     std::string testQueue1       = "queue://test.message.queue.1.";
@@ -401,13 +401,14 @@ TEST_CASE("test filter with bad receiver", "[amqp][.filter]")
     REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
     // Set bad receiver
     REQUIRE(msgBusRequester1.receive(
-        request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), badCorrelationId));
+        request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), /*request.correlationId()*/badCorrelationId));
 
     REQUIRE(msgBusRequester1.send(request));
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    // Don't receive reply
     CHECK(!msgReceived.assertValue(1));
 
-    REQUIRE(msgBusRequester1.unreceive(request.replyTo(), badCorrelationId));
+    REQUIRE(msgBusRequester1.unreceive(request.replyTo(), /*request.correlationId()*/ badCorrelationId));
 
     // Set good receiver
     REQUIRE(msgBusRequester2.receive(
@@ -419,8 +420,8 @@ TEST_CASE("test filter with bad receiver", "[amqp][.filter]")
     REQUIRE(msgBusReplyer.unreceive(request.to()));
     REQUIRE(msgBusRequester2.unreceive(request.replyTo(), request.correlationId()));
 
-    // Don't work: to be re-worked
-    //CHECK(msgReceived.assertValue(1));
+    // Receive reply
+    CHECK(msgReceived.assertValue(1));
 }
 
 TEST_CASE("multi synch filter test", "[amqp][multi][synch][filter]")

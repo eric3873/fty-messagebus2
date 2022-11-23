@@ -304,10 +304,37 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
             return deliveryState;
         }
 
+        proton::source_options opts;
+
+        // If defined (not empty), set filter on receiver
+        if (!filter.empty()) {
+            // Receiver with filtering, so reply, the filtering for this implementation is only on correlationId
+            std::ostringstream correlIdFilter;
+            correlIdFilter << "JMSCorrelationID";
+            correlIdFilter << "='";
+            correlIdFilter << filter;
+            correlIdFilter << "'";
+            logTrace("CorrelId filter: {}", correlIdFilter.str());
+
+            proton::source::filter_map map;
+            proton::symbol filterKey("selector");
+            proton::value filterValue;
+            // The value is a specific AMQP "described type": binary string with symbolic descriptor
+            // (See APACHE.ORG:SELECTOR on http://www.amqp.org/specification/1.0/filters)
+            proton::codec::encoder enc(filterValue);
+            enc << proton::codec::start::described()
+                << proton::symbol("apache.org:selector-filter:string")
+                << correlIdFilter.str()
+                << proton::codec::finish();
+            // In our case, the map has this one element
+            map.put(filterKey, filterValue);
+            opts.filters(map);
+        }
+
         // Create receiver in the session
         m_promiseReceiver.reset();
         m_connection.work_queue().add([&]() {
-            m_session.open_receiver(address, proton::receiver_options().name(key).auto_accept(true));
+            m_session.open_receiver(address, proton::receiver_options().name(key).source(opts).auto_accept(true));
         });
         // Wait to know if the receiver has been created
         if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
