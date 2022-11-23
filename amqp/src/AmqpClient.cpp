@@ -268,9 +268,15 @@ DeliveryState AmqpClient::send(const proton::message& msg)
         }
 
         // Close the temporary session
+        m_promiseSessionClose.reset();
         m_connection.work_queue().add([&]() {
+            logDebug("Close session");
             m_session.close();
         });
+        // Wait the session close
+        if (!m_promiseSessionClose.waitFor(TIMEOUT_MS)) {
+            logError("Unable to close session: timeout");
+        }
     }
     return deliveryState;
 }
@@ -361,19 +367,20 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
             return deliveryState;
         }
 
-        // find receiver with this address and close it with the session
+        // Find receiver with this address and close it with the session
         // Note: Need to check in all session because the receivers in connection is just for current session.
         bool isFound = false;
         logDebug("unreceive: try to close receiver {}", address);
-
         int nb_sessions = 0;
         auto sessions = m_connection.sessions();
         for (auto session : sessions) {
             auto receivers = session.receivers();
             for (auto receiver : receivers) {
-                //logDebug("test session:{} receiver.name()={} - {} - {}", nb_sessions, receiver.name(), receiver.closed(), receiver.active());
+                logTrace("test session:{} receiver.name()={}-closed={}-active={}",
+                    nb_sessions, receiver.name(), receiver.closed(), receiver.active());
                 if (receiver.name() == key) {
                     isFound = true;
+                    // Close receiver if needed
                     if (!receiver.closed() && receiver.active()) {
                         m_promiseReceiver.reset();
                         m_connection.work_queue().add([&]() {
@@ -390,7 +397,18 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
                         logWarn("Unable to close receiver for address {}: still closed", address);
                         deliveryState = DeliveryState::Accepted;
                     }
-                    session.close();
+                    // Close session if needed
+                    if (!session.closed()) {
+                        m_promiseSessionClose.reset();
+                        m_connection.work_queue().add([&]() {
+                            logDebug("Close session");
+                            session.close();
+                        });
+                        // Wait the session close
+                        if (!m_promiseSessionClose.waitFor(TIMEOUT_MS)) {
+                            logError("Unable to close session: timeout");
+                        }
+                    }
                     break;
                 }
             }
