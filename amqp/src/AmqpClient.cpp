@@ -335,26 +335,39 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
         }
 
         // find receiver with this address and close it with the session
+        // Note: Need to check in all session because the receivers in connection is just for current session.
         bool isFound = false;
-        auto receivers = m_connection.receivers();
         logDebug("unreceive: try to close receiver {}", address);
-        for (auto receiver : receivers) {
-            if (receiver.name() == key && !receiver.closed() && receiver.active()) {
-                isFound = true;
-                auto session = receiver.session();
-                m_promiseReceiver.reset();
-                m_connection.work_queue().add([&]() {
-                    receiver.close();
-                });
-                if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
-                    logDebug("Receiver closed for {}", address);
-                    deliveryState = DeliveryState::Accepted;
-                } else {
-                    logError("Error on unreceive for {}, timeout reached", address);
+
+        int nb_sessions = 0;
+        auto sessions = m_connection.sessions();
+        for (auto session : sessions) {
+            auto receivers = session.receivers();
+            for (auto receiver : receivers) {
+                //logDebug("test session:{} receiver.name()={} - {} - {}", nb_sessions, receiver.name(), receiver.closed(), receiver.active());
+                if (receiver.name() == key) {
+                    isFound = true;
+                    if (!receiver.closed() && receiver.active()) {
+                        m_promiseReceiver.reset();
+                        m_connection.work_queue().add([&]() {
+                            receiver.close();
+                        });
+                        if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
+                            logDebug("Receiver closed for {}", address);
+                            deliveryState = DeliveryState::Accepted;
+                        } else {
+                            logError("Error on unreceive for {}, timeout reached", address);
+                        }
+                    }
+                    else {
+                        logWarn("Unable to close receiver for address {}: still closed", address);
+                        deliveryState = DeliveryState::Accepted;
+                    }
+                    session.close();
+                    break;
                 }
-                session.close();
-                break;
             }
+            nb_sessions ++;
         }
         if (!isFound)  {
             logWarn("Unable to unreceive address {}: not present", address);
