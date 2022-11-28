@@ -108,6 +108,7 @@ public:
 
     bool assertValue(const int expected)
     {
+        //std::cout << "receiver=" << receiver << " expected=" << expected << " replyer=" << replyer << std::endl;
         return (receiver == expected && replyer == expected);
     }
 
@@ -324,6 +325,54 @@ TEST_CASE("queue", "[amqp][request]")
         REQUIRE(msgBusSender.unreceive(sendTestQueue));
     }
 }
+
+TEST_CASE("test request/reply synch with temporary queue", "[amqp][test]")
+{
+    for (int i = 0; i < 10; i++) {
+        MsgReceived msgReceived;
+        std::string syncTestQueue       = "queue://test2.message.sync.";
+        auto        msgBusRequesterSync = amqp::MessageBusAmqp("SyncReceiverTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequesterSync.connect());
+
+        auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusReplyer.connect());
+
+        // Build synchronous request and set all receiver
+        Message request = Message::buildRequest("RequestTestCase", syncTestQueue + "request", "TEST", "", QUERY, {}, SYNC_REQUEST_TIMEOUT);
+        REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+
+        auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+        REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
+
+        REQUIRE(msgBusReplyer.unreceive(request.to()));
+    }
+}
+
+TEST_CASE("test request/reply asynch with temporary queue", "[amqp][test]")
+{
+    for (int i = 0; i < 10; i++) {
+        MsgReceived msgReceived;
+        std::string asyncTestQueue  = "queue://test2.message.async.";
+        auto        msgBusRequester = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequester.connect());
+
+        auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusReplyer.connect());
+
+        // Build asynchronous request and set all receiver
+        Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", "", QUERY);
+        REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+        REQUIRE(msgBusRequester.receive("", std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), request.correlationId()));
+
+        REQUIRE(msgBusRequester.send(request));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        CHECK(msgReceived.assertValue(1));
+
+        REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
+        REQUIRE(msgBusReplyer.unreceive(asyncTestQueue + "request"));
+    }
+}
+
 
 TEST_CASE("test send different message", "[amqp][test]")
 {
@@ -915,8 +964,6 @@ TEST_CASE("wrong", "[amqp][messageStatus]")
         REQUIRE(msgBus.request(request, 1).error() == DeliveryState::Rejected);
         request.from("queue://etn.q.request");
         request.to("queue://etn.q.reply");
-        // Without reply request reject.
-        REQUIRE(msgBus.request(request, 1).error() == DeliveryState::Rejected);
     }
 
     SECTION("Wrong ip address")

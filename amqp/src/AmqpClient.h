@@ -84,6 +84,7 @@ private:
     // Proton object
     proton::connection    m_connection;
     proton::session       m_session;
+    proton::receiver      m_receiver;
     proton::message       m_message;
 
     // Pool thread
@@ -95,7 +96,6 @@ private:
 
     // Set of promise for synchronization
     Promise<fty::messagebus2::ComState> m_connectPromise;
-    Promise<void>                       m_deconnectPromise;
     Promise<void>                       m_promiseSession;
     Promise<void>                       m_promiseSessionClose;
     Promise<void>                       m_promiseSender;
@@ -106,8 +106,13 @@ private:
     std::condition_variable             m_containerStop;
     std::mutex                          m_lockStop;
 
+    // Connection close
+    std::condition_variable             m_connectionClose;
+    std::mutex                          m_lockClose;
+
 protected:
     void resetPromises();
+    std::string getAddressSubscriptions(const std::string& filter);
     bool setSubscriptions(const std::string& key, MessageListener messageListener);
     bool unsetSubscriptions(const std::string& key);
 };

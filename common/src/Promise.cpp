@@ -96,11 +96,7 @@ Promise<Message>::Promise(MessageBus& messageBus, const std::string& address, co
 }
 
 Promise<Message>::~Promise() {
-    if(!m_address.empty() && !m_filter.empty()) {
-        m_messageBus.unreceive(m_address, m_filter);
-        m_address = "";
-        m_filter = "";
-    }
+    m_messageBus.unreceive(m_address, m_filter);
 }
 
 fty::Expected<Message> Promise<Message>::getValue() {

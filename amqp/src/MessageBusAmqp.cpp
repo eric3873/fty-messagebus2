@@ -127,9 +127,6 @@ fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& mes
         if (!message.isValidMessage()) {
             return fty::unexpected(DeliveryState::Rejected);
         }
-        if (!message.needReply()) {
-            return fty::unexpected(DeliveryState::Rejected);
-        }
 
         logDebug("Synchronous request and checking answer until {} second(s)...", timeoutInSeconds);
         proton::message msgToSend = getAmqpMessage(message);

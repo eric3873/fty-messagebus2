@@ -96,7 +96,7 @@ void AmqpClient::on_connection_open(proton::connection& connection)
 void AmqpClient::on_connection_close(proton::connection&)
 {
     logDebug("Close connection ...");
-    m_deconnectPromise.setValue();
+    m_connectionClose.notify_all();
 }
 
 void AmqpClient::on_connection_error(proton::connection& connection)
@@ -149,6 +149,7 @@ void AmqpClient::on_sender_close(proton::sender& sender)
 void AmqpClient::on_receiver_open(proton::receiver& receiver)
 {
     logDebug("Waiting any message on target address: {}", receiver.source().address());
+    m_receiver = receiver;
     m_promiseReceiver.setValue();
 }
 
@@ -242,6 +243,18 @@ DeliveryState AmqpClient::send(const proton::message& msg)
         m_message.clear();
         m_message = msg;
 
+        // For request/reply with temporary queue, need to retreive the name of this temporary queue which has
+        // been created. The name of this queue has been saved in subscriptions list (receive called with empty
+        // address and a filter not empty). Use the unique filter (correlation_id) to retrieve the queue name.
+        if (m_message.reply_to().empty()) {
+            auto address = getAddressSubscriptions(proton::to_string(m_message.correlation_id()));
+            // Set reply_to only if request/reply (address found in subscriptions list)
+            if (!address.empty()) {
+                logDebug("Set reply_to with address={}", address);
+                m_message.reply_to(address);
+            }
+        }
+
         // Note for memory leak issue: The senders and the receivers which are closed are not removed from current
         // session list and leak memory. The solution is to open a new session for each new sender and close the
         // session when the message is sent to close properly the sender.
@@ -253,14 +266,14 @@ DeliveryState AmqpClient::send(const proton::message& msg)
         });
         // Wait the session creation
         if (!m_promiseSession.waitFor(TIMEOUT_MS)) {
-            logError("Send error, unable to open a new session for {}", msg.to());
+            logError("Send error, unable to open a new session for {}", m_message.to());
             return deliveryState;
         }
 
         // Create the sender in the session
         m_promiseSender.reset();
         m_connection.work_queue().add([&]() {
-            m_session.open_sender(msg.to(), proton::sender_options().name(msg.to()));
+            m_session.open_sender(m_message.to(), proton::sender_options().name(m_message.to()));
         });
         // Wait to know if the message has been sent or not
         if (m_promiseSender.waitFor(TIMEOUT_MS)) {
@@ -285,15 +298,17 @@ DeliveryState AmqpClient::send(const proton::message& msg)
 DeliveryState AmqpClient::receive(const Address& address, MessageListener messageListener, const std::string& filter)
 {
     auto deliveryState = DeliveryState::Rejected;
+
+    // Test input parameters
+    if (address.empty() && filter.empty()) {
+        logError("Receive bad parameters");
+        return deliveryState;
+    }
+
     if (isConnected()) {
         std::lock_guard<std::mutex> lock(m_lockMain);
         logDebug("Set receiver to wait message(s) from {} ...", address);
         m_promiseReceiver.reset();
-
-        auto key = setAddressFilterKey(address, filter);
-        if (!setSubscriptions(key, messageListener)) {
-            return deliveryState;
-        }
 
         // Note for memory leak issue: The senders and the receivers which are closed are not removed from current
         // session list and leak memory. The solution is to open a new session for each new receiver and close the
@@ -306,49 +321,79 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
         });
         // Wait the session creation
         if (!m_promiseSession.waitFor(TIMEOUT_MS)) {
-            logError("Send error, unable to open a new session for {}", key);
+            logError("Send error, unable to open a new session for {}/{}", address, filter);
             return deliveryState;
         }
 
         proton::source_options opts;
 
+        // TBD: Reuse receiver if defined for address
+        std::string receiverName = address;
         // If defined (not empty), set filter on receiver
         if (!filter.empty()) {
-            // Receiver with filtering, so reply, the filtering for this implementation is only on correlationId
-            std::ostringstream correlIdFilter;
-            correlIdFilter << "JMSCorrelationID";
-            correlIdFilter << "='";
-            correlIdFilter << filter;
-            correlIdFilter << "'";
-            logTrace("CorrelId filter: {}", correlIdFilter.str());
+            // For temporary queue, the receiver name must be empty and the dynamic option must be set
+            // for the receiver. A new receiver will be created with a unique name by the broker.
+            // The queue will be removed when the receiver will be closed.
+            // In this case, no need to filter with correlation id as the queue name is unique.
+            if (address.empty()) {
+                opts.dynamic(true);
+                // Receiver name is ignored
+                receiverName = "";
+            }
+            else {
+                // Receiver with filtering, so reply, the filtering for this implementation is only on correlationId
+                std::ostringstream correlIdFilter;
+                correlIdFilter << "JMSCorrelationID";
+                correlIdFilter << "='";
+                correlIdFilter << filter;
+                correlIdFilter << "'";
+                logTrace("CorrelId filter: {}", correlIdFilter.str());
 
-            proton::source::filter_map map;
-            proton::symbol filterKey("selector");
-            proton::value filterValue;
-            // The value is a specific AMQP "described type": binary string with symbolic descriptor
-            // (See APACHE.ORG:SELECTOR on http://www.amqp.org/specification/1.0/filters)
-            proton::codec::encoder enc(filterValue);
-            enc << proton::codec::start::described()
-                << proton::symbol("apache.org:selector-filter:string")
-                << correlIdFilter.str()
-                << proton::codec::finish();
-            // In our case, the map has this one element
-            map.put(filterKey, filterValue);
-            opts.filters(map);
+                proton::source::filter_map map;
+                proton::symbol filterKey("selector");
+                proton::value filterValue;
+                // The value is a specific AMQP "described type": binary string with symbolic descriptor
+                // (See APACHE.ORG:SELECTOR on http://www.amqp.org/specification/1.0/filters)
+                proton::codec::encoder enc(filterValue);
+                enc << proton::codec::start::described()
+                    << proton::symbol("apache.org:selector-filter:string")
+                    << correlIdFilter.str()
+                    << proton::codec::finish();
+                // In our case, the map has this one element
+                map.put(filterKey, filterValue);
+                opts.filters(map);
+
+                receiverName = filter;
+                // TBD: The source is discarded immediately when the link is closed (LINK_CLOSE by default)
+                opts.timeout(proton::duration::IMMEDIATE);
+            }
         }
 
         // Create receiver in the session
         m_promiseReceiver.reset();
         m_connection.work_queue().add([&]() {
-            m_session.open_receiver(address, proton::receiver_options().name(key).source(opts).auto_accept(true));
+            m_session.open_receiver(address, proton::receiver_options().name(receiverName).source(opts).auto_accept(true));
         });
         // Wait to know if the receiver has been created
-        if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
-            deliveryState = DeliveryState::Accepted;
-        }
-        else {
+        if (!m_promiseReceiver.waitFor(TIMEOUT_MS)) {
             logError("Error on receive for {}, timeout reached", address);
+            return deliveryState;
         }
+
+        // For tempory queue (address is empty), get the unique address created by the broker
+        Address address_ = address;
+        if (address_.empty()) {
+            address_ = m_receiver.source().address();
+            logDebug("Get new temporary receiver address {} for {}", address_, filter);
+        }
+
+        // Then add address in subscription list
+        auto key = setAddressFilterKey(address_, filter);
+        if (!setSubscriptions(key, messageListener)) {
+            return deliveryState;
+        }
+
+        deliveryState = DeliveryState::Accepted;
     }
     return deliveryState;
 }
@@ -357,28 +402,45 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
 DeliveryState AmqpClient::unreceive(const Address& address, const std::string& filter)
 {
     auto deliveryState = DeliveryState::Unavailable;
+
+    // Test input parameters
+    if (address.empty() && filter.empty()) {
+        logError("Unreceive bad parameters");
+        return deliveryState;
+    }
+
     if (isConnected()) {
         std::lock_guard<std::mutex> lock(m_lockMain);
 
-        auto key = setAddressFilterKey(address, filter);
-        // Remove key in subscriptions list
-        if (!unsetSubscriptions(key)) {
-            logError("Error on unreceive for {}: impossible to remove key in subscriptions list", key);
-            return deliveryState;
+        // Retreive the name of the receiver to close.
+        // By default, the name of the receiver is the address or the filter if not empty.
+        // Note with temporary queue use for request/reply: the address is empty and need to be retreived
+        // in subscriptions list (receive called with empty address and a filter not empty).
+        // In this case, use the filter (correlation_id) to retrieve the address.
+        Address address_ = address;
+        std::string receiverNameToSearch = address_;
+        if (address_.empty()) {
+            address_ = getAddressSubscriptions(filter);
+            receiverNameToSearch = address_;
+        }
+        else if (!filter.empty()) {
+            receiverNameToSearch = filter;
         }
 
         // Find receiver with this address and close it with the session
         // Note: Need to check in all session because the receivers in connection is just for current session.
         bool isFound = false;
-        logDebug("unreceive: try to close receiver {}", address);
+        logDebug("unreceive: try to close receiver {}", address_);
         int nb_sessions = 0;
         auto sessions = m_connection.sessions();
         for (auto session : sessions) {
             auto receivers = session.receivers();
             for (auto receiver : receivers) {
-                logTrace("test session:{} receiver.name()={}-closed={}-active={}",
-                    nb_sessions, receiver.name(), receiver.closed(), receiver.active());
-                if (receiver.name() == key) {
+                logTrace("test session:{} receiver.name()={} address={} closed={} active={}",
+                    nb_sessions, receiver.name(), receiver.source().address(), receiver.closed(), receiver.active());
+
+                if ((receiver.name() == receiverNameToSearch) ||
+                    (receiver.name().empty() && receiver.source().address() == address_)) {
                     isFound = true;
                     // Close receiver if needed
                     if (!receiver.closed() && receiver.active()) {
@@ -387,14 +449,14 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
                             receiver.close();
                         });
                         if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
-                            logDebug("Receiver closed for {}", address);
+                            logDebug("Receiver closed for {}", address_);
                             deliveryState = DeliveryState::Accepted;
                         } else {
-                            logError("Error on unreceive for {}, timeout reached", address);
+                            logError("Error on unreceive for {}, timeout reached", address_);
                         }
                     }
                     else {
-                        logWarn("Unable to close receiver for address {}: still closed", address);
+                        logWarn("Unable to close receiver for address {}: still closed", address_);
                         deliveryState = DeliveryState::Accepted;
                     }
                     // Close session if needed
@@ -415,7 +477,14 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
             nb_sessions ++;
         }
         if (!isFound)  {
-            logWarn("Unable to unreceive address {}: not present", address);
+            logWarn("Unable to unreceive address {}: not present", address_);
+        }
+
+        // Then remove key from subscriptions list
+        auto key = setAddressFilterKey(address_, filter);
+        if (!unsetSubscriptions(key)) {
+            logError("Error on unreceive for {}: impossible to remove key in subscriptions list", key);
+            deliveryState = DeliveryState::Unavailable;
         }
     }
     return deliveryState;
@@ -428,38 +497,21 @@ void AmqpClient::close()
 
     if (m_connection && m_connection.active()) {
 
-        // First close sessions still opened
-        auto sessions = m_connection.sessions();
-        for (auto session : sessions) {
-            if (!session.closed()) {
-                m_promiseSessionClose.reset();
-                m_connection.work_queue().add([&]() {
-                    logDebug("Close session");
-                    session.close();
-                });
-                // Wait the session creation
-                if (!m_promiseSessionClose.waitFor(TIMEOUT_MS)) {
-                    logError("Unable to close session: timeout");
-                }
-            }
+        // First close the connection
+        m_connection.close();
+        std::unique_lock<std::mutex> lockClose(m_lockClose);
+        auto statusConnection = m_connectionClose.wait_for(lockClose, std::chrono::seconds(5));
+        if (statusConnection == std::cv_status::timeout) {
+            logWarn("End stop connection with timeout");
         }
 
-        // Wait end of connection (with timeout)
-        m_deconnectPromise.reset();
-        m_connection.work_queue().add([&]() { m_connection.close(); });
-        if (!m_deconnectPromise.waitFor(TIMEOUT_MS)) {
-            logError("AmqpClient::close De-connection timeout reached");
-        }
-
-        // Close the container
-        logTrace("Start stop container");
+        // Then close the container
         m_connection.container().stop();
         std::unique_lock<std::mutex> lockStop(m_lockStop);
-        auto status = m_containerStop.wait_for(lockStop, std::chrono::seconds(5));
-        if (status == std::cv_status::timeout) {
+        auto statusContainer = m_containerStop.wait_for(lockStop, std::chrono::seconds(5));
+        if (statusContainer == std::cv_status::timeout) {
             logWarn("End stop container with timeout");
         }
-        logTrace("End stop container");
     }
 }
 
@@ -469,11 +521,21 @@ void AmqpClient::resetPromises()
     std::lock_guard<std::mutex> lock(m_lock);
     logDebug("Reset all promises");
     m_connectPromise.reset();
-    m_deconnectPromise.reset();
     m_promiseSession.reset();
     m_promiseSessionClose.reset();
     m_promiseSender.reset();
     m_promiseReceiver.reset();
+}
+
+// Get address with filter (use for reply with temporary queue)
+std::string AmqpClient::getAddressSubscriptions(const std::string& filter) {
+    for (auto it = m_subscriptions.begin(); it != m_subscriptions.end(); ++it) {
+        auto addressFilter = getAddressFilterKey(it->first);
+        if (addressFilter.second == filter) {
+            return addressFilter.first;
+        }
+    }
+    return std::string("");
 }
 
 // Set subscription designed by a key and a message listener
