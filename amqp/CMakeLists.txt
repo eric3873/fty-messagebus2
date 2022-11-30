@@ -22,6 +22,8 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
     fty-messagebus2-utils
     fty_common_logging
     Proton::cpp
+    fty-pack
+    pthread
   FLAGS
     "-fmax-errors=1"
 )

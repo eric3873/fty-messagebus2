@@ -21,8 +21,8 @@
 
 #include "fty/messagebus2/amqp/MessageBusAmqp.h"
 #include "MsgBusAmqpUtils.h"
-#include "fty/messagebus2/utils/MsgBusPoolWorker.hpp"
 #include "fty/messagebus2/Promise.h"
+#include <fty/thread-pool.h>
 #include <proton/connection.hpp>
 #include <proton/container.hpp>
 #include <proton/delivery.hpp>
@@ -88,7 +88,7 @@ private:
     proton::message       m_message;
 
     // Pool thread
-    std::shared_ptr<fty::messagebus2::utils::PoolWorker> m_pool;
+    fty::ThreadPool *m_pool { nullptr };
 
     // Mutex
     std::mutex m_lock;

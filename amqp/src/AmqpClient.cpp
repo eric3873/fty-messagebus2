@@ -54,13 +54,18 @@ using MessageListener = fty::messagebus2::MessageListener;
 static auto constexpr TIMEOUT_MS = 5000;
 
 AmqpClient::AmqpClient(const Endpoint& url)
-    : m_url(url), m_pool(std::make_shared<fty::messagebus2::utils::PoolWorker>(10))
+    : m_url(url)
 {
+    m_pool = new fty::ThreadPool(10, 100);
 }
 
 AmqpClient::~AmqpClient()
 {
     close();
+
+    if (m_pool) {
+        delete m_pool;
+    }
 }
 
 void AmqpClient::on_container_start(proton::container& container)
@@ -87,7 +92,8 @@ void AmqpClient::on_connection_open(proton::connection& connection)
     if (connection.reconnected()) {
         logDebug("Reconnected on url: {}", m_url);
         resetPromises();
-    } else {
+    }
+    else {
         logDebug("Connected on url: {}", m_url);
     }
     m_connectPromise.setValue(ComState::Connected);
@@ -198,13 +204,15 @@ void AmqpClient::on_message(proton::delivery&, proton::message& msg)
             // treatment is executing in the same worker as sender/receiver and hang the response.
             // TODO: Don't work with another proton worker
             //m_workQueue.add(proton::make_work(it->second, amqpMsg));
-            m_pool->offload(std::bind(it->second, amqpMsg));
+            // TODO: Don't use custom PoolWorker which crash with multithread test
+            m_pool->pushWorker(std::bind(it->second, amqpMsg));
             return;
         }
         else {
             logWarn("No message listener checked in for: {}", key);
         }
-    } else {
+    }
+    else {
         // Connection not set
         logError("Nothing to do, connection object not active");
     }
@@ -225,7 +233,8 @@ ComState AmqpClient::connected()
             if (auto value = m_connectPromise.getValue(); value) {
                 m_communicationState = *value;
             }
-        } else {
+        }
+        else {
             m_communicationState = ComState::ConnectFailed;
         }
     }
@@ -294,7 +303,9 @@ DeliveryState AmqpClient::send(const proton::message& msg)
     return deliveryState;
 }
 
-// Subscribe a receiver to an address with optional filter
+// Subscribe a callback to an address with an optional filter.
+// To create a temporary queue for the receiver (request/reply), use an empty address in input.
+// The filter must be unique and is mandatory for temporary queue and for filter a message with the same address.
 DeliveryState AmqpClient::receive(const Address& address, MessageListener messageListener, const std::string& filter)
 {
     auto deliveryState = DeliveryState::Rejected;
@@ -398,7 +409,9 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
     return deliveryState;
 }
 
-// Unreceive an address with optional filter
+// Unreceive a callback with the address and the filter specified.
+// The filter is facultative. For temporary queue for the receiver, use an empty address
+// and the filter use during creation.
 DeliveryState AmqpClient::unreceive(const Address& address, const std::string& filter)
 {
     auto deliveryState = DeliveryState::Unavailable;
@@ -451,7 +464,8 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
                         if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
                             logDebug("Receiver closed for {}", address_);
                             deliveryState = DeliveryState::Accepted;
-                        } else {
+                        }
+                        else {
                             logError("Error on unreceive for {}, timeout reached", address_);
                         }
                     }
@@ -500,7 +514,7 @@ void AmqpClient::close()
         // First close the connection
         m_connection.close();
         std::unique_lock<std::mutex> lockClose(m_lockClose);
-        auto statusConnection = m_connectionClose.wait_for(lockClose, std::chrono::seconds(5));
+        auto statusConnection = m_connectionClose.wait_for(lockClose, std::chrono::seconds(10));
         if (statusConnection == std::cv_status::timeout) {
             logWarn("End stop connection with timeout");
         }
@@ -508,7 +522,7 @@ void AmqpClient::close()
         // Then close the container
         m_connection.container().stop();
         std::unique_lock<std::mutex> lockStop(m_lockStop);
-        auto statusContainer = m_containerStop.wait_for(lockStop, std::chrono::seconds(5));
+        auto statusContainer = m_containerStop.wait_for(lockStop, std::chrono::seconds(10));
         if (statusContainer == std::cv_status::timeout) {
             logWarn("End stop container with timeout");
         }
@@ -527,7 +541,7 @@ void AmqpClient::resetPromises()
     m_promiseReceiver.reset();
 }
 
-// Get address with filter (use for reply with temporary queue)
+// Get address from filter (use for reply with temporary queue)
 std::string AmqpClient::getAddressSubscriptions(const std::string& filter) {
     for (auto it = m_subscriptions.begin(); it != m_subscriptions.end(); ++it) {
         auto addressFilter = getAddressFilterKey(it->first);
@@ -552,10 +566,12 @@ bool AmqpClient::setSubscriptions(const std::string& key, MessageListener messag
                 logDebug("Subscription added: {}", key);
                 return true;
             }
-        } else {
+        }
+        else {
             logWarn("Subscription skipped, key yet present: {}", key);
         }
-    } else {
+    }
+    else {
         logWarn("Subscription skipped, call back information or key not filled!");
     }
     return false;
@@ -570,10 +586,12 @@ bool AmqpClient::unsetSubscriptions(const std::string& key)
             m_subscriptions.erase(it);
             logDebug("Subscriptions remove: {}", key);
             return true;
-        } else {
+        }
+        else {
             logWarn("unsetSubscriptions skipped, key not found: {}", key);
         }
-    } else {
+    }
+    else {
         logWarn("unsetSubscriptions skipped, key empty");
     }
     return false;

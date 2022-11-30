@@ -31,9 +31,17 @@ using proton::source_options;
 
 MessageBusAmqp::MessageBusAmqp(const ClientName& clientName, const Endpoint& endpoint) : MessageBus(),
     m_clientName(clientName),
-    m_endpoint  (endpoint),
-    m_clientPtr (std::make_shared<AmqpClient>(endpoint))
+    m_endpoint  (endpoint)
 {
+    m_clientPtr = new AmqpClient(endpoint);
+}
+
+MessageBusAmqp::~MessageBusAmqp()
+{
+    if (m_clientPtr) {
+        delete m_clientPtr;
+        m_clientPtr = nullptr;
+    }
 }
 
 fty::Expected<void, ComState> MessageBusAmqp::connect() noexcept
@@ -46,7 +54,8 @@ fty::Expected<void, ComState> MessageBusAmqp::connect() noexcept
     logDebug("Connecting for {} to {} ...", m_clientName, m_endpoint);
     try {
         std::thread thrdSender([=]() {
-            proton::container(*m_clientPtr).run();
+            // TBD: Generate custom uuid to fix crash when genrerate by the library (in multi thread test)
+            proton::container(*m_clientPtr, utils::generateUuid()).run();
         });
         thrdSender.detach();
 

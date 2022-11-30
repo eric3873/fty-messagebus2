@@ -35,7 +35,7 @@ class MessageBusAmqp final : public MessageBus
 {
 public:
     MessageBusAmqp(const std::string& clientName = utils::getClientId("MessageBusAmqp"), const Endpoint& endpoint = DEFAULT_ENDPOINT);
-    ~MessageBusAmqp() = default;
+    ~MessageBusAmqp();
 
     MessageBusAmqp(MessageBusAmqp&&) = delete;
     MessageBusAmqp& operator = (MessageBusAmqp&&) = delete;
@@ -61,7 +61,7 @@ private:
     // Amqp endpoint
     Endpoint    m_endpoint{};
     // AmqpClient instance
-    std::shared_ptr<AmqpClient> m_clientPtr;
+    AmqpClient *m_clientPtr { nullptr };
 };
 
 } // namespace fty::messagebus2::amqp

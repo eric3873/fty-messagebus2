@@ -17,18 +17,18 @@
     =========================================================================
 */
 
+#include "../src/AmqpClient.h"
+#include "../src/MsgBusAmqpUtils.h"
 #include <catch2/catch.hpp>
+#include <chrono>
 #include <fty/messagebus2/Message.h>
 #include <fty/messagebus2/MessageBusStatus.h>
 #include <fty/messagebus2/amqp/MessageBusAmqp.h>
 #include <fty/messagebus2/utils.h>
-#include "../src/MsgBusAmqpUtils.h"
-#include "../src/AmqpClient.h"
+#include <future>
 #include <iostream>
 #include <mutex>
 #include <thread>
-#include <chrono>
-#include <future>
 
 #if defined(EXTERNAL_SERVER_FOR_TEST)
 static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
@@ -44,7 +44,7 @@ auto constexpr ONE_SECOND           = std::chrono::seconds(1);
 auto constexpr TWO_SECONDS          = std::chrono::seconds(2);
 auto constexpr SYNC_REQUEST_TIMEOUT = 10; // in second
 // TBD: Test not passing CI with 100 threads (Random unexpected exception)
-auto constexpr NB_THREAD_MULTI      = 10; // nb of threads for multi tests
+auto constexpr NB_THREAD_MULTI = 10; // nb of threads for multi tests
 
 static const std::string QUERY        = "query";
 static const std::string QUERY_2      = "query2";
@@ -53,15 +53,18 @@ static const std::string QUERY_AND_OK = QUERY + OK;
 static const std::string RESPONSE_2   = QUERY_2 + OK;
 
 // Class used to test protected functions of AmqpClient
-class AmqpClientPrivateTest : public fty::messagebus2::amqp::AmqpClient {
+class AmqpClientPrivateTest : public fty::messagebus2::amqp::AmqpClient
+{
 public:
-    AmqpClientPrivateTest() : fty::messagebus2::amqp::AmqpClient(AMQP_SERVER_URI) {}
+    AmqpClientPrivateTest() : fty::messagebus2::amqp::AmqpClient(AMQP_SERVER_URI) = default;
     ~AmqpClientPrivateTest() = default;
 
-    bool setSubscriptions(const std::string& key, MessageListener messageListener) {
+    bool setSubscriptions(const std::string& key, MessageListener messageListener)
+    {
         return fty::messagebus2::amqp::AmqpClient::setSubscriptions(key, messageListener);
     }
-    bool unsetSubscriptions(const std::string& key) {
+    bool unsetSubscriptions(const std::string& key)
+    {
         return fty::messagebus2::amqp::AmqpClient::unsetSubscriptions(key);
     }
 };
@@ -70,8 +73,8 @@ class MsgReceived
 {
 private:
     // Mutex
-    std::mutex                            m_lock;
-    std::shared_ptr<amqp::MessageBusAmqp> m_msgBusReplyer;
+    std::mutex m_lock;
+    amqp::MessageBusAmqp *m_msgBusReplyer { nullptr };
 
 public:
     int receiver;
@@ -81,11 +84,14 @@ public:
         : receiver(0)
         , replyer(0)
     {
-        m_msgBusReplyer = std::make_shared<amqp::MessageBusAmqp>("TestCase", AMQP_SERVER_URI);
+        m_msgBusReplyer = new amqp::MessageBusAmqp("TestCase", AMQP_SERVER_URI);
         REQUIRE(m_msgBusReplyer->connect());
     }
 
-    ~MsgReceived() = default;
+    ~MsgReceived()
+    {
+        delete m_msgBusReplyer;
+    }
 
     void reset()
     {
@@ -190,7 +196,7 @@ TEST_CASE("AddressFilter", "[amqp][AddressFilter]")
 TEST_CASE("AmqpClient private", "[amqp][AmqpClient]")
 {
     AmqpClientPrivateTest msgBusClient;
-    MessageListener myMessageListener = [](const Message&) {};
+    MessageListener       myMessageListener = [](const Message&) {};
 
     // Test bad inputs
     REQUIRE(!msgBusClient.setSubscriptions("", nullptr));
@@ -201,13 +207,13 @@ TEST_CASE("AmqpClient private", "[amqp][AmqpClient]")
     auto myAddress    = "myAddress";
     auto myFilter     = "myFilter";
     auto myBadAddress = "myBadAddress";
-    auto myKey    = fty::messagebus2::amqp::setAddressFilterKey(myAddress, myFilter);
-    auto myBadKey = fty::messagebus2::amqp::setAddressFilterKey(myBadAddress, myFilter);
+    auto myKey        = fty::messagebus2::amqp::setAddressFilterKey(myAddress, myFilter);
+    auto myBadKey     = fty::messagebus2::amqp::setAddressFilterKey(myBadAddress, myFilter);
     REQUIRE(msgBusClient.setSubscriptions(myKey, myMessageListener));
-    REQUIRE(!msgBusClient.setSubscriptions(myKey, myMessageListener));  // Key already present
-    REQUIRE(!msgBusClient.unsetSubscriptions(myBadKey));  // Key not present
+    REQUIRE(!msgBusClient.setSubscriptions(myKey, myMessageListener)); // Key already present
+    REQUIRE(!msgBusClient.unsetSubscriptions(myBadKey));               // Key not present
     REQUIRE(msgBusClient.unsetSubscriptions(myKey));
-    REQUIRE(!msgBusClient.unsetSubscriptions(myKey));  // Key already removed
+    REQUIRE(!msgBusClient.unsetSubscriptions(myKey)); // Key already removed
 }
 
 TEST_CASE("Identity", "[amqp][identity]")
@@ -231,7 +237,8 @@ TEST_CASE("queue", "[amqp][request]")
 
         // Send synchronous request
         Message request = Message::buildRequest(
-            "SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", QUERY, {}, SYNC_REQUEST_TIMEOUT);
+            "SyncRequesterTimeOutTestCase", syncTimeOutTestQueue + "request", "TEST", syncTimeOutTestQueue + "reply", QUERY, {},
+            SYNC_REQUEST_TIMEOUT);
 
         REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
@@ -262,7 +269,8 @@ TEST_CASE("queue", "[amqp][request]")
         REQUIRE(msgBusReplyer.connect());
 
         // Build synchronous request and set all receiver
-        Message request = Message::buildRequest("RequestTestCase", syncTestQueue + "request", "TEST", syncTestQueue + "reply", QUERY, {}, SYNC_REQUEST_TIMEOUT);
+        Message request = Message::buildRequest(
+            "RequestTestCase", syncTestQueue + "request", "TEST", syncTestQueue + "reply", QUERY, {}, SYNC_REQUEST_TIMEOUT);
         REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
 
         auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
@@ -284,7 +292,8 @@ TEST_CASE("queue", "[amqp][request]")
         REQUIRE(msgBusReplyer.connect());
 
         // Build asynchronous request and set all receiver
-        Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
+        Message request = Message::buildRequest(
+            "AsyncRequestTestCase", asyncTestQueue + "request", "TEST", asyncTestQueue + "reply", QUERY);
         REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
         REQUIRE(msgBusRequester.receive(
             request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
@@ -373,7 +382,6 @@ TEST_CASE("test request/reply asynch with temporary queue", "[amqp][test]")
     }
 }
 
-
 TEST_CASE("test send different message", "[amqp][test]")
 {
     MsgReceived msgReceived;
@@ -450,14 +458,15 @@ TEST_CASE("test filter with bad receiver", "[amqp][filter]")
     REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
     // Set bad receiver
     REQUIRE(msgBusRequester1.receive(
-        request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), /*request.correlationId()*/badCorrelationId));
+        request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
+        badCorrelationId));
 
     REQUIRE(msgBusRequester1.send(request));
     std::this_thread::sleep_for(std::chrono::seconds(1));
     // Don't receive reply
     CHECK(!msgReceived.assertValue(1));
 
-    REQUIRE(msgBusRequester1.unreceive(request.replyTo(), /*request.correlationId()*/ badCorrelationId));
+    REQUIRE(msgBusRequester1.unreceive(request.replyTo(), badCorrelationId));
 
     // Set good receiver
     REQUIRE(msgBusRequester2.receive(
