@@ -34,6 +34,7 @@ using namespace qpid::messaging;
 
 using MessageListener = fty::messagebus2::MessageListener;
 
+// Constructor
 AmqpClient::AmqpClient(const ClientName& clientName, const Endpoint& url) :
     m_clientName(clientName),
     m_url(url)
@@ -44,11 +45,13 @@ AmqpClient::AmqpClient(const ClientName& clientName, const Endpoint& url) :
 
 }
 
+// Destructor
 AmqpClient::~AmqpClient()
 {
     close();
 }
 
+// Init connection
 ComState AmqpClient::connect()
 {
     try {
@@ -68,31 +71,61 @@ ComState AmqpClient::connect()
     }
 }
 
+// Test if connected
 bool AmqpClient::isConnected() {
     // Test if connected
     return (m_connection && m_connection->isOpen());
 }
 
+// Send a message
 DeliveryState AmqpClient::send(const qpid::messaging::Message& msg)
 {
     auto deliveryState = DeliveryState::Accepted;
 
-    auto address = sanitizeAddress(getAddress(msg));
-    Sender sender = m_connection->getSession(DEFAULT_SESSION).createSender(address);
-    sender.send(msg);
-    sender.close();
+    // Make a copy of the message
+    qpid::messaging::Message message = msg;
+
+    // For request/reply with temporary queue, need to retreive the name of this temporary queue which has
+    // been created. The name of this queue has been saved in subscriptions list (receive called with empty
+    // address and a filter not empty). Use the unique filter (correlation_id) to retrieve the queue name.
+    if (message.getReplyTo().str().empty()) {
+        auto correlationId = message.getCorrelationId();
+        for (auto it_receiver = m_receivers.begin(); it_receiver != m_receivers.end(); it_receiver ++) {
+            if ((*it_receiver)->getSubscription(correlationId)) {
+                // Set reply_to only if request/reply (address found in subscriptions list)
+                logDebug("Set setReplyTo with address={}", (*it_receiver)->getAddress());
+                qpid::messaging::Address qpidAddr((*it_receiver)->getAddress());
+                message.setReplyTo(qpidAddr);
+                break;
+            }
+        }
+    }
+
+    auto address = sanitizeAddress(getAddress(message));
+    try {
+        Sender sender = m_connection->getSession(DEFAULT_SESSION).createSender(address);
+        sender.send(message);
+        sender.close();
+    }
+    catch(std::exception& e) {
+        logError("Exception when send message: {}", e.what());
+        deliveryState = DeliveryState::Rejected;
+    }
     return deliveryState;
 }
 
-DeliveryState AmqpClient::receive(const Address& addressIn, MessageListener messageListener, const std::string& filter)
+// Subscribe a callback to an address with an optional filter.
+// To create a temporary queue for the receiver (request/reply), use an empty address in input.
+// The filter must be unique and is mandatory for temporary queue and for filter a message with the same address.
+DeliveryState AmqpClient::receive(const Address& address, MessageListener messageListener, const std::string& filter)
 {
     auto deliveryState = DeliveryState::Rejected;
 
-    logDebug("Receive address (address:{}, filter:{})", addressIn, filter);
+    logDebug("Receive address (address:{}, filter:{})", address, filter);
 
-    // Test address
-    if (addressIn.empty()) {
-        logError("Receive address: Address is required");
+    // Test input parameters
+    if (address.empty() && filter.empty()) {
+        logError("Receive address: bad input parameters");
         return deliveryState;
     }
 
@@ -102,15 +135,15 @@ DeliveryState AmqpClient::receive(const Address& addressIn, MessageListener mess
         return deliveryState;
     }
 
-    auto address = sanitizeAddress(addressIn);
-
     // Then search if a receiver with this address exist
     AmqpReceiverPointer receiver = nullptr;
     std::lock_guard<std::mutex> lock(m_lock);
-    for (auto it_receiver = m_receivers.begin(); it_receiver != m_receivers.end(); it_receiver ++) {
-        if ((*it_receiver)->getAddress() == address) {
-           receiver = *it_receiver;
-           break;
+    if (!address.empty()) {
+        for (auto it_receiver = m_receivers.begin(); it_receiver != m_receivers.end(); it_receiver ++) {
+            if ((*it_receiver)->getAddress() == address) {
+                receiver = *it_receiver;
+                break;
+            }
         }
     }
     // If address not found, create a new receiver on this address
@@ -135,28 +168,32 @@ DeliveryState AmqpClient::receive(const Address& addressIn, MessageListener mess
     return deliveryState;
 }
 
-DeliveryState AmqpClient::unreceive(const Address& addressIn, const std::string& filter)
+// Unreceive a callback with the address and the filter specified.
+// The filter is facultative. For temporary queue for the receiver, use an empty address
+// and the filter use during creation.
+DeliveryState AmqpClient::unreceive(const Address& address, const std::string& filter)
 {
     auto deliveryState = DeliveryState::Rejected;
 
-    logDebug("Unreceive address (address:{}, filter:{})", addressIn, filter);
+    logDebug("Unreceive address (address:{}, filter:{})", address, filter);
 
-    // First, test address
-    if (addressIn.empty()) {
-        logError("Unreceive address: Address is required");
+    // First, test input parameters
+    if (address.empty() && filter.empty()) {
+        logError("Unreceive address:bad input parameters");
         return deliveryState;
     }
 
-    auto address = sanitizeAddress(addressIn);
-
-    // Then search address with filter
+    // Then close receiver if found it and not yet used
+    // -if address not empty, search address with filter
+    // -if address is empty (for request/reply), search filter in all receivers
     std::lock_guard<std::mutex> lock(m_lock);
     for (auto it_receiver = m_receivers.begin(); it_receiver != m_receivers.end(); it_receiver ++) {
-        if ((*it_receiver)->getAddress() == address) {
+        if ((!address.empty() && (*it_receiver)->getAddress() == address) ||
+            (address.empty() && (*it_receiver)->getSubscription(filter))) {
             auto receiver = *it_receiver;
             if (receiver->unsetSubscription(filter)) {
                 // Receiver can be closed if no more filter on it
-                if (receiver->getSubscriptionsNumber() == 0) {
+                if (receiver->getSubscriptionsSize() == 0) {
                     if (!(*it_receiver)->waitClose()) {
                         logWarn("Unreceive timeout reached (name: {})", (*it_receiver)->getName());
                     }
@@ -174,6 +211,7 @@ DeliveryState AmqpClient::unreceive(const Address& addressIn, const std::string&
     return deliveryState;
 }
 
+// Close connection
 void AmqpClient::close()
 {
     m_closed = true;
@@ -186,6 +224,9 @@ void AmqpClient::close()
             logWarn("Close receiver timeout reached (name: {})", (*it_receiver)->getName());
         }
     }
+
+    // Close connection
+    m_connection->close();
 }
 
 } // namespace fty::messagebus2::amqp

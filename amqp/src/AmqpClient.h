@@ -46,12 +46,15 @@ public:
     fty::messagebus2::ComState connect();
     bool isConnected();
 
-    fty::messagebus2::DeliveryState receive(const Address& addressIn, MessageListener messageListener, const std::string& filter = {});
-    fty::messagebus2::DeliveryState unreceive(const Address& addressIn, const std::string& filter = {});
+    fty::messagebus2::DeliveryState receive(const Address& address, MessageListener messageListener, const std::string& filter = {});
+    fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {});
     fty::messagebus2::DeliveryState send(const qpid::messaging::Message& msg);
 
     void close();
-    bool isClosed() { return m_closed; };
+    bool isClosed()
+    {
+        return m_closed;
+    };
 
     const std::string getName() { return m_clientName; };
     std::shared_ptr<qpid::messaging::Connection> getConnection() { return m_connection; };

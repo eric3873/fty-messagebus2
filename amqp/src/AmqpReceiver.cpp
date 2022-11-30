@@ -28,6 +28,7 @@
 
 namespace fty::messagebus2::amqp {
 
+// Constructor
 AmqpReceiver::AmqpReceiver(amqp::AmqpClient *client, const std::string& address) :
     m_client(client),
     m_address(address),
@@ -35,6 +36,7 @@ AmqpReceiver::AmqpReceiver(amqp::AmqpClient *client, const std::string& address)
 {
 }
 
+// Destructor
 AmqpReceiver::~AmqpReceiver()
 {
     // If not closed, wait end of messaging thread
@@ -43,6 +45,7 @@ AmqpReceiver::~AmqpReceiver()
     }
 }
 
+// Init receiver
 bool AmqpReceiver::init(const std::string& filter, const MessageListener& messageListener)
 {
     if (!m_client) {
@@ -54,37 +57,72 @@ bool AmqpReceiver::init(const std::string& filter, const MessageListener& messag
         logError("Receiver init error: no connection");
         return false;
     }
-    auto qpidReceiver = connection->getSession(DEFAULT_SESSION).createReceiver(m_address);
-    m_name = qpidReceiver.getName();
+
+    // Sanitize address
+    auto address = sanitizeAddress(m_address);
+
+    // Create temporary queue with "#"" if address is empty
+    if (address.empty()) {
+        address = "#";
+    }
+
+    // Create receiver
+    try {
+        auto qpidReceiver = connection->getSession(DEFAULT_SESSION).createReceiver(address);
+        m_name = qpidReceiver.getName();
+        m_address = qpidReceiver.getAddress().str();
+        logDebug("Create receiver: name={} address={}", m_name, m_address);
+    }
+    catch(std::exception& e) {
+        logError("Exception when create receiver: {}", e.what());
+        return false;
+    }
+
     // Create first subscription with input parameters
     if (!setSubscription(filter, messageListener)) {
         logError("Receiver init error: bad subscription");
         return false;
     }
+
     // Create thread for receive message
     std::thread thread(&AmqpReceiver::manageMessage, this);
     thread.detach();
+
     return true;
 }
 
+// Wait close of receiver
 bool AmqpReceiver::waitClose()
 {
+    bool res = true;
+
     m_closed = true;
     // Wait until messaging thread terminate
     if (!m_promiseClose.waitFor(TIMEOUT_MS)) {
-        return false;
+        logWarn("Close receiver with timeout: {}", m_name);
+        res = false;
     }
-    return true;
+
+    // Then close receiver
+    auto connection = m_client->getConnection();
+    auto receiver = connection->getSession(DEFAULT_SESSION).getReceiver(m_name);
+    logDebug("Close receiver {}", m_name);
+    receiver.close();
+
+    return res;
 }
 
-ulong AmqpReceiver::getSubscriptionsNumber()
+// Get subscription list size
+ulong AmqpReceiver::getSubscriptionsSize()
 {
     return m_subscriptions.size();
 }
 
+// Get callback with input filter
 MessageListener AmqpReceiver::getSubscription(const std::string& filter)
 {
     std::lock_guard<std::mutex> lock(m_lock);
+
     auto it = m_subscriptions.find(filter);
     if (it != m_subscriptions.end()) {
         return (*it).second;
@@ -92,6 +130,7 @@ MessageListener AmqpReceiver::getSubscription(const std::string& filter)
     return nullptr;
 }
 
+// Set callback with input filter
 bool AmqpReceiver::setSubscription(const std::string& filter, MessageListener messageListener)
 {
     if (messageListener) {
@@ -110,6 +149,7 @@ bool AmqpReceiver::setSubscription(const std::string& filter, MessageListener me
     return false;
 }
 
+// Remove callback with input filter
 bool AmqpReceiver::unsetSubscription(const std::string& filter)
 {
     std::lock_guard<std::mutex> lock(m_lock);
@@ -124,6 +164,7 @@ bool AmqpReceiver::unsetSubscription(const std::string& filter)
     return false;
 }
 
+// Thread for managing message reception
 void AmqpReceiver::manageMessage()
 {
     // Construct friendly description
@@ -154,17 +195,16 @@ void AmqpReceiver::manageMessage()
                 // Test if the message filter match
                 auto callback = getSubscription(correlationId);
                 if (callback) {
-                    logDebug("Acknowledge message with \"{}\" correlationId for {}", correlationId, desc);
+                    logDebug("Acknowledge message (correlationId={} desc={})", correlationId, desc);
                     receiver.getSession().acknowledge(message);
 
                     // Execute subscription callback
                     callback(amqpMsg);
                 }
                 else {
-                    logDebug("Bad message receiver (correlationId: {}) for {}", correlationId, desc);
+                    logDebug("Bad message receiver (correlationId={} desc={})", correlationId, desc);
                 }
             }
-            logDebug("Ending manageMessage for {}", desc);
 
         }
         catch (const std::exception& ex) {
@@ -174,6 +214,7 @@ void AmqpReceiver::manageMessage()
 
     // Indicate that the messaging thread is closing
     m_promiseClose.setValue();
+    logDebug("Ending manageMessage for {}", desc);
 }
 
 } // namespace fty::messagebus2::amqp

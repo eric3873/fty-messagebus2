@@ -35,15 +35,22 @@ class AmqpClient;
 class AmqpReceiver
 {
 public:
-    AmqpReceiver(fty::messagebus2::amqp::AmqpClient *client, const std::string& address);
+    AmqpReceiver(fty::messagebus2::amqp::AmqpClient* client, const std::string& address);
     ~AmqpReceiver();
 
     bool init(const std::string& filter, const MessageListener& messageListener);
     bool waitClose();
-    const std::string getName() { return m_name; };
-    const Address getAddress() { return m_address; };
+    const std::string getName()
+    {
+        return m_name;
+    };
+    const Address getAddress()
+    {
+        return m_address;
+    };
 
-    ulong getSubscriptionsNumber();
+    // Get the number of subscribers
+    ulong getSubscriptionsSize();
     // Get the subscription according the input filter
     MessageListener getSubscription(const std::string& filter);
     // Add filter for subscription
@@ -57,16 +64,16 @@ protected:
 
 private:
     // Client reference
-    AmqpClient*          m_client;
+    AmqpClient* m_client;
     // Internal name of the qpid receiver
-    std::string          m_name;
+    std::string m_name;
     // Address of receiver
-    std::string          m_address;
+    std::string m_address;
     // List of message subscriptions
     SubScriptionListener m_subscriptions;
 
     // Mutex for subscription list
-    std::mutex           m_lock;
+    std::mutex m_lock;
 
     // Flag and promise used for closing the messaging thread
     std::atomic<bool>               m_closed;

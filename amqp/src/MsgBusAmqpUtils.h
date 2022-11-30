@@ -32,7 +32,7 @@ inline const std::string sanitizeAddress(const Address& addressIn)
 {
     // Add simple quotes around the address, e.g. "queue://myQueue" -> "'queue://myQueue'"
     std::string address { addressIn };
-    if (address[0] != '\'') {
+    if (!address.empty() && address[0] != '\'') {
         address = "'" + addressIn + "'";
     }
     return address;
