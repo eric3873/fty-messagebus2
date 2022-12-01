@@ -53,22 +53,6 @@ static const std::string OK           = ":OK";
 static const std::string QUERY_AND_OK = QUERY + OK;
 static const std::string RESPONSE_2   = QUERY_2 + OK;
 
-// Class used to test protected functions of AmqpClient
-class AmqpClientPrivateTest : public fty::messagebus2::amqp::AmqpClient {
-public:
-    AmqpClientPrivateTest() : fty::messagebus2::amqp::AmqpClient(AMQP_SERVER_URI) {}
-    ~AmqpClientPrivateTest() = default;
-
-    bool setSubscriptions(const std::string& key, MessageListener messageListener) {
-        return fty::messagebus2::amqp::AmqpClient::setSubscriptions(key, messageListener);
-    }
-    bool unsetSubscriptions(const std::string& key) {
-        return fty::messagebus2::amqp::AmqpClient::unsetSubscriptions(key);
-    }
-    bool isAddressInSubscriptions(const Address& address) {
-        return fty::messagebus2::amqp::AmqpClient::isAddressInSubscriptions(address);
-    }
-};
 // Class for test message receiption
 class MsgReceived
 {
