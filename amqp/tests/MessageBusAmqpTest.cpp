@@ -56,7 +56,7 @@ static const std::string RESPONSE_2   = QUERY_2 + OK;
 class AmqpClientPrivateTest : public fty::messagebus2::amqp::AmqpClient
 {
 public:
-    AmqpClientPrivateTest() : fty::messagebus2::amqp::AmqpClient(AMQP_SERVER_URI) = default;
+    AmqpClientPrivateTest() : fty::messagebus2::amqp::AmqpClient(AMQP_SERVER_URI) {};
     ~AmqpClientPrivateTest() = default;
 
     bool setSubscriptions(const std::string& key, MessageListener messageListener)
