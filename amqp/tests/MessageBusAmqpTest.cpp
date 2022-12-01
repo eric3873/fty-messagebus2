@@ -814,7 +814,7 @@ TEST_CASE("queueWithSameObject", "[amqp][request]")
             CHECK(asyncMsgReceived.assertValue(i + 1));
         }
         std::this_thread::sleep_for(ONE_SECOND);
-        CHECK(asyncMsgReceived.isRecieved(i));
+        CHECK(asyncMsgReceived.isReceived(i));
         // TODO: TO FIX
         //REQUIRE(msgBusRequesterAsync.unreceive(request.replyTo()));
     }
