@@ -55,7 +55,7 @@ public:
     {
         return m_closed;
     };
-    
+
     const std::string getName() { return m_clientName; };
     std::shared_ptr<qpid::messaging::Connection> getConnection() { return m_connection; };
 

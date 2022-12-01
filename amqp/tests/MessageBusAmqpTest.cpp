@@ -834,24 +834,12 @@ TEST_CASE("queueWithSameObject", "[amqp][request]")
         // TODO: TO FIX
         //REQUIRE(msgBusRequesterAsync.unreceive(request.replyTo()));
     }
-
-      int i = 0;
-      for (i = 0; i < 3; i++) {
-          //REQUIRE(msgBusRequesterAsync.send(request));
-          REQUIRE(msgBusRequesterAsync.send(request2));
-          std::this_thread::sleep_for(2s);
-          CHECK(asyncMsgReceived.assertValue(i + 1));
-      }
-      std::this_thread::sleep_for(ONE_SECOND);
-      CHECK(asyncMsgReceived.isReceived(i));
-      // TODO: TO FIX
-      //REQUIRE(msgBusRequesterAsync.unreceive(request.replyTo()));
-  }
-
-  {
-    for (int i = 0; i < 2; i++) {
-      auto otherReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
-      REQUIRE(otherReplyMsg.value().userData() == QUERY_AND_OK);
+  
+    {
+        for (int i = 0; i < 2; i++) {
+            auto otherReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+            REQUIRE(otherReplyMsg.value().userData() == QUERY_AND_OK);
+        }
     }
 }
 
