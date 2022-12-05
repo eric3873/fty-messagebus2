@@ -174,8 +174,10 @@ void AmqpClient::on_transport_error(proton::transport& transport)
 {
     logError("Transport error: {}", transport.error().what());
     // Reset connect promise in case of send or receive arrived before connection open
-    m_connectPromise.reset();
-    m_communicationState = ComState::Lost;
+    if (m_communicationState != ComState::Unknown) {
+        m_connectPromise.reset();
+        m_communicationState = ComState::Lost;
+    }
 }
 
 void AmqpClient::on_transport_open(proton::transport&)
