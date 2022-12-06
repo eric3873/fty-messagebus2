@@ -83,7 +83,11 @@ void AmqpClient::on_container_start(proton::container& container)
 void AmqpClient::on_container_stop(proton::container& container)
 {
     logDebug("Close container {} ...", container.id());
-    m_containerStop.notify_all();
+    {
+        std::unique_lock<std::mutex> lock(m_lockContainerStop);
+        m_containerStopOk = true;
+    }
+    m_cvContainerStop.notify_one();
 }
 
 void AmqpClient::on_connection_open(proton::connection& connection)
@@ -102,7 +106,7 @@ void AmqpClient::on_connection_open(proton::connection& connection)
 void AmqpClient::on_connection_close(proton::connection&)
 {
     logDebug("Close connection ...");
-    m_connectionClose.notify_all();
+    m_cvConnectionClose.notify_one();
 }
 
 void AmqpClient::on_connection_error(proton::connection& connection)
@@ -514,20 +518,29 @@ void AmqpClient::close()
     if (m_connection && m_connection.active()) {
 
         // First close the connection
-        m_connection.close();
-        std::unique_lock<std::mutex> lockClose(m_lockClose);
-        auto statusConnection = m_connectionClose.wait_for(lockClose, std::chrono::seconds(10));
+        m_connection.work_queue().add([&]() {
+            m_connection.close();
+        });
+        std::unique_lock<std::mutex> lockConnectionClose(m_lockConnectionClose);
+        auto statusConnection = m_cvConnectionClose.wait_for(lockConnectionClose, std::chrono::seconds(5));
         if (statusConnection == std::cv_status::timeout) {
             logWarn("End stop connection with timeout");
         }
 
+        // Thread to wait end of container
+        std::thread thrd([this]() {
+            std::unique_lock<std::mutex> lockContainerStop(m_lockContainerStop);
+            auto statusContainer = m_cvContainerStop.wait_for(lockContainerStop, std::chrono::seconds(5), [this]{
+                return m_containerStopOk;
+            });
+            if (!statusContainer) {
+                logWarn("End stop container with timeout");
+            }
+        });
+
         // Then close the container
         m_connection.container().stop();
-        std::unique_lock<std::mutex> lockStop(m_lockStop);
-        auto statusContainer = m_containerStop.wait_for(lockStop, std::chrono::seconds(10));
-        if (statusContainer == std::cv_status::timeout) {
-            logWarn("End stop container with timeout");
-        }
+        thrd.join();
     }
 }
 

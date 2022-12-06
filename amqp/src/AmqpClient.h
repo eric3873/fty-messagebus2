@@ -103,12 +103,13 @@ private:
     Promise<void>                       m_promiseSenderClose;
 
     // Container stop
-    std::condition_variable             m_containerStop;
-    std::mutex                          m_lockStop;
+    bool                                m_containerStopOk {false};
+    std::condition_variable             m_cvContainerStop;
+    std::mutex                          m_lockContainerStop;
 
     // Connection close
-    std::condition_variable             m_connectionClose;
-    std::mutex                          m_lockClose;
+    std::condition_variable             m_cvConnectionClose;
+    std::mutex                          m_lockConnectionClose;
 
 protected:
     void resetPromises();
