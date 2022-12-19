@@ -1,5 +1,5 @@
 /*  =========================================================================
-    Copyright (C) 2014 - 2021 Eaton
+    Copyright (C) 2014 - 2022 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -29,11 +29,12 @@
 #include <thread>
 #include <chrono>
 #include <future>
+#include <chrono>
 
 #if defined(EXTERNAL_SERVER_FOR_TEST)
-static constexpr auto AMQP_SERVER_URI{"x.x.x.x:5672"};
+static constexpr auto AMQP_SERVER_URI {"x.x.x.x:5672"};
 #else
-static constexpr auto AMQP_SERVER_URI{"amqp://127.0.0.1:5672"};
+static constexpr auto AMQP_SERVER_URI {"amqp:tcp:127.0.0.1:5672"};
 #endif
 
 using namespace fty::messagebus2;
@@ -52,22 +53,6 @@ static const std::string OK           = ":OK";
 static const std::string QUERY_AND_OK = QUERY + OK;
 static const std::string RESPONSE_2   = QUERY_2 + OK;
 
-// Class used to test protected functions of AmqpClient
-class AmqpClientPrivateTest : public fty::messagebus2::amqp::AmqpClient {
-public:
-    AmqpClientPrivateTest() : fty::messagebus2::amqp::AmqpClient(AMQP_SERVER_URI) {}
-    ~AmqpClientPrivateTest() = default;
-
-    bool setSubscriptions(const std::string& key, MessageListener messageListener) {
-        return fty::messagebus2::amqp::AmqpClient::setSubscriptions(key, messageListener);
-    }
-    bool unsetSubscriptions(const std::string& key) {
-        return fty::messagebus2::amqp::AmqpClient::unsetSubscriptions(key);
-    }
-    bool isAddressInSubscriptions(const Address& address) {
-        return fty::messagebus2::amqp::AmqpClient::isAddressInSubscriptions(address);
-    }
-};
 // Class for test message receiption
 class MsgReceived
 {
@@ -80,9 +65,9 @@ public:
     int receiver;
     int replyer;
 
-    MsgReceived()
-        : receiver(0)
-        , replyer(0)
+    MsgReceived() :
+        receiver(0),
+        replyer(0)
     {
         m_msgBusReplyer = std::make_shared<amqp::MessageBusAmqp>("TestCase", AMQP_SERVER_URI);
         REQUIRE(m_msgBusReplyer->connect());
@@ -111,15 +96,16 @@ public:
 
     bool assertValue(const int expected)
     {
+        std::cout << "receiver: " << receiver << " <> " <<  expected << " replyer: " << replyer << " <> " << expected << std::endl;
         return (receiver == expected && replyer == expected);
     }
 
-    bool isRecieved(const int expected)
+    bool isReceived(const int expected)
     {
         return (receiver == expected);
     }
 
-    int getRecieved()
+    int getReceived()
     {
         return receiver;
     }
@@ -134,6 +120,7 @@ public:
     {
         incReplyer();
         // Build the response
+        std::cout << "replyerAddOK:" << message.toString() << std::endl;
         auto response = message.buildReply(message.userData() + OK);
 
         if (!response) {
@@ -174,48 +161,6 @@ public:
 //----------------------------------------------------------------------
 // Test case
 //----------------------------------------------------------------------
-
-TEST_CASE("AddressFilter", "[amqp][AddressFilter]")
-{
-    std::string res1 = "myAddress|myFilter";
-    std::string res2 = "myAddress";
-    REQUIRE(fty::messagebus2::amqp::setAddressFilterKey("myAddress", "myFilter") == res1);
-    REQUIRE(fty::messagebus2::amqp::setAddressFilterKey("myAddress") == res2);
-    auto res = fty::messagebus2::amqp::getAddressFilterKey(res1);
-    REQUIRE(res.first == "myAddress");
-    REQUIRE(res.second == "myFilter");
-    res = fty::messagebus2::amqp::getAddressFilterKey(res2);
-    REQUIRE(res.first == "myAddress");
-    REQUIRE(res.second.empty());
-}
-
-TEST_CASE("AmqpClient private", "[amqp][AmqpClient]")
-{
-    AmqpClientPrivateTest msgBusClient;
-    MessageListener myMessageListener = [](const Message&) {};
-
-    // Test bad inputs
-    REQUIRE(!msgBusClient.setSubscriptions("", nullptr));
-    REQUIRE(!msgBusClient.setSubscriptions("", myMessageListener));
-    REQUIRE(!msgBusClient.setSubscriptions("myKey", nullptr));
-    REQUIRE(!msgBusClient.unsetSubscriptions(""));
-    REQUIRE(!msgBusClient.isAddressInSubscriptions(""));
-
-    auto myAddress    = "myAddress";
-    auto myFilter     = "myFilter";
-    auto myBadAddress = "myBadAddress";
-    auto myKey    = fty::messagebus2::amqp::setAddressFilterKey(myAddress, myFilter);
-    auto myBadKey = fty::messagebus2::amqp::setAddressFilterKey(myBadAddress, myFilter);
-    REQUIRE(!msgBusClient.isAddressInSubscriptions(myAddress));  // No key
-    REQUIRE(msgBusClient.setSubscriptions(myKey, myMessageListener));
-    REQUIRE(!msgBusClient.setSubscriptions(myKey, myMessageListener));  // Key already present
-    REQUIRE(msgBusClient.isAddressInSubscriptions(myAddress));
-    REQUIRE(!msgBusClient.isAddressInSubscriptions(myBadAddress));
-    REQUIRE(!msgBusClient.unsetSubscriptions(myBadKey));  // Key not present
-    REQUIRE(msgBusClient.unsetSubscriptions(myKey));
-    REQUIRE(!msgBusClient.unsetSubscriptions(myKey));  // Key already removed
-    REQUIRE(!msgBusClient.isAddressInSubscriptions(myAddress));  // Key removed
-}
 
 TEST_CASE("Identity", "[amqp][identity]")
 {
@@ -326,10 +271,59 @@ TEST_CASE("queue", "[amqp][request]")
         for (int i = 0; i < 3; i++) {
             REQUIRE(msgBusSender.send(msg));
             std::this_thread::sleep_for(ONE_SECOND);
-            CHECK(msgReceived.isRecieved(i + 1));
+            CHECK(msgReceived.isReceived(i + 1));
         }
 
         REQUIRE(msgBusSender.unreceive(sendTestQueue));
+    }
+}
+
+TEST_CASE("test request/reply synch with temporary queue", "[amqp][test]")
+{
+    for (int i = 0; i < 10; i++) {
+        MsgReceived msgReceived;
+        std::string syncTestQueue       = "queue://test2.message.sync.";
+        auto        msgBusRequesterSync = amqp::MessageBusAmqp("SyncReceiverTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequesterSync.connect());
+
+        auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusReplyer.connect());
+
+        // Build synchronous request and set all receiver
+        Message request = Message::buildRequest("RequestTestCase", syncTestQueue + "request", "TEST", "", QUERY, {}, SYNC_REQUEST_TIMEOUT);
+        REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+
+        auto replyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
+        REQUIRE(replyMsg.value().userData() == QUERY_AND_OK);
+
+        REQUIRE(msgBusReplyer.unreceive(request.to()));
+    }
+}
+
+TEST_CASE("test request/reply asynch with temporary queue", "[amqp][test]")
+{
+    for (int i = 0; i < 10; i++) {
+        MsgReceived msgReceived;
+        std::string asyncTestQueue  = "queue://test2.message.async.";
+        auto        msgBusRequester = amqp::MessageBusAmqp("AsyncRequesterTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusRequester.connect());
+
+        auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
+        REQUIRE(msgBusReplyer.connect());
+
+        // Build asynchronous request and set all receiver
+        Message request = Message::buildRequest("AsyncRequestTestCase", asyncTestQueue + "request", "TEST", "", QUERY);
+        REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
+        REQUIRE(
+            msgBusRequester
+                .receive("", std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), request.correlationId()));
+
+        REQUIRE(msgBusRequester.send(request));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        CHECK(msgReceived.assertValue(1));
+
+        REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
+        REQUIRE(msgBusReplyer.unreceive(asyncTestQueue + "request"));
     }
 }
 
@@ -352,7 +346,7 @@ TEST_CASE("test send different message", "[amqp][test]")
             request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
             request.correlationId()));
         REQUIRE(msgBusRequester.send(request));
-        std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
         CHECK(msgReceived.assertValue(i + 1));
         REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
     }
@@ -388,15 +382,18 @@ TEST_CASE("test send same message", "[amqp][test]")
     REQUIRE(msgBusReplyer.unreceive(asyncTestQueue + "request"));
 }
 
-TEST_CASE("test filter with bad receiver", "[amqp][.filter]")
+TEST_CASE("test filter with bad receiver", "[amqp][filter]")
 {
     MsgReceived msgReceived;
     std::string testQueue1       = "queue://test.message.queue.1.";
     std::string testQueue2       = "queue://test.message.queue.2.";
     std::string badCorrelationId = "0123456789";
 
-    auto msgBusRequester = amqp::MessageBusAmqp("RequesteTestCase", AMQP_SERVER_URI);
-    REQUIRE(msgBusRequester.connect());
+    auto msgBusRequester1 = amqp::MessageBusAmqp("RequesteTestCase1", AMQP_SERVER_URI);
+    REQUIRE(msgBusRequester1.connect());
+
+    auto msgBusRequester2 = amqp::MessageBusAmqp("RequesteTestCase2", AMQP_SERVER_URI);
+    REQUIRE(msgBusRequester2.connect());
 
     auto msgBusReplyer = amqp::MessageBusAmqp("AsyncReplyerTestCase", AMQP_SERVER_URI);
     REQUIRE(msgBusReplyer.connect());
@@ -405,27 +402,27 @@ TEST_CASE("test filter with bad receiver", "[amqp][.filter]")
     Message request = Message::buildRequest("AsyncRequestTestCase", testQueue1 + "request", "TEST", testQueue1 + "reply", QUERY);
     REQUIRE(msgBusReplyer.receive(request.to(), std::bind(&MsgReceived::replyerAddOK, std::ref(msgReceived), std::placeholders::_1)));
     // Set bad receiver
-    REQUIRE(msgBusRequester.receive(
-        request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), badCorrelationId));
+    REQUIRE(msgBusRequester1.receive(
+        request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1), /*request.correlationId()*/badCorrelationId));
 
-    REQUIRE(msgBusRequester.send(request));
+    REQUIRE(msgBusRequester1.send(request));
     std::this_thread::sleep_for(std::chrono::seconds(1));
+    // Don't receive reply
     CHECK(!msgReceived.assertValue(1));
 
-    REQUIRE(msgBusRequester.unreceive(request.replyTo(), badCorrelationId));
+    REQUIRE(msgBusRequester1.unreceive(request.replyTo(), /*request.correlationId()*/ badCorrelationId));
 
     // Set good receiver
-    REQUIRE(msgBusRequester.receive(
+    REQUIRE(msgBusRequester2.receive(
         request.replyTo(), std::bind(&MsgReceived::messageListener, std::ref(msgReceived), std::placeholders::_1),
         request.correlationId()));
-    std::this_thread::sleep_for(std::chrono::seconds(5));
-
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 
     REQUIRE(msgBusReplyer.unreceive(request.to()));
-    REQUIRE(msgBusRequester.unreceive(request.replyTo(), request.correlationId()));
+    REQUIRE(msgBusRequester2.unreceive(request.replyTo(), request.correlationId()));
 
-    // Don't work: to be re-worked
-    // CHECK(msgReceived.assertValue(1));
+    // Receive reply
+    CHECK(msgReceived.assertValue(1));
 }
 
 TEST_CASE("multi synch filter test", "[amqp][multi][synch][filter]")
@@ -817,11 +814,11 @@ TEST_CASE("queueWithSameObject", "[amqp][request]")
             CHECK(asyncMsgReceived.assertValue(i + 1));
         }
         std::this_thread::sleep_for(ONE_SECOND);
-        CHECK(asyncMsgReceived.isRecieved(i));
+        CHECK(asyncMsgReceived.isReceived(i));
         // TODO: TO FIX
         //REQUIRE(msgBusRequesterAsync.unreceive(request.replyTo()));
     }
-
+  
     {
         for (int i = 0; i < 2; i++) {
             auto otherReplyMsg = msgBusRequesterSync.request(request, SYNC_REQUEST_TIMEOUT);
@@ -835,8 +832,8 @@ TEST_CASE("topic", "[amqp][pub]")
     SECTION("Publish subscribe")
     {
         MsgReceived msgReceived;
-        std::string topic        = "topic://test.message.pubsub";
-        auto        msgBusSender = amqp::MessageBusAmqp("PubTestCase", AMQP_SERVER_URI);
+        std::string topic = "topic://test.message.pubsub";
+        auto msgBusSender = amqp::MessageBusAmqp("PubTestCase", AMQP_SERVER_URI);
         REQUIRE(msgBusSender.connect());
 
         auto msgBusReceiver = amqp::MessageBusAmqp("PubTestCaseReceiver", AMQP_SERVER_URI);
@@ -850,7 +847,7 @@ TEST_CASE("topic", "[amqp][pub]")
         for (int i = 0; i < 3; i++) {
             REQUIRE(msgBusSender.send(msg));
             std::this_thread::sleep_for(ONE_SECOND);
-            CHECK(msgReceived.isRecieved(i + 1));
+            CHECK(msgReceived.isReceived(i + 1));
         }
     }
 
@@ -872,7 +869,7 @@ TEST_CASE("topic", "[amqp][pub]")
         Message msg = Message::buildMessage("UnreceiveTestCase", topic, "TEST", QUERY);
         REQUIRE(msgBusSender.send(msg));
         std::this_thread::sleep_for(TWO_SECONDS);
-        CHECK(msgReceived.isRecieved(1));
+        CHECK(msgReceived.isReceived(1));
 
         // Try to unreceive a wrong topic => REJECTED
         REQUIRE(msgBus.unreceive("/etn/t/wrongTopic").error() == DeliveryState::Rejected);
@@ -880,7 +877,7 @@ TEST_CASE("topic", "[amqp][pub]")
         REQUIRE(msgBus.unreceive(topic));
         REQUIRE(msgBusSender.send(msg));
         std::this_thread::sleep_for(ONE_SECOND);
-        CHECK(msgReceived.isRecieved(1));
+        CHECK(msgReceived.isReceived(1));
     }
 
     SECTION("Pub sub with same object")
@@ -898,7 +895,7 @@ TEST_CASE("topic", "[amqp][pub]")
 
         REQUIRE(msgBus.send(msg));
         std::this_thread::sleep_for(ONE_SECOND);
-        CHECK(msgReceived.isRecieved(1));
+        CHECK(msgReceived.isReceived(1));
     }
 }
 
@@ -919,8 +916,6 @@ TEST_CASE("wrong", "[amqp][messageStatus]")
         REQUIRE(msgBus.request(request, 1).error() == DeliveryState::Rejected);
         request.from("queue://etn.q.request");
         request.to("queue://etn.q.reply");
-        // Without reply request reject.
-        REQUIRE(msgBus.request(request, 1).error() == DeliveryState::Rejected);
     }
 
     SECTION("Wrong ip address")

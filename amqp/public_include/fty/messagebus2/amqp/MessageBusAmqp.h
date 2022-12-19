@@ -1,5 +1,5 @@
 /*  =========================================================================
-    Copyright (C) 2014 - 2021 Eaton
+    Copyright (C) 2014 - 2022 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,8 +26,8 @@
 namespace fty::messagebus2::amqp {
 
 // Default amqp end point
-static auto constexpr DEFAULT_ENDPOINT{"amqp://127.0.0.1:5672"};
-static auto constexpr BUS_IDENTITY{"AMQP"};
+static auto constexpr DEFAULT_ENDPOINT {"amqp:tcp:127.0.0.1:5672"};
+static auto constexpr BUS_IDENTITY {"AMQP"};
 
 class AmqpClient;
 
@@ -35,7 +35,7 @@ class MessageBusAmqp final : public MessageBus
 {
 public:
     MessageBusAmqp(const std::string& clientName = utils::getClientId("MessageBusAmqp"), const Endpoint& endpoint = DEFAULT_ENDPOINT);
-    ~MessageBusAmqp() = default;
+    ~MessageBusAmqp();
 
     MessageBusAmqp(MessageBusAmqp&&) = delete;
     MessageBusAmqp& operator = (MessageBusAmqp&&) = delete;

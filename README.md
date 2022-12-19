@@ -40,7 +40,7 @@ The interfaces is documentation is available in the [header](common/public_inclu
 * [fty-utils](https://github.com/42ity/fty-utils)
 * [PahoMqttC](https://github.com/eclipse/paho.mqtt.c)
 * [PahoMqttCpp](https://github.com/eclipse/paho.mqtt.cpp)
-* [qpid-proton](https://github.com/apache/qpid-proton.git)
+* [qpid-cpp](https://github.com/apache/qpid-cpp)
 * [Catch2](https://github.com/catchorg/Catch2)
 
 ## How to build

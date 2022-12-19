@@ -1,5 +1,5 @@
 /*  =========================================================================
-    Copyright (C) 2014 - 2021 Eaton
+    Copyright (C) 2014 - 2022 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,87 +20,58 @@
 #pragma once
 
 #include "fty/messagebus2/amqp/MessageBusAmqp.h"
-#include "MsgBusAmqpUtils.h"
-#include "fty/messagebus2/utils/MsgBusPoolWorker.hpp"
-#include "fty/messagebus2/Promise.h"
-#include <proton/connection.hpp>
-#include <proton/container.hpp>
-#include <proton/delivery.hpp>
-#include <proton/message.hpp>
-#include <proton/messaging_handler.hpp>
-#include <proton/receiver_options.hpp>
-#include <proton/source_options.hpp>
-#include <proton/tracker.hpp>
-#include <proton/transport.hpp>
-#include <proton/work_queue.hpp>
+
+#include <qpid/messaging/Message.h>
+#include <qpid/messaging/Connection.h>
+
+#include <atomic>
+#include <mutex>
 
 namespace fty::messagebus2::amqp {
 
-using MessageListener      = fty::messagebus2::MessageListener;
-using SubScriptionListener = std::map<Address, MessageListener>;
 class AmqpClient;
 using AmqpClientPointer = std::shared_ptr<AmqpClient>;
 
-class AmqpClient : public proton::messaging_handler
+class AmqpReceiver;
+using AmqpReceiverPointer  = std::shared_ptr<fty::messagebus2::amqp::AmqpReceiver>;
+
+static auto constexpr DEFAULT_SESSION {"default_session"};
+
+class AmqpClient
 {
 public:
-    AmqpClient(const Endpoint& url);
+    AmqpClient(const ClientName& clientName, const Endpoint& url);
     ~AmqpClient();
 
-    // proton::messaging_handler Callback
-    void on_container_start(proton::container& container) override;
-    void on_container_stop(proton::container&) override;
-    void on_connection_open(proton::connection& connection) override;
-    void on_connection_close(proton::connection& connection) override;
-    void on_connection_error(proton::connection& connection) override;
-    void on_sender_open(proton::sender& sender) override;
-    void on_sender_close(proton::sender&) override;
-    void on_receiver_open(proton::receiver& receiver) override;
-    void on_receiver_close(proton::receiver&) override;
-    void on_error(const proton::error_condition& error) override;
-    void on_transport_error(proton::transport& t) override;
-    void on_transport_open(proton::transport&) override;
-    void on_transport_close(proton::transport&) override;
-    void on_message(proton::delivery& delivery, proton::message& msg) override;
-
+    fty::messagebus2::ComState connect();
     bool isConnected();
-    fty::messagebus2::ComState connected();
-    fty::messagebus2::DeliveryState send(const proton::message& msg);
-    fty::messagebus2::DeliveryState receive(
-        const Address& address, MessageListener messageListener = {}, const std::string& filter = {});
-    fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {}, bool forceClose = false);
+
+    fty::messagebus2::DeliveryState receive(const Address& address, MessageListener messageListener, const std::string& filter = {});
+    fty::messagebus2::DeliveryState unreceive(const Address& address, const std::string& filter = {});
+    fty::messagebus2::DeliveryState send(const qpid::messaging::Message& msg);
+
     void close();
+    bool isClosed()
+    {
+        return m_closed;
+    };
+
+    const std::string getName() { return m_clientName; };
+    std::shared_ptr<qpid::messaging::Connection> getConnection() { return m_connection; };
 
 private:
-    Endpoint                m_url;
-    SubScriptionListener    m_subscriptions;
+    const ClientName  m_clientName;
+    Endpoint          m_url;
+    std::atomic<bool> m_closed;
 
-    // Default communication state
-    fty::messagebus2::ComState m_communicationState = fty::messagebus2::ComState::Unknown;
+    // Qpid object
+    std::shared_ptr<qpid::messaging::Connection> m_connection;
 
-    // Proton object
-    proton::connection    m_connection;
-    proton::message       m_message;
+    // List of receivers
+    std::vector<fty::messagebus2::amqp::AmqpReceiverPointer> m_receivers;
 
-    // Pool thread
-    std::shared_ptr<fty::messagebus2::utils::PoolWorker> m_pool;
-
-    // Mutex
+    // Mutex for receivers list
     std::mutex m_lock;
-    std::mutex m_lockMain;
-
-protected:
-    // Set of promise for synchronization
-    Promise<fty::messagebus2::ComState> m_connectPromise;
-    Promise<void>                       m_deconnectPromise;
-    Promise<void>                       m_promiseSender;
-    Promise<void>                       m_promiseReceiver;
-    Promise<void>                       m_promiseSenderClose;
-
-    void resetPromises();
-    bool setSubscriptions(const std::string& key, MessageListener messageListener);
-    bool unsetSubscriptions(const std::string& key);
-    bool isAddressInSubscriptions(const Address& address);
 };
 
 } // namespace fty::messagebus2::amqp
