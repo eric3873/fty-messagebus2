@@ -55,7 +55,12 @@ fty::Expected<void, ComState> MessageBusAmqp::connect() noexcept
     try {
         std::thread thrdSender([=]() {
             // TBD: Generate custom uuid to fix crash when genrerate by the library (in multi thread test)
-            proton::container(*m_clientPtr, utils::generateUuid()).run();
+            std::string uuid;
+            {
+               std::lock_guard<std::mutex> lock(m_lockUuid);
+               uuid = utils::generateUuid();
+            }
+            proton::container(*m_clientPtr, uuid).run();
         });
         thrdSender.detach();
 

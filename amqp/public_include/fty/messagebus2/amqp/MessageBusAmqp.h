@@ -22,6 +22,7 @@
 #include <fty/messagebus2/Message.h>
 #include <fty/messagebus2/MessageBus.h>
 #include <fty/messagebus2/utils.h>
+#include <mutex>
 
 namespace fty::messagebus2::amqp {
 
@@ -53,6 +54,9 @@ public:
     [[nodiscard]] const Identity& identity() const noexcept override;
 
 private:
+    // TBD: For uuid generation protection (Needed ?)
+    std::mutex m_lockUuid;
+
     // Test if the service is available or not
     bool isServiceAvailable();
 
