@@ -157,11 +157,18 @@ fty::Expected<void, ComState> MsgBusMqtt::connect()
 
         // After a connection lost, depending of reconnection setting, this handler is called by paho library
         m_asynClient->set_update_connection_handler([this](const ::mqtt::connect_data& /*connData*/) {
-            if (!m_asynClient->is_connected()) {
-                logInfo("Try a reconnection with {} ...", m_endpoint);
-                m_asynClient->reconnect()->wait_for(TIMEOUT);
+            try {
+                if (!m_asynClient->is_connected()) {
+                    logInfo("Try a reconnection with {} ...", m_endpoint);
+                    m_asynClient->reconnect()->wait_for(TIMEOUT);
+                }
+                return true;
+            } catch (const ::mqtt::exception& e) {
+                logError("Error to reconnect with the Mqtt server, reason: {}", e.get_message());
+            } catch (const std::exception& e) {
+                logError("unexpected error: {}", e.what());
             }
-            return true;
+            return false;
         });
 
         // Callback(s)
