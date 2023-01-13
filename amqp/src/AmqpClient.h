@@ -54,7 +54,7 @@ public:
     void on_connection_open(proton::connection& connection) override;
     void on_connection_close(proton::connection& connection) override;
     void on_connection_error(proton::connection& connection) override;
-    void on_session_open(proton::session& session) override;
+    void on_session_open(proton::session&) override;
     void on_session_close(proton::session&) override;
     void on_sender_open(proton::sender& sender) override;
     void on_sender_close(proton::sender& sender) override;
@@ -83,7 +83,6 @@ private:
 
     // Proton object
     proton::connection    m_connection;
-    proton::session       m_session;
     proton::receiver      m_receiver;
     proton::message       m_message;
 
@@ -96,8 +95,6 @@ private:
 
     // Set of promise for synchronization
     Promise<fty::messagebus2::ComState> m_connectPromise;
-    Promise<void>                       m_promiseSession;
-    Promise<void>                       m_promiseSessionClose;
     Promise<void>                       m_promiseSender;
     Promise<void>                       m_promiseReceiver;
     Promise<void>                       m_promiseSenderClose;

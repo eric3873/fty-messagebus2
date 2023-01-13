@@ -123,17 +123,14 @@ void AmqpClient::on_connection_error(proton::connection& connection)
     connection.work_queue().add([&]() { m_connection.open(); });
 }
 
-void AmqpClient::on_session_open(proton::session& session)
+void AmqpClient::on_session_open(proton::session&)
 {
     logDebug("Open session ...");
-    m_session = session;
-    m_promiseSession.setValue();
 }
 
 void AmqpClient::on_session_close(proton::session&)
 {
     logDebug("Close session ...");
-    m_promiseSessionClose.setValue();
 }
 
 void AmqpClient::on_sender_open(proton::sender& sender)
@@ -270,40 +267,14 @@ DeliveryState AmqpClient::send(const proton::message& msg)
             }
         }
 
-        // Note for memory leak issue: The senders and the receivers which are closed are not removed from current
-        // session list and leak memory. The solution is to open a new session for each new sender and close the
-        // session when the message is sent to close properly the sender.
-
-        m_promiseSession.reset();
-        // Open a new temporary session for the transaction
-        m_connection.work_queue().add([&]() {
-            m_connection.open_session();
-        });
-        // Wait the session creation
-        if (!m_promiseSession.waitFor(TIMEOUT_MS)) {
-            logError("Send error, unable to open a new session for {}", m_message.to());
-            return deliveryState;
-        }
-
-        // Create the sender in the session
+        // Create the sender
         m_promiseSender.reset();
         m_connection.work_queue().add([&]() {
-            m_session.open_sender(m_message.to(), proton::sender_options().name(m_message.to()));
+            m_connection.open_sender(m_message.to(), proton::sender_options().name(m_message.to()));
         });
         // Wait to know if the message has been sent or not
         if (m_promiseSender.waitFor(TIMEOUT_MS)) {
             deliveryState = DeliveryState::Accepted;
-        }
-
-        // Close the temporary session
-        m_promiseSessionClose.reset();
-        m_connection.work_queue().add([&]() {
-            logDebug("Close session");
-            m_session.close();
-        });
-        // Wait the session close
-        if (!m_promiseSessionClose.waitFor(TIMEOUT_MS)) {
-            logError("Unable to close session: timeout");
         }
     }
     return deliveryState;
@@ -326,21 +297,6 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
         std::lock_guard<std::mutex> lock(m_lockMain);
         logDebug("Set receiver to wait message(s) from {} ...", address);
         m_promiseReceiver.reset();
-
-        // Note for memory leak issue: The senders and the receivers which are closed are not removed from current
-        // session list and leak memory. The solution is to open a new session for each new receiver and close the
-        // session when the message is received to close properly the receiver.
-
-        // Open a new temporary session for the transaction
-        m_promiseSession.reset();
-        m_connection.work_queue().add([&]() {
-            m_connection.open_session();
-        });
-        // Wait the session creation
-        if (!m_promiseSession.waitFor(TIMEOUT_MS)) {
-            logError("Send error, unable to open a new session for {}/{}", address, filter);
-            return deliveryState;
-        }
 
         proton::source_options opts;
 
@@ -386,10 +342,10 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
             }
         }
 
-        // Create receiver in the session
+        // Create receiver
         m_promiseReceiver.reset();
         m_connection.work_queue().add([&]() {
-            m_session.open_receiver(address, proton::receiver_options().name(receiverName).source(opts).auto_accept(true));
+            m_connection.open_receiver(address, proton::receiver_options().name(receiverName).source(opts).auto_accept(true));
         });
         // Wait to know if the receiver has been created
         if (!m_promiseReceiver.waitFor(TIMEOUT_MS)) {
@@ -446,55 +402,37 @@ DeliveryState AmqpClient::unreceive(const Address& address, const std::string& f
             receiverNameToSearch = filter;
         }
 
-        // Find receiver with this address and close it with the session
-        // Note: Need to check in all session because the receivers in connection is just for current session.
+        // Find receiver with this address and close it
         bool isFound = false;
         logDebug("unreceive: try to close receiver {}", address_);
-        int nb_sessions = 0;
-        auto sessions = m_connection.sessions();
-        for (auto session : sessions) {
-            auto receivers = session.receivers();
-            for (auto receiver : receivers) {
-                logTrace("test session:{} receiver.name()={} address={} closed={} active={}",
-                    nb_sessions, receiver.name(), receiver.source().address(), receiver.closed(), receiver.active());
+        auto receivers = m_connection.receivers();
+        for (auto receiver : receivers) {
+            logTrace("test receiver.name()={} address={} closed={} active={}",
+                receiver.name(), receiver.source().address(), receiver.closed(), receiver.active());
 
-                if ((receiver.name() == receiverNameToSearch) ||
-                    (receiver.name().empty() && receiver.source().address() == address_)) {
-                    isFound = true;
-                    // Close receiver if needed
-                    if (!receiver.closed() && receiver.active()) {
-                        m_promiseReceiver.reset();
-                        m_connection.work_queue().add([&]() {
-                            receiver.close();
-                        });
-                        if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
-                            logDebug("Receiver closed for {}", address_);
-                            deliveryState = DeliveryState::Accepted;
-                        }
-                        else {
-                            logError("Error on unreceive for {}, timeout reached", address_);
-                        }
-                    }
-                    else {
-                        logWarn("Unable to close receiver for address {}: still closed", address_);
+            if ((receiver.name() == receiverNameToSearch) ||
+                (receiver.name().empty() && receiver.source().address() == address_)) {
+                isFound = true;
+                // Close receiver if needed
+                if (!receiver.closed() && receiver.active()) {
+                    m_promiseReceiver.reset();
+                    m_connection.work_queue().add([&]() {
+                        receiver.close();
+                    });
+                    if (m_promiseReceiver.waitFor(TIMEOUT_MS)) {
+                        logDebug("Receiver closed for {}", address_);
                         deliveryState = DeliveryState::Accepted;
                     }
-                    // Close session if needed
-                    if (!session.closed()) {
-                        m_promiseSessionClose.reset();
-                        m_connection.work_queue().add([&]() {
-                            logDebug("Close session");
-                            session.close();
-                        });
-                        // Wait the session close
-                        if (!m_promiseSessionClose.waitFor(TIMEOUT_MS)) {
-                            logError("Unable to close session: timeout");
-                        }
+                    else {
+                        logError("Error on unreceive for {}, timeout reached", address_);
                     }
-                    break;
                 }
+                else {
+                    logWarn("Unable to close receiver for address {}: still closed", address_);
+                    deliveryState = DeliveryState::Accepted;
+                }
+                break;
             }
-            nb_sessions ++;
         }
         if (!isFound)  {
             logWarn("Unable to unreceive address {}: not present", address_);
@@ -550,8 +488,6 @@ void AmqpClient::resetPromises()
     std::lock_guard<std::mutex> lock(m_lock);
     logDebug("Reset all promises");
     m_connectPromise.reset();
-    m_promiseSession.reset();
-    m_promiseSessionClose.reset();
     m_promiseSender.reset();
     m_promiseReceiver.reset();
 }
