@@ -132,8 +132,14 @@ fty::Expected<void, ComState> MsgBusMqtt::connect()
                                            .finalize();
 
     if (m_will.isValidMessage()) {
-        ::mqtt::will_options willOptions(*buildMessageForMqtt(m_will));
-        connOpts.set_will(willOptions);
+        auto willMsg = buildMessageForMqtt(m_will);
+        if (willMsg.get()) {
+            ::mqtt::will_options willOptions(*willMsg);
+            connOpts.set_will(willOptions);
+        }
+        else {
+           logError("Will message not initialized correctly");
+        }
     }
 
     try {
