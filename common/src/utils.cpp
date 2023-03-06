@@ -22,6 +22,7 @@
 #include <random>
 #include <string>
 #include <uuid/uuid.h>
+#include <string.h>
 
 namespace fty::messagebus2::utils {
 
@@ -30,6 +31,7 @@ const std::string generateUuid()
     uuid_t uuid;
     uuid_generate(uuid);
     char uuid_str[UUID_STR_LEN + 1];
+    memset(uuid_str, 0, sizeof(uuid_str));
     uuid_unparse_lower(uuid, uuid_str);
     return uuid_str;
 }
