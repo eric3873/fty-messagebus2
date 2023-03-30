@@ -259,8 +259,8 @@ std::string Message::toString() const
 
 Message& Message::operator=(const Message& other)
 {
-    m_metadata = std::move(other.metaData());
-    m_data     = std::move(other.userData());
+    m_metadata = other.metaData();
+    m_data     = other.userData();
     return *this;
 }
 
