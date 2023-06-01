@@ -20,7 +20,7 @@
 Source:         fty-messagebus2
 Section:        net
 Priority:       optional
-Maintainer:     fty-messagebus2 Developers <eatonipcopensource@eaton.com>
+Maintainer:     fty-messagebus2 Developers <opensource@eaton.com>
 Standards-Version: 4.0.1.0
 Build-Depends: debhelper (>= 9),
     cmake (>=3.0),
