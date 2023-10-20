@@ -136,15 +136,15 @@ bool AmqpReceiver::setSubscription(const std::string& filter, MessageListener me
     if (messageListener) {
         std::lock_guard<std::mutex> lock(m_lock);
         if (auto it {m_subscriptions.find(filter)}; it == m_subscriptions.end()) {
-            logDebug("Subscriptions added: {} / {}", m_address, filter);
+            logDebug("Subscriptions added: address={}, filter={}", m_address, filter);
             m_subscriptions.emplace(filter, messageListener);
             return true;
 
         } else {
-            logWarn("Subscriptions skipped, filter yet present: {} / {}", m_address, filter);
+            logWarn("Subscriptions skipped, filter yet present: address={}, filter={}", m_address, filter);
         }
     } else {
-        logWarn("Subscriptions skipped, call back information not filled!");
+        logWarn("Subscriptions skipped, call back information not filled! (address={}, filter={})", m_address, filter);
     }
     return false;
 }
@@ -168,7 +168,7 @@ bool AmqpReceiver::unsetSubscription(const std::string& filter)
 void AmqpReceiver::manageMessage()
 {
     // Construct friendly description
-    std::string desc = m_client->getName() + "(" + m_name + ")";
+    std::string desc = m_client->getName() + " (" + m_name + ")";
 
     // While connection not closed or unreceive not called
     while (!m_client->isClosed() && !m_closed) {
@@ -186,9 +186,9 @@ void AmqpReceiver::manageMessage()
             auto receiver = connection->getSession(DEFAULT_SESSION).getReceiver(m_name);
             // Wait a new message arrived before timeout
             if (receiver.fetch(message, qpid::messaging::Duration::SECOND * 1)) {
-                Message amqpMsg = getMessage(message);
                 logDebug("Receive message on {}", desc);
-                logTrace("{}", amqpMsg.toString());
+                logTrace("\n=== qpidMsg ==={}", qpidMsgtoString(message));
+
                 // Take into account correlation id for filter if not the reply sentence
                 std::string correlationId = message.getReplyTo().str().empty() ? message.getCorrelationId() : "";
 
@@ -199,6 +199,8 @@ void AmqpReceiver::manageMessage()
                     receiver.getSession().acknowledge(message);
 
                     // Execute subscription callback
+                    Message amqpMsg = getMessage(message);
+                    logTrace("\n=== amqpMsg ==={}", amqpMsg.toString());
                     callback(amqpMsg);
                 }
                 else {

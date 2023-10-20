@@ -30,7 +30,7 @@ namespace fty::messagebus2::amqp {
 
 inline const std::string sanitizeAddress(const Address& addressIn)
 {
-    // Add simple quotes around the address, e.g. "queue://myQueue" -> "'queue://myQueue'"
+    // Add single quotes around the address, e.g. "queue://myQueue" -> "'queue://myQueue'"
     std::string address { addressIn };
     if (!address.empty() && address[0] != '\'') {
         address = "'" + addressIn + "'";
@@ -44,10 +44,10 @@ inline const std::string qpidMsgtoString(const qpid::messaging::Message& qpidMsg
     data += "\nfrom=" + qpidMsg.getMessageId();
     data += "\nsubject=" + qpidMsg.getSubject();
     data += "\ncorrelationId=" + qpidMsg.getCorrelationId();
-    data += "\ngetReplyTo=" + qpidMsg.getReplyTo().str();
+    data += "\nreplyTo=" + qpidMsg.getReplyTo().str();
     data += "\n=== METADATA ===\n";
     for (const auto& [key, variant] : qpidMsg.getProperties()) {
-      data += "[" + key + "]=" + variant.asString() + "\n";
+        data += "[" + key + "]=" + variant.asString() + "\n";
     }
     data += "=== USERDATA ===\n";
     data += qpidMsg.getContent();
@@ -62,8 +62,7 @@ inline const std::string getAddress(const qpid::messaging::Message& qpidMsg)
     // It must be extracted from "x-amqp-to" key in properties.
     auto search = qpidMsg.getProperties().find("x-amqp-to");
     if (search != qpidMsg.getProperties().end()) {
-        auto address = search->second.getString();
-        return address;
+        return search->second.getString();
     }
     return "";
 }
