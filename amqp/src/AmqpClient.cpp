@@ -150,7 +150,7 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
     if (!receiver) {
         receiver = std::make_shared<AmqpReceiver>(this, address);
         if (receiver && receiver->init(filter, messageListener)) {
-            logDebug("receive: add new receiver (name:{}, address:{}, filter:{})", receiver->getName(), address, filter);
+            logDebug("receive: add new receiver (name={}, address={}, filter={})", receiver->getName(), address, filter);
             m_receivers.push_back(receiver);
             deliveryState = DeliveryState::Accepted;
         }
@@ -158,11 +158,11 @@ DeliveryState AmqpClient::receive(const Address& address, MessageListener messag
     else {
         // Address is present, just add new filter (if not exist)
         if (receiver->setSubscription(filter, messageListener)) {
-            logDebug("receive: add new filter (address:{}, filter:{})", address, filter);
+            logDebug("receive: add new filter (address={}, filter={})", address, filter);
             deliveryState = DeliveryState::Accepted;
         }
         else {
-            logError("Receive error: receiver with filter exist yet (address:{}, filter:{})", address, filter);
+            logError("Receive error: receiver with filter exist yet (address={}, filter={})", address, filter);
         }
     }
     return deliveryState;
