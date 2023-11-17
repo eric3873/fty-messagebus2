@@ -24,6 +24,8 @@
 #include <future>
 #include <thread>
 
+#include "Message.h"
+
 namespace fty::messagebus2 {
 
 class Message;
