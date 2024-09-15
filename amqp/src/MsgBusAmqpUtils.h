@@ -1,5 +1,5 @@
 /*  =========================================================================
-    Copyright (C) 2014 - 2021 Eaton
+    Copyright (C) 2014 - 2022 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,96 +20,115 @@
 #pragma once
 
 #include "fty/messagebus2/Message.h"
-#include <proton/message.hpp>
-#include <proton/message_id.hpp>
-#include <proton/scalar_base.hpp>
-#include <proton/types.hpp>
+
+#include <qpid/messaging/Address.h>
+#include <qpid/messaging/Message.h>
+
+#include <iostream>
 
 namespace fty::messagebus2::amqp {
 
-using property_map = std::map<std::string, proton::scalar>;
-
-inline std::string setAddressFilter(const Address& address, const std::string& filter={})
+inline const std::string sanitizeAddress(const Address& addressIn)
 {
-    return filter.empty() ? address : address + "|" + filter;
+    // Add simple quotes around the address, e.g. "queue://myQueue" -> "'queue://myQueue'"
+    std::string address { addressIn };
+    if (!address.empty() && address[0] != '\'') {
+        address = "'" + addressIn + "'";
+    }
+    return address;
 }
 
-inline std::pair<std::string, std::string> getAddressFilter(const std::string& input)
+inline const std::string qpidMsgtoString(const qpid::messaging::Message& qpidMsg)
 {
-    std::pair<std::string, std::string> ret;
-    if (auto pos = input.find("|"); pos != std::string::npos) {
-        ret.first = input.substr(0, pos);
-        ret.second = input.substr(pos + 1);
+    std::string data;
+    data += "\nfrom=" + qpidMsg.getMessageId();
+    data += "\nsubject=" + qpidMsg.getSubject();
+    data += "\ncorrelationId=" + qpidMsg.getCorrelationId();
+    data += "\ngetReplyTo=" + qpidMsg.getReplyTo().str();
+    data += "\n=== METADATA ===\n";
+    for (const auto& [key, variant] : qpidMsg.getProperties()) {
+      data += "[" + key + "]=" + variant.asString() + "\n";
     }
-    else {
-        ret.first = input;
-        ret.second = "";
-    }
-    return ret;
+    data += "=== USERDATA ===\n";
+    data += qpidMsg.getContent();
+    data += "\n================";
+
+    return data;
 }
 
-inline const MetaData getMetaData(const proton::message& protonMsg)
+inline const std::string getAddress(const qpid::messaging::Message& qpidMsg)
+{
+    // Note: destination is not directly accessible in message.
+    // It must be extracted from "x-amqp-to" key in properties.
+    auto search = qpidMsg.getProperties().find("x-amqp-to");
+    if (search != qpidMsg.getProperties().end()) {
+        auto address = search->second.getString();
+        return address;
+    }
+    return "";
+}
+
+inline const Message getMessage(const qpid::messaging::Message& qpidMsg)
 {
     Message message;
 
     // User properties
-    if (!protonMsg.properties().empty()) {
-        property_map props;
-        proton::get(protonMsg.properties(), props);
-        for (property_map::iterator it = props.begin(); it != props.end(); ++it) {
-            message.metaData().emplace(proton::to_string(it->first), proton::to_string(it->second));
+    if (!qpidMsg.getProperties().empty()) {
+        for (const auto& [key, value] : qpidMsg.getProperties()) {
+            message.metaData().emplace(key, value);
         }
     }
 
-    if (!protonMsg.user().empty()) {
-        message.from(protonMsg.user());
+    if (!qpidMsg.getUserId().empty()) {
+        message.from(qpidMsg.getUserId());
     }
-    if (!protonMsg.id().empty()) {
-        message.id(proton::to_string(protonMsg.id()));
-        message.from(proton::to_string(protonMsg.id()));
+    if (!qpidMsg.getMessageId().empty()) {
+        message.id(qpidMsg.getMessageId());
+        message.from(qpidMsg.getMessageId());
     }
-    if (!protonMsg.subject().empty()) {
-        message.subject(protonMsg.subject());
+    if (!qpidMsg.getSubject().empty()) {
+        message.subject(qpidMsg.getSubject());
     }
     // Req/Rep pattern properties
-    if (!protonMsg.correlation_id().empty()) {
-        message.correlationId(proton::to_string(protonMsg.correlation_id()));
+    if (!qpidMsg.getCorrelationId().empty()) {
+        message.correlationId(qpidMsg.getCorrelationId());
     }
-    if (!protonMsg.address().empty()) {
-        message.replyTo(protonMsg.reply_to());
+    if (!qpidMsg.getReplyTo().str().empty()) {
+        message.replyTo(qpidMsg.getReplyTo().str());
     }
-    if (!protonMsg.to().empty()) {
-        message.to(protonMsg.to());
-    }
-
-    return message.metaData();
+    message.to(getAddress(qpidMsg));
+    message.userData(qpidMsg.getContent());
+    return message;
 }
 
-inline const proton::message getAmqpMessage(const Message& message)
+inline const qpid::messaging::Message getAmqpMessage(const Message& message)
 {
-    proton::message protonMsg;
+    qpid::messaging::Message qpidMsg;
 
     // Fill in replyTo and CorrelationId only if there are not empty, otherwise filled in with empty values,
-    // the filtering on correlationId with proton library does not work.
+    // the filtering on correlationId with library does not work.
     if (!message.replyTo().empty()) {
-        protonMsg.reply_to(message.replyTo());
+        qpidMsg.setReplyTo(message.replyTo());
     }
     if (!message.correlationId().empty()) {
-        protonMsg.correlation_id(message.correlationId());
+        qpidMsg.setCorrelationId(message.correlationId());
     }
-    protonMsg.to(message.to());
-    protonMsg.subject(message.subject());
-    protonMsg.user(message.from());
-    protonMsg.id(message.from());
+    // Destination is not directly settable in message.
+    // It must be saved in the "x-amqp-to" key of properties.
+    qpidMsg.getProperties()["x-amqp-to"] = message.to();
+    qpidMsg.setSubject(message.subject());
+    qpidMsg.setUserId(message.from());
+    qpidMsg.setMessageId(message.from());
 
     // All remaining properties
     for (const auto& [key, value] : message.getUndefinedProperties()) {
-        protonMsg.properties().put(key, value);
+        qpidMsg.getProperties()[key] = value;
     }
 
-    protonMsg.content_type("string");
-    protonMsg.body(message.userData());
-    return protonMsg;
+    // TBD Set content type (i.e. MIME type)
+    qpidMsg.setContentType("text/plain");
+    qpidMsg.setContent(message.userData());
+    return qpidMsg;
 }
 
 } // namespace fty::messagebus2::amqp

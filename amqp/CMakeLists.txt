@@ -4,10 +4,6 @@ project(fty-messagebus2-amqp
   DESCRIPTION "fty messagebus2 amqp library"
 )
 
-##############################################################################################################
-find_package(ProtonCpp REQUIRED)
-##############################################################################################################
-
 etn_target(shared ${PROJECT_NAME} PUBLIC
   SOURCES
     src/*.cpp
@@ -21,7 +17,8 @@ etn_target(shared ${PROJECT_NAME} PUBLIC
   USES_PRIVATE
     fty-messagebus2-utils
     fty_common_logging
-    Proton::cpp
+    qpidmessaging
+    qpidtypes
   FLAGS
     "-fmax-errors=1"
 )

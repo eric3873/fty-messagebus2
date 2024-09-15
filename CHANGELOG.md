@@ -4,7 +4,15 @@ All notable changes to 'fty-messagebus2' project will be documented in this file
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-[1.0.X] - 2022-mm-dd [IN PROGRESS]
+[1.0.3] - 2022-mm-dd [IN PROGRESS]
+### Added
+- Add implementation with qpid-cpp for Amqp.
+### Changed
+### Removed
+- Remove the implementation with qpid-proton for Amqp.
+### Fixed
+
+[1.0.2] - 2022-09-02
 ### Added
 - Add secured class for promise/future management.
 ### Changed

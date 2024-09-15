@@ -241,6 +241,11 @@ MetaData Message::getUndefinedProperties() const
 std::string Message::toString() const
 {
     std::string data;
+    data += "\nfrom=" + from();
+    data += "\nto=" + to();
+    data += "\nsubject=" + subject();
+    data += "\ncorrelationId=" + correlationId();
+    data += "\nstatus=" + status();
     data += "\n=== METADATA ===\n";
     for (auto& [key, value] : m_metadata) {
         data += "[" + key + "]=" + value + "\n";

@@ -1,5 +1,5 @@
 /*  =========================================================================
-    Copyright (C) 2014 - 2021 Eaton
+    Copyright (C) 2014 - 2022 Eaton
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -18,6 +18,8 @@
 */
 #include "fty/messagebus2/amqp/MessageBusAmqp.h"
 #include "AmqpClient.h"
+#include "MsgBusAmqpUtils.h"
+
 #include <fty/messagebus2/Promise.h>
 #include <fty/expected.h>
 #include <fty/messagebus2/MessageBusStatus.h>
@@ -26,13 +28,15 @@
 namespace fty::messagebus2::amqp {
 
 using namespace fty::messagebus2;
-using proton::receiver_options;
-using proton::source_options;
 
 MessageBusAmqp::MessageBusAmqp(const ClientName& clientName, const Endpoint& endpoint) : MessageBus(),
     m_clientName(clientName),
-    m_endpoint  (endpoint),
-    m_clientPtr (std::make_shared<AmqpClient>(endpoint))
+    m_endpoint(endpoint),
+    m_clientPtr(std::make_shared<AmqpClient>(clientName, endpoint))
+{
+}
+
+MessageBusAmqp::~MessageBusAmqp()
 {
 }
 
@@ -45,12 +49,7 @@ fty::Expected<void, ComState> MessageBusAmqp::connect() noexcept
 
     logDebug("Connecting for {} to {} ...", m_clientName, m_endpoint);
     try {
-        std::thread thrdSender([=]() {
-            proton::container(*m_clientPtr).run();
-        });
-        thrdSender.detach();
-
-        auto connection = m_clientPtr->connected();
+        auto connection = m_clientPtr->connect();
         if (connection != ComState::Connected) {
             return fty::unexpected(connection);
         }
@@ -97,13 +96,14 @@ fty::Expected<void, DeliveryState> MessageBusAmqp::unreceive(const Address& addr
 
 fty::Expected<void, DeliveryState> MessageBusAmqp::send(const Message& message) noexcept
 {
+
     if (!isServiceAvailable()) {
         logDebug("Service not available");
         return fty::unexpected(DeliveryState::Unavailable);
     }
 
     logDebug("Sending message ...");
-    proton::message msgToSend = getAmqpMessage(message);
+    qpid::messaging::Message msgToSend = getAmqpMessage(message);
 
     auto msgSent = m_clientPtr->send(msgToSend);
     if (msgSent != DeliveryState::Accepted) {
@@ -112,6 +112,7 @@ fty::Expected<void, DeliveryState> MessageBusAmqp::send(const Message& message) 
     }
 
     logDebug("Message sent (Accepted)");
+
     return {};
 }
 
@@ -127,22 +128,21 @@ fty::Expected<Message, DeliveryState> MessageBusAmqp::request(const Message& mes
         if (!message.isValidMessage()) {
             return fty::unexpected(DeliveryState::Rejected);
         }
-        if (!message.needReply()) {
-            return fty::unexpected(DeliveryState::Rejected);
-        }
 
         logDebug("Synchronous request and checking answer until {} second(s)...", timeoutInSeconds);
-        proton::message msgToSend = getAmqpMessage(message);
+        qpid::messaging::Message msgToSend = getAmqpMessage(message);
+
+        logDebug("msg={}", qpidMsgtoString(msgToSend));
 
         // Promise and future to check if the answer arrive constraint by timeout.
-        Promise<Message> promiseSyncRequest(*this, msgToSend.reply_to(), proton::to_string(msgToSend.correlation_id()));
+        Promise<Message> promiseSyncRequest(*this, msgToSend.getReplyTo().str(), msgToSend.getCorrelationId());
 
         bool msgArrived = false;
 
         auto msgReceived = receive(
-            msgToSend.reply_to(),
+            msgToSend.getReplyTo().str(),
             std::move(std::bind(&Promise<Message>::setValue, &promiseSyncRequest, std::placeholders::_1)),
-            proton::to_string(msgToSend.correlation_id()));
+            msgToSend.getCorrelationId());
         if (!msgReceived) {
             return fty::unexpected(DeliveryState::Aborted);
         }
